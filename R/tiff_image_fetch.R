@@ -1,3 +1,14 @@
+
+.rect_null_check = function(rect){
+  if(is.null(rect)){
+    img_info = read_tiff_meta_data(tiff_path)
+    max_info = subset(img_info, resolutionLevel == 1)
+    rect = TiffRect(1, max_info$sizeX, 1, max_info$sizeY)
+  }
+  if(!is(rect, "TiffRect")) stop("rect must be a TiffRect object")
+  rect
+}
+
 #' Plot a rectangular region of a TIFF image
 #'
 #' Creates a visualization of a rectangular region from a TIFF image file.
@@ -5,7 +16,7 @@
 #' coordinates to image dimensions.
 #'
 #' @param tiff_path Path to the TIFF image file
-#' @param rect A \linkS4class{TiffRect} object defining the rectangle region
+#' @param rect A \linkS4class{TiffRect} object defining the rectangle region. If default of NULL< full region will be used.
 #' @param resolution Resolution level to read from the TIFF file. If NULL, automatically selects resolution to keep image under max_pixels
 #' @param max_pixels Maximum dimension in pixels for the plotted image. Used for automatic resolution selection
 #' @param precalc_max Optional data frame with precalculated min/max values per channel for normalization
@@ -40,8 +51,9 @@
 #' class(tiff_data)
 #' p = ggplot2::last_plot() 
 #' rect_annotate(p, view_rect2) 
-fetchTiffData = function(tiff_path, rect, resolution = NULL, max_pixels = 800, precalc_max = NULL, show_raw = FALSE, quantile_norm = .999){
-  if(!is(rect, "TiffRect")) stop("rect must be a TiffRect object")
+fetchTiffData = function(tiff_path, rect = NULL, resolution = NULL, max_pixels = 800, precalc_max = NULL, show_raw = FALSE, quantile_norm = .999){
+  rect = .rect_null_check(rect)
+  
   .fetch_tiff_data(tiff_path,
                   x_start = rect@xmin,
                   x_width = rect@xmax - rect@xmin,
@@ -119,17 +131,21 @@ fetchTiffData = function(tiff_path, rect, resolution = NULL, max_pixels = 800, p
       Y = seq(y_start*y_ratio, (y_start + y_width)* y_ratio)
     ))
 
-  annotated_image = img_data
-  # 1. Assume 'annotated_image' is a 2D matrix (or array converted to matrix)
+  # 1. Assume 'img_data' is a 2D matrix (or array converted to matrix)
   # 2. Find indices of non-zero pixels
-  non_zero_coords <- which(annotated_image != 0, arr.ind = TRUE)
-  if(nrow(non_zero_coords) == 0){
+  # non_zero_coords <- which(img_data != 0, arr.ind = TRUE)
+  # if(nrow(non_zero_coords) == 0){
+    # stop("No data found in area.")
+  # }
+  if(max(img_data) == 0){
     stop("No data found in area.")
   }
 
   # report plotted image stats
-  x_pix = diff(range(non_zero_coords[, "x"])) %>% as.numeric
-  y_pix = diff(range(non_zero_coords[, "y"])) %>% as.numeric
+  # x_pix = diff(range(non_zero_coords[, "x"])) %>% as.numeric
+  # y_pix = diff(range(non_zero_coords[, "y"])) %>% as.numeric
+  x_pix = ncol(img_data)
+  y_pix = nrow(img_data)
   pix_area = x_pix*y_pix
   if(pix_area >= 1e5){
     pix_area = paste0(round(pix_area / 1e6, 2), "M")
@@ -139,15 +155,17 @@ fetchTiffData = function(tiff_path, rect, resolution = NULL, max_pixels = 800, p
   message("plotted image is ", x_pix, "x", y_pix, " (", pix_area,  " pixels)")
 
   # 3. Create sparse matrix
-  sparse_img <- data.frame(
-    i = (non_zero_coords[, "x"] + x_start*x_ratio)/x_ratio,
-    j = (non_zero_coords[, "y"] + y_start*y_ratio)/y_ratio,
-    channel = non_zero_coords[, "c"],
-    value = annotated_image[non_zero_coords]
-  )
-
-  sparse_img$i = as.integer(sparse_img$i)
-  sparse_img$j = as.integer(sparse_img$j)
+  # sparse_img <- data.frame(
+  #   i = (non_zero_coords[, "x"] + x_start*x_ratio)/x_ratio,
+  #   j = (non_zero_coords[, "y"] + y_start*y_ratio)/y_ratio,
+  #   channel = non_zero_coords[, "c"],
+  #   value = img_data[non_zero_coords]
+  # )
+  dim(img_data)
+  sparse_img = reshape2::melt(img_data@.Data)
+  colnames(sparse_img) = c("i", "j", "channel", "value")
+  # sparse_img$i = as.integer(sparse_img$i)
+  # sparse_img$j = as.integer(sparse_img$j)
 
   if(is.null(precalc_max)){
     precalc_max = sparse_img  %>% group_by(channel) %>% summarise(min_value = 0, max_value = quantile(value, quantile_norm))
@@ -174,6 +192,7 @@ fetchTiffData = function(tiff_path, rect, resolution = NULL, max_pixels = 800, p
   }
   message("full resolution image would have been ", x_pix, "x", y_pix, " (", pix_area,  " pixels)")
 
+  
   # return_data parameter removed; functions now return a TiffPlotData object
   if(show_raw){
     p = ggplot(sparse_img, aes(x = i, y = j, fill = value))
@@ -187,7 +206,8 @@ fetchTiffData = function(tiff_path, rect, resolution = NULL, max_pixels = 800, p
     scale_fill_viridis_c(option = "magma") +
     theme(panel.background = element_rect(fill = "gray20"), panel.grid = element_blank())
 
-  plots_list <- list(channels = p)
+  plots_list = list()
+  plots_list[[ifelse(show_raw, "raw", "normalized")]] = p
   data_df <- as.data.frame(sparse_img)
   # record rectangle corresponding to requested region
   rect_obj <- TiffRect(x_start, x_start + x_width, y_start, y_start + y_width)
@@ -228,14 +248,14 @@ fetchTiffData = function(tiff_path, rect, resolution = NULL, max_pixels = 800, p
 #'                      red_channel=6, green_channel=1, blue_channel=5)
 #' }
 fetchTiffData.rgb = function(tiff_path,
-                              rect,
+                              rect = NULL,
                               resolution = NULL,
                               max_pixels = 800,
                               red_channel = 6,
                               green_channel = 1,
                               blue_channel = 5,
                               value_var = "norm_value"){
-  if(!is(rect, "TiffRect")) stop("rect must be a TiffRect object")
+  rect = .rect_null_check(rect)
   .fetch_tiff_data.rgb(tiff_path,
                       x_start = rect@xmin,
                       x_width = rect@xmax - rect@xmin,
