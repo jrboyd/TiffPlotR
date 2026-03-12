@@ -12,7 +12,7 @@
 #' \dontrun{
 #' r <- TiffRect(10, 20, 30, 50, name = "roi1")
 #' r2 <- rect_shift(r, dx = 5, dy = -2)
-#' r3 <- resize_rect_mult(r, fx = 2)
+#' r3 <- rect_resize_mult(r, fx = 2)
 #' p <- ggplot() + geom_point(data = data.frame(x = 1:100, y = rnorm(100)), aes(x,y))
 #' p <- rect_annotate(r, p, fill = "red", alpha = 0.2)
 #' }
@@ -122,7 +122,7 @@ rect_resize_abs <- function(rect, width, height, anchor = "center"){
 #' @param fy multiplier for height (numeric, defaults to fx)
 #' @return resized TiffRect
 #' @export
-resize_rect_mult <- function(rect, fx = 1, fy = NULL){
+rect_resize_mult <- function(rect, fx = 1, fy = NULL){
   if(!is(rect, "TiffRect")) stop("rect must be a TiffRect")
   if(is.null(fy)) fy <- fx
   w <- (rect@xmax - rect@xmin) * as.numeric(fx)

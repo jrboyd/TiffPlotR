@@ -42,7 +42,7 @@
 #'   view_rect2
 #' )
 #' 
-#' view_rect3 = resize_rect_mult(view_rect2, 3)
+#' view_rect3 = rect_resize_mult(view_rect2, 3)
 #' fetchTiffData(
 #'   tiff_path,
 #'   view_rect3

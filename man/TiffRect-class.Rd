@@ -25,7 +25,7 @@ Stores a rectangular region definition with numeric boundaries.
 \dontrun{
 r <- TiffRect(10, 20, 30, 50, name = "roi1")
 r2 <- rect_shift(r, dx = 5, dy = -2)
-r3 <- resize_rect_mult(r, fx = 2)
+r3 <- rect_resize_mult(r, fx = 2)
 p <- ggplot() + geom_point(data = data.frame(x = 1:100, y = rnorm(100)), aes(x,y))
 p <- rect_annotate(r, p, fill = "red", alpha = 0.2)
 }

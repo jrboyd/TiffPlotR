@@ -6,7 +6,7 @@
 \usage{
 fetchTiffData.rgb(
   tiff_path,
-  rect,
+  rect = NULL,
   resolution = NULL,
   max_pixels = 800,
   red_channel = 6,

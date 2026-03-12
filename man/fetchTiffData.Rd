@@ -6,7 +6,7 @@
 \usage{
 fetchTiffData(
   tiff_path,
-  rect,
+  rect = NULL,
   resolution = NULL,
   max_pixels = 800,
   precalc_max = NULL,
@@ -17,7 +17,7 @@ fetchTiffData(
 \arguments{
 \item{tiff_path}{Path to the TIFF image file}
 
-\item{rect}{A \linkS4class{TiffRect} object defining the rectangle region}
+\item{rect}{A \linkS4class{TiffRect} object defining the rectangle region. If default of NULL< full region will be used.}
 
 \item{resolution}{Resolution level to read from the TIFF file. If NULL, automatically selects resolution to keep image under max_pixels}
 
@@ -50,7 +50,7 @@ fetchTiffData(
   view_rect2
 )
 
-view_rect3 = resize_rect_mult(view_rect2, 3)
+view_rect3 = rect_resize_mult(view_rect2, 3)
 fetchTiffData(
   tiff_path,
   view_rect3

@@ -160,46 +160,46 @@ test_that("rect_resize_abs coerces numeric inputs", {
   expect_equal(resized@ymax - resized@ymin, 10)
 })
 
-test_that("resize_rect_mult doubles rectangle size with fx=2", {
+test_that("rect_resize_mult doubles rectangle size with fx=2", {
   rect <- TiffRect(10, 20, 30, 50)
   # width = 10, height = 20
-  resized <- resize_rect_mult(rect, fx = 2)
+  resized <- rect_resize_mult(rect, fx = 2)
   expect_equal(resized@xmax - resized@xmin, 20)
   expect_equal(resized@ymax - resized@ymin, 40)
 })
 
-test_that("resize_rect_mult halves rectangle size with fx=0.5", {
+test_that("rect_resize_mult halves rectangle size with fx=0.5", {
   rect <- TiffRect(10, 20, 30, 50)
-  resized <- resize_rect_mult(rect, fx = 0.5)
+  resized <- rect_resize_mult(rect, fx = 0.5)
   expect_equal(resized@xmax - resized@xmin, 5)
   expect_equal(resized@ymax - resized@ymin, 10)
 })
 
-test_that("resize_rect_mult with separate fx and fy multipliers", {
+test_that("rect_resize_mult with separate fx and fy multipliers", {
   rect <- TiffRect(10, 20, 30, 50)
   # width = 10, height = 20
-  resized <- resize_rect_mult(rect, fx = 2, fy = 0.5)
+  resized <- rect_resize_mult(rect, fx = 2, fy = 0.5)
   expect_equal(resized@xmax - resized@xmin, 20)
   expect_equal(resized@ymax - resized@ymin, 10)
 })
 
-test_that("resize_rect_mult with only fx uses fx for both dimensions", {
+test_that("rect_resize_mult with only fx uses fx for both dimensions", {
   rect <- TiffRect(10, 20, 30, 50)
-  resized <- resize_rect_mult(rect, fx = 2)
+  resized <- rect_resize_mult(rect, fx = 2)
   expect_equal(resized@xmax - resized@xmin, 20)
   expect_equal(resized@ymax - resized@ymin, 40)
 })
 
-test_that("resize_rect_mult fails with non-TiffRect input", {
-  expect_error(resize_rect_mult(list(), fx = 2), "rect must be a TiffRect")
+test_that("rect_resize_mult fails with non-TiffRect input", {
+  expect_error(rect_resize_mult(list(), fx = 2), "rect must be a TiffRect")
 })
 
-test_that("resize_rect_mult maintains center position", {
+test_that("rect_resize_mult maintains center position", {
   rect <- TiffRect(10, 20, 30, 50)
   center_x <- (rect@xmin + rect@xmax) / 2
   center_y <- (rect@ymin + rect@ymax) / 2
   
-  resized <- resize_rect_mult(rect, fx = 2, fy = 0.5)
+  resized <- rect_resize_mult(rect, fx = 2, fy = 0.5)
   resized_center_x <- (resized@xmin + resized@xmax) / 2
   resized_center_y <- (resized@ymin + resized@ymax) / 2
   
@@ -255,7 +255,7 @@ test_that("chained rectangle operations work correctly", {
   # Apply multiple operations
   result <- rect %>%
     rect_shift(dx = 5, dy = -5) %>%
-    resize_rect_mult(fx = 2) %>%
+    rect_resize_mult(fx = 2) %>%
     rect_shift(dx = -10)
   
   expect_s4_class(result, "TiffRect")
