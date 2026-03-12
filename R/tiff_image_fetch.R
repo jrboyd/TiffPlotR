@@ -67,6 +67,50 @@ fetchTiffData = function(tiff_path, rect = NULL, resolution = NULL, max_pixels =
   )
 }
 
+
+#' Title
+#'
+#' @param img_mat 
+#'
+#' @returns
+#' @export
+#'
+#' @examples
+makeImageTidy = function(img_mat){
+  tidy_img = reshape2::melt(img_data@.Data)
+  colnames(tidy_img) = c("i", "j", "channel", "value")
+  tidy_img
+}
+
+#' Title
+#'
+#' @param img_df 
+#' @param red_channel 
+#' @param green_channel 
+#' @param blue_channel 
+#'
+#' @returns
+#' @export
+#'
+#' @examples
+convertTidyToRGB = function(img_df, red_channel = 1, green_channel = 2, blue_channel = 3){
+  rv = red_channel
+  gv = green_channel
+  bv = blue_channel
+  
+  rgb_df = subset(img_df, channel %in% c(rv, gv, bv)) %>%
+    tidyr::pivot_wider(id_cols = c("i", "j"), names_from = "channel", values_from = all_of(value_var))
+  rgb_df = rgb_df %>% mutate(i, j, red = !!sym(as.character(rv)), green = !!sym(as.character(gv)), blue = !!sym(as.character(bv)), .keep = "none")
+  
+  #strip NA values
+  rgb_df = rgb_df %>%
+    mutate(red = ifelse(is.na(red), 0, red)) %>%
+    mutate(green = ifelse(is.na(green), 0, green)) %>%
+    mutate(blue = ifelse(is.na(blue), 0, blue))
+  rgb_df = rgb_df %>% mutate(chex = rgb(red/max(red, na.rm = TRUE), green/max(green, na.rm = TRUE), blue/max(blue, na.rm = TRUE)))
+  rgb_df
+}
+
 #' Plot a TIFF image with custom dimensions
 #'
 #' Reads a region from a TIFF image file and creates a ggplot visualization.
@@ -155,35 +199,35 @@ fetchTiffData = function(tiff_path, rect = NULL, resolution = NULL, max_pixels =
   message("plotted image is ", x_pix, "x", y_pix, " (", pix_area,  " pixels)")
 
   # 3. Create sparse matrix
-  # sparse_img <- data.frame(
+  # tidy_img <- data.frame(
   #   i = (non_zero_coords[, "x"] + x_start*x_ratio)/x_ratio,
   #   j = (non_zero_coords[, "y"] + y_start*y_ratio)/y_ratio,
   #   channel = non_zero_coords[, "c"],
   #   value = img_data[non_zero_coords]
   # )
   dim(img_data)
-  sparse_img = reshape2::melt(img_data@.Data)
-  colnames(sparse_img) = c("i", "j", "channel", "value")
-  # sparse_img$i = as.integer(sparse_img$i)
-  # sparse_img$j = as.integer(sparse_img$j)
+  tidy_img = reshape2::melt(img_data@.Data)
+  colnames(tidy_img) = c("i", "j", "channel", "value")
+  # tidy_img$i = as.integer(tidy_img$i)
+  # tidy_img$j = as.integer(tidy_img$j)
 
   if(is.null(precalc_max)){
-    precalc_max = sparse_img  %>% group_by(channel) %>% summarise(min_value = 0, max_value = quantile(value, quantile_norm))
+    precalc_max = tidy_img  %>% group_by(channel) %>% summarise(min_value = 0, max_value = quantile(value, quantile_norm))
   }
   stopifnot(c("channel", "min_value", "max_value") %in% colnames(precalc_max))
 
-  sparse_img = merge(sparse_img, precalc_max %>% select(channel, min_value, max_value), all.x = TRUE)
-  sparse_img = sparse_img %>% mutate(norm_value = (value - min_value) / (max_value - min_value))
-  sparse_img = sparse_img %>% select(!c(min_value, max_value))
+  tidy_img = merge(tidy_img, precalc_max %>% select(channel, min_value, max_value), all.x = TRUE)
+  tidy_img = tidy_img %>% mutate(norm_value = (value - min_value) / (max_value - min_value))
+  tidy_img = tidy_img %>% select(!c(min_value, max_value))
 
   #cap norm_value to 1
-  sparse_img = sparse_img %>% mutate(norm_value = ifelse(norm_value > 1, 1, norm_value))
-  sparse_img = sparse_img %>% mutate(norm_value = ifelse(norm_value < 0, 0, norm_value))
+  tidy_img = tidy_img %>% mutate(norm_value = ifelse(norm_value > 1, 1, norm_value))
+  tidy_img = tidy_img %>% mutate(norm_value = ifelse(norm_value < 0, 0, norm_value))
 
 
   # report fullresolution image stats
-  x_pix = diff(range(sparse_img$i)) %>% as.numeric
-  y_pix = diff(range(sparse_img$j)) %>% as.numeric
+  x_pix = diff(range(tidy_img$i)) %>% as.numeric
+  y_pix = diff(range(tidy_img$j)) %>% as.numeric
   pix_area = x_pix*y_pix
   if(pix_area >= 1e5){
     pix_area = paste0(round(pix_area / 1e6, 2), "M")
@@ -195,9 +239,9 @@ fetchTiffData = function(tiff_path, rect = NULL, resolution = NULL, max_pixels =
   
   # return_data parameter removed; functions now return a TiffPlotData object
   if(show_raw){
-    p = ggplot(sparse_img, aes(x = i, y = j, fill = value))
+    p = ggplot(tidy_img, aes(x = i, y = j, fill = value))
   }else{
-    p = ggplot(sparse_img, aes(x = i, y = j, fill = norm_value))
+    p = ggplot(tidy_img, aes(x = i, y = j, fill = norm_value))
   }
   p = p +
     facet_wrap(~channel) +
@@ -208,7 +252,7 @@ fetchTiffData = function(tiff_path, rect = NULL, resolution = NULL, max_pixels =
 
   plots_list = list()
   plots_list[[ifelse(show_raw, "raw", "normalized")]] = p
-  data_df <- as.data.frame(sparse_img)
+  data_df <- as.data.frame(tidy_img)
   # record rectangle corresponding to requested region
   rect_obj <- TiffRect(x_start, x_start + x_width, y_start, y_start + y_width)
   new("TiffPlotData",
@@ -325,20 +369,7 @@ fetchTiffData.rgb = function(tiff_path,
     max_pixels = max_pixels
   )
   img_df = img_obj@data
-  rv = red_channel
-  gv = green_channel
-  bv = blue_channel
-
-  rgb_df = subset(img_df, channel %in% c(rv, gv, bv)) %>%
-    tidyr::pivot_wider(id_cols = c("i", "j"), names_from = "channel", values_from = all_of(value_var))
-  rgb_df = rgb_df %>% mutate(i, j, red = !!sym(as.character(rv)), green = !!sym(as.character(gv)), blue = !!sym(as.character(bv)), .keep = "none")
-
-  #strip NA values
-  rgb_df = rgb_df %>%
-    mutate(red = ifelse(is.na(red), 0, red)) %>%
-    mutate(green = ifelse(is.na(green), 0, green)) %>%
-    mutate(blue = ifelse(is.na(blue), 0, blue))
-  rgb_df = rgb_df %>% mutate(chex = rgb(red/max(red, na.rm = TRUE), green/max(green, na.rm = TRUE), blue/max(blue, na.rm = TRUE)))
+  convertTidyToRGB(img_df, red_channel = red_channel, green_channel = green_channel, blue_channel = blue_channel)
   # rgb_df %>% mutate(chex = rgb(red/max(red, na.rm = TRUE), green/max(green, na.rm = TRUE), blue/max(blue, na.rm = TRUE)))
 
   leg_df = data.frame(channel = c(red_channel, green_channel, blue_channel))
