@@ -1,0 +1,5 @@
+.Rproj.user
+.Rhistory
+tests/testthat/Rplots.pdf
+*.Rproj
+inst/extdata/*tiff
