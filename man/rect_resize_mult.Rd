@@ -4,7 +4,7 @@
 \alias{rect_resize_mult}
 \title{Resize a TiffRect by multipliers}
 \usage{
-rect_resize_mult(rect, fx = 1, fy = NULL)
+rect_resize_mult(rect, fx = 1, fy = NULL, anchor = "center")
 }
 \arguments{
 \item{rect}{TiffRect}
@@ -12,6 +12,8 @@ rect_resize_mult(rect, fx = 1, fy = NULL)
 \item{fx}{multiplier for width (numeric)}
 
 \item{fy}{multiplier for height (numeric, defaults to fx)}
+
+\item{anchor}{where to keep fixed: "center" (default), "topleft", "topright", "botleft", "botright"}
 }
 \value{
 resized TiffRect

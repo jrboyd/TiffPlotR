@@ -6,16 +6,16 @@ library(ggplot2)
 test_that("TiffRect constructor creates valid object with required parameters", {
   rect <- TiffRect(10, 20, 30, 50)
   expect_s4_class(rect, "TiffRect")
-  expect_equal(rect@xmin, 10)
-  expect_equal(rect@xmax, 20)
-  expect_equal(rect@ymin, 30)
-  expect_equal(rect@ymax, 50)
-  expect_equal(rect@name, "rect")
+  expect_equal(rect@coords$xmin[[1]], 10)
+  expect_equal(rect@coords$xmax[[1]], 20)
+  expect_equal(rect@coords$ymin[[1]], 30)
+  expect_equal(rect@coords$ymax[[1]], 50)
+  expect_equal(rect@coords$name[[1]], "rect")
 })
 
 test_that("TiffRect constructor accepts custom name", {
   rect <- TiffRect(0, 100, 0, 100, name = "roi1")
-  expect_equal(rect@name, "roi1")
+  expect_equal(rect@coords$name[[1]], "roi1")
 })
 
 test_that("TiffRect constructor fails with invalid coordinates", {
@@ -29,56 +29,77 @@ test_that("TiffRect constructor fails with non-numeric coordinates", {
   expect_error(TiffRect(10, "b", 30, 50), "Coordinates must be numeric")
 })
 
-test_that("TiffRect constructor rejects vectors of length > 1", {
-  expect_error(TiffRect(c(10, 15), 20, 30, 50), "All coordinates must be length 1")
-  expect_error(TiffRect(10, c(20, 25), 30, 50), "All coordinates must be length 1")
+test_that("TiffRect constructor supports vectorized rectangles", {
+  rect <- TiffRect(c(10, 15), c(20, 25), c(30, 35), c(50, 55), name = c("a", "b"))
+  expect_equal(nrow(rect@coords), 2)
+  expect_equal(rect@coords$name, c("a", "b"))
+})
+
+test_that("TiffRect constructor makes duplicate names unique", {
+  rect <- TiffRect(c(10, 15, 20), c(20, 25, 30), c(30, 35, 40), c(50, 55, 60), name = c("roi", "roi", "roi"))
+  expect_equal(rect@coords$name, c("roi_1", "roi_2", "roi_3"))
+  expect_equal(length(unique(rect@coords$name)), 3)
+})
+
+test_that("TiffRect constructor rejects incompatible vector lengths", {
+  expect_error(TiffRect(c(10, 15), c(20, 25, 30), 30, 50), "Coordinate lengths must all be 1 or match the longest input")
+  expect_error(TiffRect(c(10, 15), c(20, 25), c(30, 35), c(50, 55), name = c("a", "b", "c")), "name must be length 1 or match coordinate length")
 })
 
 test_that("TiffRect show method displays correctly", {
   rect <- TiffRect(10, 20, 30, 50, name = "test")
-  expected_output <- "TiffRect: test"
-  expect_output(show(rect), "TiffRect: test")
-  expect_output(show(rect), "xmin: 10")
-  expect_output(show(rect), "xmax: 20")
-  expect_output(show(rect), "ymin: 30")
-  expect_output(show(rect), "ymax: 50")
+  expect_output(show(rect), "TiffRect with 1 rectangle")
+  expect_output(show(rect), "xmin")
+  expect_output(show(rect), "xmax")
+  expect_output(show(rect), "ymin")
+  expect_output(show(rect), "ymax")
+  expect_output(show(rect), "test")
 })
 
 test_that("rect_shift shifts rectangle by dx and dy", {
   rect <- TiffRect(10, 20, 30, 50)
   shifted <- rect_shift(rect, dx = 5, dy = -2)
-  expect_equal(shifted@xmin, 15)
-  expect_equal(shifted@xmax, 25)
-  expect_equal(shifted@ymin, 28)
-  expect_equal(shifted@ymax, 48)
-  expect_equal(shifted@name, "rect")
+  expect_equal(shifted@coords$xmin[[1]], 15)
+  expect_equal(shifted@coords$xmax[[1]], 25)
+  expect_equal(shifted@coords$ymin[[1]], 28)
+  expect_equal(shifted@coords$ymax[[1]], 48)
+  expect_equal(shifted@coords$name[[1]], "rect")
+})
+
+test_that("vectorized operations preserve row count", {
+  rect <- TiffRect(c(0, 10), c(5, 20), c(0, 10), c(5, 20), name = c("r1", "r2"))
+  shifted <- rect_shift(rect, dx = 1, dy = -1)
+  resized <- rect_resize_mult(shifted, fx = 2)
+
+  expect_equal(nrow(resized@coords), 2)
+  expect_equal(resized@coords$name, c("r1", "r2"))
 })
 
 test_that("rect_shift with defaults doesn't modify rectangle", {
   rect <- TiffRect(10, 20, 30, 50)
   shifted <- rect_shift(rect)
-  expect_equal(shifted@xmin, rect@xmin)
-  expect_equal(shifted@xmax, rect@xmax)
-  expect_equal(shifted@ymin, rect@ymin)
-  expect_equal(shifted@ymax, rect@ymax)
+  expect_equal(shifted@coords$xmin[[1]], rect@coords$xmin[[1]])
+  expect_equal(shifted@coords$xmax[[1]], rect@coords$xmax[[1]])
+  expect_equal(shifted@coords$ymin[[1]], rect@coords$ymin[[1]])
+  expect_equal(shifted@coords$ymax[[1]], rect@coords$ymax[[1]])
 })
 
 test_that("rect_shift with only dx shifts x coordinates", {
   rect <- TiffRect(10, 20, 30, 50)
   shifted <- rect_shift(rect, dx = 5)
-  expect_equal(shifted@xmin, 15)
-  expect_equal(shifted@xmax, 25)
-  expect_equal(shifted@ymin, 30)
-  expect_equal(shifted@ymax, 50)
+  expect_equal(shifted@coords$xmin[[1]], 15)
+  expect_equal(shifted@coords$xmax[[1]], 25)
+  expect_equal(shifted@coords$ymin[[1]], 30)
+  expect_equal(shifted@coords$ymax[[1]], 50)
 })
 
 test_that("rect_shift with only dy shifts y coordinates", {
   rect <- TiffRect(10, 20, 30, 50)
   shifted <- rect_shift(rect, dy = 10)
-  expect_equal(shifted@xmin, 10)
-  expect_equal(shifted@xmax, 20)
-  expect_equal(shifted@ymin, 40)
-  expect_equal(shifted@ymax, 60)
+  expect_equal(shifted@coords$xmin[[1]], 10)
+  expect_equal(shifted@coords$xmax[[1]], 20)
+  expect_equal(shifted@coords$ymin[[1]], 40)
+  expect_equal(shifted@coords$ymax[[1]], 60)
 })
 
 test_that("rect_shift fails with non-TiffRect input", {
@@ -89,56 +110,56 @@ test_that("rect_shift fails with non-TiffRect input", {
 test_that("rect_shift with negative values works correctly", {
   rect <- TiffRect(10, 20, 30, 50)
   shifted <- rect_shift(rect, dx = -5, dy = -10)
-  expect_equal(shifted@xmin, 5)
-  expect_equal(shifted@xmax, 15)
-  expect_equal(shifted@ymin, 20)
-  expect_equal(shifted@ymax, 40)
+  expect_equal(shifted@coords$xmin[[1]], 5)
+  expect_equal(shifted@coords$xmax[[1]], 15)
+  expect_equal(shifted@coords$ymin[[1]], 20)
+  expect_equal(shifted@coords$ymax[[1]], 40)
 })
 
 test_that("rect_resize_abs with default center anchor resizes symmetrically", {
   rect <- TiffRect(10, 30, 20, 40)
   # center is at (20, 30)
   resized <- rect_resize_abs(rect, width = 10, height = 10)
-  expect_equal(resized@xmin, 15)
-  expect_equal(resized@xmax, 25)
-  expect_equal(resized@ymin, 25)
-  expect_equal(resized@ymax, 35)
+  expect_equal(resized@coords$xmin[[1]], 15)
+  expect_equal(resized@coords$xmax[[1]], 25)
+  expect_equal(resized@coords$ymin[[1]], 25)
+  expect_equal(resized@coords$ymax[[1]], 35)
 })
 
 test_that("rect_resize_abs with topleft anchor", {
   rect <- TiffRect(10, 30, 20, 40)
   resized <- rect_resize_abs(rect, width = 40, height = 10, anchor = "topleft")
-  expect_equal(resized@xmin, 10)
-  expect_equal(resized@xmax, 50)
-  expect_equal(resized@ymin, 20)
-  expect_equal(resized@ymax, 30)
+  expect_equal(resized@coords$xmin[[1]], 10)
+  expect_equal(resized@coords$xmax[[1]], 50)
+  expect_equal(resized@coords$ymin[[1]], 20)
+  expect_equal(resized@coords$ymax[[1]], 30)
 })
 
 test_that("rect_resize_abs with topright anchor", {
   rect <- TiffRect(10, 30, 20, 40)
   resized <- rect_resize_abs(rect, width = 20, height = 10, anchor = "topright")
-  expect_equal(resized@xmin, 10)
-  expect_equal(resized@xmax, 30)
-  expect_equal(resized@ymin, 20)
-  expect_equal(resized@ymax, 30)
+  expect_equal(resized@coords$xmin[[1]], 10)
+  expect_equal(resized@coords$xmax[[1]], 30)
+  expect_equal(resized@coords$ymin[[1]], 20)
+  expect_equal(resized@coords$ymax[[1]], 30)
 })
 
 test_that("rect_resize_abs with botleft anchor", {
   rect <- TiffRect(10, 30, 20, 40)
   resized <- rect_resize_abs(rect, width = 10, height = 20, anchor = "botleft")
-  expect_equal(resized@xmin, 10)
-  expect_equal(resized@xmax, 20)
-  expect_equal(resized@ymin, 20)
-  expect_equal(resized@ymax, 40)
+  expect_equal(resized@coords$xmin[[1]], 10)
+  expect_equal(resized@coords$xmax[[1]], 20)
+  expect_equal(resized@coords$ymin[[1]], 20)
+  expect_equal(resized@coords$ymax[[1]], 40)
 })
 
 test_that("rect_resize_abs with botright anchor", {
   rect <- TiffRect(10, 30, 20, 40)
   resized <- rect_resize_abs(rect, width = 10, height = 20, anchor = "botright")
-  expect_equal(resized@xmin, 20)
-  expect_equal(resized@xmax, 30)
-  expect_equal(resized@ymin, 20)
-  expect_equal(resized@ymax, 40)
+  expect_equal(resized@coords$xmin[[1]], 20)
+  expect_equal(resized@coords$xmax[[1]], 30)
+  expect_equal(resized@coords$ymin[[1]], 20)
+  expect_equal(resized@coords$ymax[[1]], 40)
 })
 
 test_that("rect_resize_abs fails with invalid anchor", {
@@ -156,38 +177,38 @@ test_that("rect_resize_abs fails with non-TiffRect input", {
 test_that("rect_resize_abs coerces numeric inputs", {
   rect <- TiffRect(10, 30, 20, 40)
   resized <- rect_resize_abs(rect, width = "10", height = "10")
-  expect_equal(resized@xmax - resized@xmin, 10)
-  expect_equal(resized@ymax - resized@ymin, 10)
+  expect_equal(resized@coords$xmax[[1]] - resized@coords$xmin[[1]], 10)
+  expect_equal(resized@coords$ymax[[1]] - resized@coords$ymin[[1]], 10)
 })
 
 test_that("rect_resize_mult doubles rectangle size with fx=2", {
   rect <- TiffRect(10, 20, 30, 50)
   # width = 10, height = 20
   resized <- rect_resize_mult(rect, fx = 2)
-  expect_equal(resized@xmax - resized@xmin, 20)
-  expect_equal(resized@ymax - resized@ymin, 40)
+  expect_equal(resized@coords$xmax[[1]] - resized@coords$xmin[[1]], 20)
+  expect_equal(resized@coords$ymax[[1]] - resized@coords$ymin[[1]], 40)
 })
 
 test_that("rect_resize_mult halves rectangle size with fx=0.5", {
   rect <- TiffRect(10, 20, 30, 50)
   resized <- rect_resize_mult(rect, fx = 0.5)
-  expect_equal(resized@xmax - resized@xmin, 5)
-  expect_equal(resized@ymax - resized@ymin, 10)
+  expect_equal(resized@coords$xmax[[1]] - resized@coords$xmin[[1]], 5)
+  expect_equal(resized@coords$ymax[[1]] - resized@coords$ymin[[1]], 10)
 })
 
 test_that("rect_resize_mult with separate fx and fy multipliers", {
   rect <- TiffRect(10, 20, 30, 50)
   # width = 10, height = 20
   resized <- rect_resize_mult(rect, fx = 2, fy = 0.5)
-  expect_equal(resized@xmax - resized@xmin, 20)
-  expect_equal(resized@ymax - resized@ymin, 10)
+  expect_equal(resized@coords$xmax[[1]] - resized@coords$xmin[[1]], 20)
+  expect_equal(resized@coords$ymax[[1]] - resized@coords$ymin[[1]], 10)
 })
 
 test_that("rect_resize_mult with only fx uses fx for both dimensions", {
   rect <- TiffRect(10, 20, 30, 50)
   resized <- rect_resize_mult(rect, fx = 2)
-  expect_equal(resized@xmax - resized@xmin, 20)
-  expect_equal(resized@ymax - resized@ymin, 40)
+  expect_equal(resized@coords$xmax[[1]] - resized@coords$xmin[[1]], 20)
+  expect_equal(resized@coords$ymax[[1]] - resized@coords$ymin[[1]], 40)
 })
 
 test_that("rect_resize_mult fails with non-TiffRect input", {
@@ -196,12 +217,12 @@ test_that("rect_resize_mult fails with non-TiffRect input", {
 
 test_that("rect_resize_mult maintains center position", {
   rect <- TiffRect(10, 20, 30, 50)
-  center_x <- (rect@xmin + rect@xmax) / 2
-  center_y <- (rect@ymin + rect@ymax) / 2
+  center_x <- (rect@coords$xmin[[1]] + rect@coords$xmax[[1]]) / 2
+  center_y <- (rect@coords$ymin[[1]] + rect@coords$ymax[[1]]) / 2
   
   resized <- rect_resize_mult(rect, fx = 2, fy = 0.5)
-  resized_center_x <- (resized@xmin + resized@xmax) / 2
-  resized_center_y <- (resized@ymin + resized@ymax) / 2
+  resized_center_x <- (resized@coords$xmin[[1]] + resized@coords$xmax[[1]]) / 2
+  resized_center_y <- (resized@coords$ymin[[1]] + resized@coords$ymax[[1]]) / 2
   
   expect_equal(resized_center_x, center_x)
   expect_equal(resized_center_y, center_y)
@@ -259,6 +280,46 @@ test_that("chained rectangle operations work correctly", {
     rect_shift(dx = -10)
   
   expect_s4_class(result, "TiffRect")
-  expect_true(result@xmin < result@xmax)
-  expect_true(result@ymin < result@ymax)
+  expect_true(result@coords$xmin[[1]] < result@coords$xmax[[1]])
+  expect_true(result@coords$ymin[[1]] < result@coords$ymax[[1]])
+})
+
+test_that("rect_intersect returns overlap rectangle", {
+  rect_a <- TiffRect(0, 10, 0, 10, name = "a")
+  rect_b <- TiffRect(5, 15, 2, 8, name = "b")
+
+  out <- rect_intersect(rect_a, rect_b)
+  expect_s4_class(out, "TiffRect")
+  expect_equal(out@coords$xmin[[1]], 5)
+  expect_equal(out@coords$xmax[[1]], 10)
+  expect_equal(out@coords$ymin[[1]], 2)
+  expect_equal(out@coords$ymax[[1]], 8)
+  expect_equal(out@coords$name[[1]], "a_intersect_b")
+})
+
+test_that("rect_intersect returns NULL for non-overlap", {
+  rect_a <- TiffRect(0, 2, 0, 2)
+  rect_b <- TiffRect(3, 5, 3, 5)
+
+  expect_null(rect_intersect(rect_a, rect_b))
+})
+
+test_that("rect_intersect invert returns non-overlap flag", {
+  overlapping_a <- TiffRect(0, 4, 0, 4)
+  overlapping_b <- TiffRect(1, 3, 1, 3)
+  separate_a <- TiffRect(0, 1, 0, 1)
+  separate_b <- TiffRect(2, 3, 2, 3)
+
+  expect_false(rect_intersect(overlapping_a, overlapping_b, invert = TRUE))
+  expect_true(rect_intersect(separate_a, separate_b, invert = TRUE))
+})
+
+test_that("rect_intersect supports vectorized pairwise intersection", {
+  rect_a <- TiffRect(c(0, 0), c(4, 2), c(0, 0), c(4, 2), name = c("a1", "a2"))
+  rect_b <- TiffRect(c(1, 3), c(3, 4), c(1, 3), c(3, 4), name = c("b1", "b2"))
+
+  out <- rect_intersect(rect_a, rect_b)
+  expect_s4_class(out, "TiffRect")
+  expect_equal(nrow(out@coords), 1)
+  expect_equal(out@coords$name[[1]], "a1_intersect_b1")
 })

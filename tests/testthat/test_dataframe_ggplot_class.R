@@ -28,6 +28,26 @@ test_that("TiffPlotData class can be instantiated with metadata slots", {
   expect_equal(obj@img_info$sizeX, 100)
 })
 
+test_that("TiffPlotData accepts multi-row TiffRect metadata", {
+  df <- data.frame(x = 1:10, y = rnorm(10))
+  p1 <- ggplot(df, aes(x = x, y = y)) + geom_point()
+  r <- TiffRect(c(0, 20), c(10, 30), c(0, 40), c(10, 50), name = c("roi1", "roi2"))
+
+  obj <- new("TiffPlotData",
+             data = df,
+             plots = list(scatter = p1),
+             activePlot = "scatter",
+             tiff_path = "foo.tiff",
+             resolution = 2,
+             precalc_max = data.frame(channel=1, min_value=0, max_value=1),
+             rect = r,
+             img_info = data.frame())
+
+  expect_s4_class(obj@rect, "TiffRect")
+  expect_equal(nrow(obj@rect@coords), 2)
+  expect_equal(obj@rect@coords$name, c("roi1", "roi2"))
+})
+
 
 
 
@@ -190,7 +210,11 @@ test_that("$<- operator sets slots", {
   expect_equal(obj$precalc_max$channel, 2)
   new_r <- TiffRect(1,2,3,4)
   obj$rect <- new_r
-  expect_equal(obj$rect@xmin, 1)
+  expect_equal(obj$rect@coords$xmin[[1]], 1)
+  new_r_multi <- TiffRect(c(1, 5), c(2, 6), c(3, 7), c(4, 8), name = c("r1", "r2"))
+  obj$rect <- new_r_multi
+  expect_equal(nrow(obj$rect@coords), 2)
+  expect_equal(obj$rect@coords$name, c("r1", "r2"))
   new_info <- data.frame(sizeX=10,sizeY=10,sizeC=1,resolutionLevel=1)
   obj$img_info <- new_info
   expect_equal(obj$img_info$sizeY, 10)

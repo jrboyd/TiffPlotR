@@ -10,24 +10,24 @@ Stores a rectangular region definition with numeric boundaries.
 \section{Slots}{
 
 \describe{
-\item{\code{xmin}}{Numeric left x coordinate}
-
-\item{\code{xmax}}{Numeric right x coordinate}
-
-\item{\code{ymin}}{Numeric bottom y coordinate}
-
-\item{\code{ymax}}{Numeric top y coordinate}
-
-\item{\code{name}}{Optional single character name for the rectangle}
+\item{\code{coords}}{data.frame with xmin/xmax/ymin/ymax/name columns}
 }}
 
 \examples{
-\dontrun{
-r <- TiffRect(10, 20, 30, 50, name = "roi1")
+r <- TiffRect(c(10, 15), 20, 40, 50, name = "roi1")
 r2 <- rect_shift(r, dx = 5, dy = -2)
-r3 <- rect_resize_mult(r, fx = 2)
-p <- ggplot() + geom_point(data = data.frame(x = 1:100, y = rnorm(100)), aes(x,y))
-p <- rect_annotate(r, p, fill = "red", alpha = 0.2)
-}
+r3 <- rect_resize_mult(r2, fx = 2, )
+r4 <- rect_resize_mult(r2, fx = .5)
+
+library(ggplot2)
+library(magrittr)
+ggplot() \%>\%
+  rect_annotate(r, fill = "red", alpha = 0.2) \%>\%
+  rect_annotate(r2, fill = "green", alpha = 0.2)
+
+ggplot() \%>\%
+  rect_annotate(r, fill = "red", alpha = 0.2) \%>\%
+  rect_annotate(r3, fill = "blue", alpha = 0.2) \%>\%
+  rect_annotate(r4, fill = "yellow", alpha = 0.2)
 
 }

@@ -15,7 +15,7 @@ TiffRect(xmin, xmax, ymin, ymax, name = "rect")
 
 \item{ymax}{top y coordinate}
 
-\item{name}{optional name (default "rect")}
+\item{name}{optional name(s). Recycled when length 1}
 }
 \value{
 a `TiffRect` object

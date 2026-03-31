@@ -53,12 +53,13 @@
 #' rect_annotate(p, view_rect2)
 fetchTiffData = function(tiff_path, rect = NULL, resolution = NULL, max_pixels = 800, precalc_max = NULL, show_raw = FALSE, quantile_norm = .999){
   rect = .rect_null_check(rect)
+  if(nrow(rect@coords) != 1) stop("fetchTiffData requires a TiffRect with exactly one row")
 
   .fetch_tiff_data(tiff_path,
-                  x_start = rect@xmin,
-                  x_width = rect@xmax - rect@xmin,
-                  y_start = rect@ymin,
-                  y_width = rect@ymax - rect@ymin,
+                  x_start = rect@coords$xmin[[1]],
+                  x_width = rect@coords$xmax[[1]] - rect@coords$xmin[[1]],
+                  y_start = rect@coords$ymin[[1]],
+                  y_width = rect@coords$ymax[[1]] - rect@coords$ymin[[1]],
                   resolution = resolution,
                   max_pixels = max_pixels,
                   precalc_max = precalc_max,
@@ -68,31 +69,51 @@ fetchTiffData = function(tiff_path, rect = NULL, resolution = NULL, max_pixels =
 }
 
 
-#' Title
+#' Convert a TIFF image array to a tidy data frame
 #'
-#' @param img_mat
+#' Melts a multi-channel image array into a long-format data frame with columns
+#' for pixel coordinates, channel, and pixel value.
 #'
-#' @returns
+#' @param img_mat A multi-dimensional image array (e.g. from RBioFormats::read.image)
+#'
+#' @returns A data frame with columns `i` (x coordinate), `j` (y coordinate),
+#'   `channel` (channel index), and `value` (pixel intensity)
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#'   img_mat <- RBioFormats::read.image("image.tiff", normalize = FALSE)
+#'   tidy <- makeImageTidy(img_mat)
+#'   head(tidy)
+#' }
 makeImageTidy = function(img_mat){
   tidy_img = reshape2::melt(img_data@.Data)
   colnames(tidy_img) = c("i", "j", "channel", "value")
   tidy_img
 }
 
-#' Title
+#' Convert a tidy image data frame to RGB
 #'
-#' @param img_df
-#' @param red_channel
-#' @param green_channel
-#' @param blue_channel
+#' Combines three channels from a tidy image data frame into a single RGB data
+#' frame with a hex color column, suitable for display with ggplot2.
 #'
-#' @returns
+#' @param img_df A tidy data frame with columns `i`, `j`, `channel`, and a
+#'   value column (see `value_var`)
+#' @param red_channel Channel number to map to red (default 1)
+#' @param green_channel Channel number to map to green (default 2)
+#' @param blue_channel Channel number to map to blue (default 3)
+#' @param value_var Name of the column to use for RGB values (default "norm_value")
+#'
+#' @returns A data frame with columns `i`, `j`, `red`, `green`, `blue`, and
+#'   `chex` (hex color string)
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#'   tiff_path <- exampleTiff()
+#'   img_obj <- fetchTiffData(tiff_path, TiffRect(900, 2300, 1400, 2800))
+#'   rgb_df <- convertTidyToRGB(img_obj@data, red_channel = 6, green_channel = 1, blue_channel = 5)
+#' }
 convertTidyToRGB = function(img_df, red_channel = 1, green_channel = 2, blue_channel = 3, value_var = "norm_value"){
   rv = red_channel
   gv = green_channel
@@ -303,11 +324,12 @@ fetchTiffData.rgb = function(tiff_path,
                               blue_channel = 5,
                               value_var = "norm_value"){
   rect = .rect_null_check(rect)
+  if(nrow(rect@coords) != 1) stop("fetchTiffData.rgb requires a TiffRect with exactly one row")
   .fetch_tiff_data.rgb(tiff_path,
-                      x_start = rect@xmin,
-                      x_width = rect@xmax - rect@xmin,
-                      y_start = rect@ymin,
-                      y_width = rect@ymax - rect@ymin,
+                                  x_start = rect@coords$xmin[[1]],
+                                  x_width = rect@coords$xmax[[1]] - rect@coords$xmin[[1]],
+                                  y_start = rect@coords$ymin[[1]],
+                                  y_width = rect@coords$ymax[[1]] - rect@coords$ymin[[1]],
                       resolution = resolution,
                       max_pixels = max_pixels,
                       red_channel = red_channel,

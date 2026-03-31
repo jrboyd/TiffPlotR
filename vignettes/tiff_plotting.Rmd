@@ -211,7 +211,7 @@ rs_1@plots$channels + annotate("point", x= x$x, y = x$y, color = "green")
 ```{r, fig.width = 16, fig.height=8}
 rs_1.2@plots$channels
 r = rs_1.2@rect
-x.2 = subset(x, x < r@xmax & x > r@xmin & y < r@ymax & y > r@ymin)
+x.2 = subset(x, x < r@coords$xmax[[1]] & x > r@coords$xmin[[1]] & y < r@coords$ymax[[1]] & y > r@coords$ymin[[1]])
 
 rs_1.2@plots$channels + annotate("point", x= x.2$x, y = x.2$y, color = "green")
 
