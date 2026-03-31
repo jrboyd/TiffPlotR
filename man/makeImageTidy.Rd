@@ -2,13 +2,25 @@
 % Please edit documentation in R/tiff_image_fetch.R
 \name{makeImageTidy}
 \alias{makeImageTidy}
-\title{Title}
+\title{Convert a TIFF image array to a tidy data frame}
 \usage{
 makeImageTidy(img_mat)
 }
 \arguments{
-\item{img_mat}{}
+\item{img_mat}{A multi-dimensional image array (e.g. from RBioFormats::read.image)}
+}
+\value{
+A data frame with columns `i` (x coordinate), `j` (y coordinate),
+  `channel` (channel index), and `value` (pixel intensity)
 }
 \description{
-Title
+Melts a multi-channel image array into a long-format data frame with columns
+for pixel coordinates, channel, and pixel value.
+}
+\examples{
+\dontrun{
+  img_mat <- RBioFormats::read.image("image.tiff", normalize = FALSE)
+  tidy <- makeImageTidy(img_mat)
+  head(tidy)
+}
 }

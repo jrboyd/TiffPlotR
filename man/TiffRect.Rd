@@ -23,3 +23,14 @@ a `TiffRect` object
 \description{
 Construct a TiffRect
 }
+\seealso{
+Class details: \code{\link{TiffRect-class}} for slot structure and validity rules.
+
+Geometric transforms: \code{\link{rect_shift}}, \code{\link{rect_resize_abs}},
+and \code{\link{rect_resize_mult}}.
+
+Spatial relationships: \code{\link{rect_intersection_region}},
+\code{\link{rect_test_overlap}}, and \code{\link{rect_test_contains}}.
+
+Visualization: \code{\link{rect_annotate}}.
+}

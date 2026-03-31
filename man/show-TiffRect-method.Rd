@@ -2,7 +2,7 @@
 % Please edit documentation in R/class_TiffRect.R
 \name{show,TiffRect-method}
 \alias{show,TiffRect-method}
-\title{Show method for TiffRect}
+\title{Show method for \code{\link{TiffRect}}}
 \usage{
 \S4method{show}{TiffRect}(object)
 }
@@ -10,5 +10,5 @@
 \item{object}{TiffRect}
 }
 \description{
-Show method for TiffRect
+Show method for \code{\link{TiffRect}}
 }

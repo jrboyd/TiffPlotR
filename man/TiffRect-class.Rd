@@ -5,7 +5,7 @@
 \alias{TiffRect-class}
 \title{Rectangle definition S4 class}
 \description{
-Stores a rectangular region definition with numeric boundaries.
+Stores a \code{\link{TiffRect}} region definition with numeric boundaries.
 }
 \section{Slots}{
 
@@ -13,21 +13,16 @@ Stores a rectangular region definition with numeric boundaries.
 \item{\code{coords}}{data.frame with xmin/xmax/ymin/ymax/name columns}
 }}
 
-\examples{
-r <- TiffRect(c(10, 15), 20, 40, 50, name = "roi1")
-r2 <- rect_shift(r, dx = 5, dy = -2)
-r3 <- rect_resize_mult(r2, fx = 2, )
-r4 <- rect_resize_mult(r2, fx = .5)
+\seealso{
+Construction and creation: \code{\link{TiffRect}} to build new rectangle objects.
 
-library(ggplot2)
-library(magrittr)
-ggplot() \%>\%
-  rect_annotate(r, fill = "red", alpha = 0.2) \%>\%
-  rect_annotate(r2, fill = "green", alpha = 0.2)
+Geometric transforms: \code{\link{rect_shift}} to translate rectangles,
+\code{\link{rect_resize_abs}} for fixed-size resizing, and
+\code{\link{rect_resize_mult}} for multiplier-based resizing.
 
-ggplot() \%>\%
-  rect_annotate(r, fill = "red", alpha = 0.2) \%>\%
-  rect_annotate(r3, fill = "blue", alpha = 0.2) \%>\%
-  rect_annotate(r4, fill = "yellow", alpha = 0.2)
+Spatial relationships: \code{\link{rect_intersection_region}} to compute overlap
+regions, \code{\link{rect_test_overlap}} to flag overlapping pairs, and
+\code{\link{rect_test_contains}} to test containment.
 
+Visualization: \code{\link{rect_annotate}} to draw rectangles on ggplot objects.
 }

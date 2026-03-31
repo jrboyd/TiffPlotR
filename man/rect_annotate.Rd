@@ -2,7 +2,7 @@
 % Please edit documentation in R/class_TiffRect.R
 \name{rect_annotate}
 \alias{rect_annotate}
-\title{Annotate a ggplot with a TiffRect}
+\title{Annotate a ggplot with a \code{\link{TiffRect}}}
 \usage{
 rect_annotate(p, rect, color = "green", fill = NA, alpha = 0.2, ...)
 }
@@ -23,5 +23,5 @@ rect_annotate(p, rect, color = "green", fill = NA, alpha = 0.2, ...)
 ggplot object with rectangle layer added
 }
 \description{
-Annotate a ggplot with a TiffRect
+Adds one or more \code{\link{TiffRect}} regions as \code{geom_rect} layers.
 }

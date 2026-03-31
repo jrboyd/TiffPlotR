@@ -284,11 +284,11 @@ test_that("chained rectangle operations work correctly", {
   expect_true(result@coords$ymin[[1]] < result@coords$ymax[[1]])
 })
 
-test_that("rect_intersect returns overlap rectangle", {
+test_that("rect_intersection_region returns overlap rectangle", {
   rect_a <- TiffRect(0, 10, 0, 10, name = "a")
   rect_b <- TiffRect(5, 15, 2, 8, name = "b")
 
-  out <- rect_intersect(rect_a, rect_b)
+  out <- rect_intersection_region(rect_a, rect_b)
   expect_s4_class(out, "TiffRect")
   expect_equal(out@coords$xmin[[1]], 5)
   expect_equal(out@coords$xmax[[1]], 10)
@@ -297,29 +297,54 @@ test_that("rect_intersect returns overlap rectangle", {
   expect_equal(out@coords$name[[1]], "a_intersect_b")
 })
 
-test_that("rect_intersect returns NULL for non-overlap", {
+test_that("rect_intersection_region returns NULL for non-overlap", {
   rect_a <- TiffRect(0, 2, 0, 2)
   rect_b <- TiffRect(3, 5, 3, 5)
 
-  expect_null(rect_intersect(rect_a, rect_b))
+  expect_null(rect_intersection_region(rect_a, rect_b))
 })
 
-test_that("rect_intersect invert returns non-overlap flag", {
-  overlapping_a <- TiffRect(0, 4, 0, 4)
-  overlapping_b <- TiffRect(1, 3, 1, 3)
-  separate_a <- TiffRect(0, 1, 0, 1)
-  separate_b <- TiffRect(2, 3, 2, 3)
-
-  expect_false(rect_intersect(overlapping_a, overlapping_b, invert = TRUE))
-  expect_true(rect_intersect(separate_a, separate_b, invert = TRUE))
-})
-
-test_that("rect_intersect supports vectorized pairwise intersection", {
+test_that("rect_intersection_region supports vectorized pairwise intersection", {
   rect_a <- TiffRect(c(0, 0), c(4, 2), c(0, 0), c(4, 2), name = c("a1", "a2"))
   rect_b <- TiffRect(c(1, 3), c(3, 4), c(1, 3), c(3, 4), name = c("b1", "b2"))
 
-  out <- rect_intersect(rect_a, rect_b)
+  out <- rect_intersection_region(rect_a, rect_b)
   expect_s4_class(out, "TiffRect")
   expect_equal(nrow(out@coords), 1)
   expect_equal(out@coords$name[[1]], "a1_intersect_b1")
+})
+
+test_that("rect_test_overlap returns logical and subsets correctly", {
+  r1 <- TiffRect(c(0, 10), c(5, 15), c(0, 10), c(5, 15), name = c("a", "b"))
+  r2 <- TiffRect(3, 8, 3, 8, name = "x")
+
+  result <- rect_test_overlap(r1, r2)
+  expect_equal(result, c(TRUE, FALSE))
+
+  sub <- rect_test_overlap(r1, r2, subset = TRUE)
+  expect_s4_class(sub, "TiffRect")
+  expect_equal(nrow(sub@coords), 1)
+  expect_equal(sub@coords$name[[1]], "a")
+
+  # non-overlapping pair returns NULL when subsetting
+  separate <- TiffRect(20, 30, 20, 30, name = "far")
+  expect_null(rect_test_overlap(r1, separate, subset = TRUE))
+})
+
+test_that("rect_test_contains returns logical and subsets correctly", {
+  r1 <- TiffRect(c(1, 0), c(9, 20), c(1, 0), c(9, 20), name = c("a", "b"))
+  container <- TiffRect(0, 10, 0, 10, name = "container")
+
+  result <- rect_test_contains(r1, container)
+  expect_equal(result, c(TRUE, FALSE))
+
+  sub <- rect_test_contains(r1, container, subset = TRUE)
+  expect_s4_class(sub, "TiffRect")
+  expect_equal(nrow(sub@coords), 1)
+  expect_equal(sub@coords$name[[1]], "a")
+
+  # fully outside returns NULL when subsetting
+  outside <- TiffRect(100, 200, 100, 200, name = "out")
+  r_out <- TiffRect(50, 150, 50, 150, name = "r")
+  expect_null(rect_test_contains(r_out, container, subset = TRUE))
 })

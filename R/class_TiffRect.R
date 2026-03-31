@@ -1,25 +1,21 @@
 #' Rectangle definition S4 class
 #'
-#' Stores a rectangular region definition with numeric boundaries.
+#' Stores a \code{\link{TiffRect}} region definition with numeric boundaries.
 #'
 #' @slot coords data.frame with xmin/xmax/ymin/ymax/name columns
+#' @seealso
+#' Construction and creation: \code{\link{TiffRect}} to build new rectangle objects.
 #'
-#' @examples
-#' r <- TiffRect(c(10, 15), 20, 40, 50, name = "roi1")
-#' r2 <- rect_shift(r, dx = 5, dy = -2)
-#' r3 <- rect_resize_mult(r2, fx = 2, )
-#' r4 <- rect_resize_mult(r2, fx = .5)
+#' Geometric transforms: \code{\link{rect_shift}} to translate rectangles,
+#' \code{\link{rect_resize_abs}} for fixed-size resizing, and
+#' \code{\link{rect_resize_mult}} for multiplier-based resizing.
 #'
-#' library(ggplot2)
-#' library(magrittr)
-#' ggplot() %>%
-#'   rect_annotate(r, fill = "red", alpha = 0.2) %>%
-#'   rect_annotate(r2, fill = "green", alpha = 0.2)
+#' Spatial relationships: \code{\link{rect_intersection_region}} to compute overlap
+#' regions, \code{\link{rect_test_overlap}} to flag overlapping pairs, and
+#' \code{\link{rect_test_contains}} to test containment.
 #'
-#' ggplot() %>%
-#'   rect_annotate(r, fill = "red", alpha = 0.2) %>%
-#'   rect_annotate(r3, fill = "blue", alpha = 0.2) %>%
-#'   rect_annotate(r4, fill = "yellow", alpha = 0.2)
+#' Visualization: \code{\link{rect_annotate}} to draw rectangles on ggplot objects.
+#'
 #'
 #' @export
 setClass("TiffRect",
@@ -53,6 +49,16 @@ utils::globalVariables(c("xmin", "xmax", "ymin", "ymax", "name"))
 #' @param ymax top y coordinate
 #' @param name optional name(s). Recycled when length 1
 #' @return a `TiffRect` object
+#' @seealso
+#' Class details: \code{\link{TiffRect-class}} for slot structure and validity rules.
+#'
+#' Geometric transforms: \code{\link{rect_shift}}, \code{\link{rect_resize_abs}},
+#' and \code{\link{rect_resize_mult}}.
+#'
+#' Spatial relationships: \code{\link{rect_intersection_region}},
+#' \code{\link{rect_test_overlap}}, and \code{\link{rect_test_contains}}.
+#'
+#' Visualization: \code{\link{rect_annotate}}.
 #' @export
 TiffRect <- function(xmin, xmax, ymin, ymax, name = "rect"){
   coords <- list(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax)
@@ -88,7 +94,7 @@ TiffRect <- function(xmin, xmax, ymin, ymax, name = "rect"){
   new("TiffRect", coords = coords_df)
 }
 
-#' Show method for TiffRect
+#' Show method for \code{\link{TiffRect}}
 #' @param object TiffRect
 setMethod("show", "TiffRect", function(object){
   n <- nrow(object@coords)
@@ -96,13 +102,47 @@ setMethod("show", "TiffRect", function(object){
   print(object@coords, row.names = FALSE)
 })
 
-#' Shift a TiffRect by dx and dy
+#' Shift and resize \code{\link{TiffRect}} objects
+#'
+#' Functions to transform a \code{\link{TiffRect}} object's position or dimensions.
 #'
 #' @param rect TiffRect object
 #' @param dx shift in x direction (numeric)
 #' @param dy shift in y direction (numeric)
-#' @return shifted TiffRect
+#' @param width desired absolute width (numeric)
+#' @param height desired absolute height (numeric)
+#' @param fx multiplier for width (numeric)
+#' @param fy multiplier for height (numeric, defaults to `fx`)
+#' @param anchor point to keep fixed during resize: `"center"` (default),
+#'   `"topleft"`, `"topright"`, `"botleft"`, `"botright"`
+#' @return a `TiffRect` with updated coordinates
 #' @export
+#' @examples
+#' library(ggplot2)
+#' library(magrittr)
+#' r <- TiffRect(10, 20, 10, 20, name = "original")
+#'
+#' # rect_shift: show original vs shifted
+#' r_shifted <- rect_shift(r, dx = 8, dy = 5)
+#' ggplot() %>%
+#'   rect_annotate(r, fill = "steelblue", alpha = 0.3) %>%
+#'   rect_annotate(r_shifted, fill = "tomato", alpha = 0.3)
+#'
+#' # rect_resize_abs: show original vs absolute-resized from different anchors
+#' r_abs_center  <- rect_resize_abs(r, width = 20, height = 20, anchor = "center")
+#' r_abs_topleft <- rect_resize_abs(r, width = 20, height = 20, anchor = "topleft")
+#' ggplot() %>%
+#'   rect_annotate(r, fill = "steelblue", alpha = 0.3) %>%
+#'   rect_annotate(r_abs_center,  fill = "tomato",    alpha = 0.3) %>%
+#'   rect_annotate(r_abs_topleft, fill = "goldenrod", alpha = 0.3)
+#'
+#' # rect_resize_mult: show original vs scaled up and down
+#' r_big   <- rect_resize_mult(r, fx = 2)
+#' r_small <- rect_resize_mult(r, fx = 0.5)
+#' ggplot() %>%
+#'   rect_annotate(r,       fill = "steelblue", alpha = 0.3) %>%
+#'   rect_annotate(r_big,   fill = "tomato",    alpha = 0.3) %>%
+#'   rect_annotate(r_small, fill = "seagreen",  alpha = 0.3)
 rect_shift <- function(rect, dx = 0, dy = 0){
   if(!is(rect, "TiffRect")) stop("rect must be a TiffRect")
   rect@coords$xmin <- rect@coords$xmin + dx
@@ -113,14 +153,19 @@ rect_shift <- function(rect, dx = 0, dy = 0){
   rect
 }
 
-#' Resize a TiffRect to absolute width/height (anchor=center)
-#'
-#' @param rect TiffRect
-#' @param width desired width (numeric)
-#' @param height desired height (numeric)
-#' @param anchor where to keep fixed: "center" (default), "topleft", "topright", "botleft", "botright"
-#' @return resized TiffRect
+#' @describeIn rect_shift Resize to absolute width and height anchored at a fixed point
 #' @export
+#' @examples
+#' # Demonstrate how each anchor keeps a different corner fixed
+#' library(ggplot2)
+#' library(magrittr)
+#' r <- TiffRect(10, 20, 10, 20, name = "original")
+#' r_tl <- rect_resize_abs(r, 15, 15, anchor = "topleft")
+#' r_br <- rect_resize_abs(r, 15, 15, anchor = "botright")
+#' ggplot() %>%
+#'   rect_annotate(r_tl, fill = "tomato",    alpha = 0.3) %>%
+#'   rect_annotate(r_br, fill = "seagreen",  alpha = 0.3) %>%
+#'   rect_annotate(r,    fill = "steelblue", alpha = 0.3, color = "red")
 rect_resize_abs <- function(rect, width, height, anchor = "center"){
   if(!is(rect, "TiffRect")) stop("rect must be a TiffRect")
   if(!anchor %in% c("center", "topleft", "topright", "botleft", "botright")){
@@ -152,14 +197,21 @@ rect_resize_abs <- function(rect, width, height, anchor = "center"){
   rect
 }
 
-#' Resize a TiffRect by multipliers
-#'
-#' @param rect TiffRect
-#' @param fx multiplier for width (numeric)
-#' @param fy multiplier for height (numeric, defaults to fx)
-#' @param anchor where to keep fixed: "center" (default), "topleft", "topright", "botleft", "botright"
-#' @return resized TiffRect
+#' @describeIn rect_shift Resize by multiplying current width and height
 #' @export
+#' @examples
+#' # Stretch width only vs uniform scaling
+#' library(ggplot2)
+#' library(magrittr)
+#' r <- TiffRect(10, 20, 10, 20, name = "original")
+#' r_wide   <- rect_resize_mult(r, fx = 2,   fy = 1)
+#' r_tall   <- rect_resize_mult(r, fx = 1,   fy = 2)
+#' r_scaled <- rect_resize_mult(r, fx = 1.5)
+#' ggplot() %>%
+#'   rect_annotate(r_wide,   fill = "tomato",    alpha = 0.3) %>%
+#'   rect_annotate(r_tall,   fill = "goldenrod", alpha = 0.3) %>%
+#'   rect_annotate(r_scaled, fill = "seagreen",  alpha = 0.3) %>%
+#'   rect_annotate(r,        fill = "steelblue", alpha = 0.3, color = "red")
 rect_resize_mult <- function(rect, fx = 1, fy = NULL, anchor = "center"){
   if(!is(rect, "TiffRect")) stop("rect must be a TiffRect")
   if(is.null(fy)) fy <- fx
@@ -168,22 +220,32 @@ rect_resize_mult <- function(rect, fx = 1, fy = NULL, anchor = "center"){
   rect_resize_abs(rect, width = w, height = h, anchor = anchor)
 }
 
-#' Intersect two TiffRect objects
+#' Spatial relationship functions for \code{\link{TiffRect}} objects
+#'
+#' Functions to query spatial relationships between \code{\link{TiffRect}}
+#' objects: compute the
+#' intersection region, test for pairwise overlap, or test for containment.
 #'
 #' @param rect TiffRect
-#' @param other TiffRect
-#' @param invert logical; when FALSE (default), returns the intersection rectangle
-#'   or NULL when there is no overlap. When TRUE, returns whether rectangles do
-#'   not overlap.
+#' @param other TiffRect to compare against
 #' @param name optional name(s) for returned intersection rectangle(s)
-#' @return A `TiffRect`, `NULL`, or logical depending on `invert`
+#' @param subset logical; when `FALSE` (default) returns a logical vector.
+#'   When `TRUE`, returns `rect` subsetted to matching rows, or `NULL` if none match.
+#' @return `rect_intersection_region`: a `TiffRect` of the overlapping region(s), or
+#'   `NULL` if there is no overlap; `rect_test_overlap` and `rect_test_contains`: a
+#'   logical vector, or a `TiffRect` when `subset = TRUE`
 #' @export
 #' @examples
+#' library(ggplot2)
+#' library(magrittr)
 #' r1 <- TiffRect(0, 10, 0, 10, name = "a")
 #' r2 <- TiffRect(5, 15, 5, 15, name = "b")
-#' rect_intersect(r1, r2)
-#' rect_intersect(r1, r2, invert = TRUE)
-rect_intersect <- function(rect, other, invert = FALSE, name = NULL){
+#' isect <- rect_intersection_region(r1, r2)
+#' ggplot() %>%
+#'   rect_annotate(r1,    fill = "steelblue", alpha = 0.3) %>%
+#'   rect_annotate(r2,    fill = "tomato",    alpha = 0.3) %>%
+#'   rect_annotate(isect, fill = "seagreen",  alpha = 0.5, color = "red")
+rect_intersection_region <- function(rect, other, name = NULL){
   if(!is(rect, "TiffRect")) stop("rect must be a TiffRect")
   if(!is(other, "TiffRect")) stop("other must be a TiffRect")
 
@@ -206,7 +268,6 @@ rect_intersect <- function(rect, other, invert = FALSE, name = NULL){
   ymax <- pmin(rect_coords$ymax, other_coords$ymax)
 
   has_overlap <- (xmin < xmax) & (ymin < ymax)
-  if(isTRUE(invert)) return(!has_overlap)
   if(!any(has_overlap)) return(NULL)
 
   default_names <- paste0(rect_coords$name, "_intersect_", other_coords$name)
@@ -228,7 +289,101 @@ rect_intersect <- function(rect, other, invert = FALSE, name = NULL){
   TiffRect(xmin = xmin[has_overlap], xmax = xmax[has_overlap], ymin = ymin[has_overlap], ymax = ymax[has_overlap], name = out_names)
 }
 
-#' Annotate a ggplot with a TiffRect
+#' @describeIn rect_intersection_region Test whether each paired row of `rect` overlaps with `other`
+#' @export
+#' @examples
+#' # Three candidate rects, one query — highlight those that overlap
+#' library(ggplot2)
+#' library(magrittr)
+#' candidates <- TiffRect(
+#'   xmin = c(0, 12, 6), xmax = c(5, 17, 11),
+#'   ymin = c(0, 0,  0), ymax = c(5, 5,  5),
+#'   name = c("left", "right", "center")
+#' )
+#' query <- TiffRect(4, 9, 0, 5, name = "query")
+#' hits <- rect_test_overlap(candidates, query, subset = TRUE)
+#' p <- ggplot() %>%
+#'   rect_annotate(candidates, fill = "steelblue", alpha = 0.3) %>%
+#'   rect_annotate(query,      fill = "tomato",    alpha = 0.2)
+#' if (!is.null(hits)) p <- rect_annotate(p, hits, fill = NA, alpha = 0.5, color = "red")
+#' p + labs(title = "hits are outlined in red")
+rect_test_overlap <- function(rect, other, subset = FALSE){
+  if(!is(rect, "TiffRect")) stop("rect must be a TiffRect")
+  if(!is(other, "TiffRect")) stop("other must be a TiffRect")
+
+  n1 <- nrow(rect@coords)
+  n2 <- nrow(other@coords)
+  if(n1 != n2 && n1 != 1 && n2 != 1){
+    stop("rect and other must have same number of rows or one must have one row")
+  }
+
+  n <- max(n1, n2)
+  idx1 <- rep(seq_len(n1), length.out = n)
+  idx2 <- rep(seq_len(n2), length.out = n)
+
+  rect_coords <- rect@coords[idx1, , drop = FALSE]
+  other_coords <- other@coords[idx2, , drop = FALSE]
+
+  has_overlap <- (pmin(rect_coords$xmax, other_coords$xmax) > pmax(rect_coords$xmin, other_coords$xmin)) &
+                 (pmin(rect_coords$ymax, other_coords$ymax) > pmax(rect_coords$ymin, other_coords$ymin))
+
+  if(!isTRUE(subset)) return(has_overlap)
+
+  rect_row_has_overlap <- as.logical(tapply(has_overlap, idx1, any))
+  if(!any(rect_row_has_overlap)) return(NULL)
+  new("TiffRect", coords = rect@coords[rect_row_has_overlap, , drop = FALSE])
+}
+
+#' @describeIn rect_intersection_region Test whether each row of `rect` is fully within `other`
+#' @export
+#' @examples
+#' # Two candidates, one fully inside the container, one partially outside
+#' library(ggplot2)
+#' library(magrittr)
+#' candidates <- TiffRect(
+#'   xmin = c(2, 8, 0), xmax = c(8, 14, 10),
+#'   ymin = c(2, 2, 0), ymax = c(8, 8, 10),
+#'   name = c("inside", "outside", "identical")
+#' )
+#' container <- TiffRect(0, 10, 0, 10, name = "container")
+#' contained <- rect_test_contains(candidates, container, subset = TRUE)
+#' p <- ggplot() %>%
+#'   rect_annotate(container,  fill = NA,          color = "black",     alpha = 1) %>%
+#'   rect_annotate(candidates, fill = "steelblue", alpha = 0.3)
+#' if (!is.null(contained)) p <- rect_annotate(p, contained, fill = "seagreen", alpha = 0.5, color = "red")
+#' p
+rect_test_contains <- function(rect, other, subset = FALSE){
+  if(!is(rect, "TiffRect")) stop("rect must be a TiffRect")
+  if(!is(other, "TiffRect")) stop("other must be a TiffRect")
+
+  n1 <- nrow(rect@coords)
+  n2 <- nrow(other@coords)
+  if(n1 != n2 && n1 != 1 && n2 != 1){
+    stop("rect and other must have same number of rows or one must have one row")
+  }
+
+  n <- max(n1, n2)
+  idx1 <- rep(seq_len(n1), length.out = n)
+  idx2 <- rep(seq_len(n2), length.out = n)
+
+  rect_coords <- rect@coords[idx1, , drop = FALSE]
+  other_coords <- other@coords[idx2, , drop = FALSE]
+
+  is_contained <- (rect_coords$xmin >= other_coords$xmin) &
+                  (rect_coords$xmax <= other_coords$xmax) &
+                  (rect_coords$ymin >= other_coords$ymin) &
+                  (rect_coords$ymax <= other_coords$ymax)
+
+  if(!isTRUE(subset)) return(is_contained)
+
+  rect_row_contained <- as.logical(tapply(is_contained, idx1, all))
+  if(!any(rect_row_contained)) return(NULL)
+  new("TiffRect", coords = rect@coords[rect_row_contained, , drop = FALSE])
+}
+
+#' Annotate a ggplot with a \code{\link{TiffRect}}
+#'
+#' Adds one or more \code{\link{TiffRect}} regions as \code{geom_rect} layers.
 #'
 #' @param rect TiffRect
 #' @param p ggplot object

@@ -2,9 +2,15 @@
 % Please edit documentation in R/class_TiffRect.R
 \name{rect_shift}
 \alias{rect_shift}
-\title{Shift a TiffRect by dx and dy}
+\alias{rect_resize_abs}
+\alias{rect_resize_mult}
+\title{Shift and resize \code{\link{TiffRect}} objects}
 \usage{
 rect_shift(rect, dx = 0, dy = 0)
+
+rect_resize_abs(rect, width, height, anchor = "center")
+
+rect_resize_mult(rect, fx = 1, fy = NULL, anchor = "center")
 }
 \arguments{
 \item{rect}{TiffRect object}
@@ -12,10 +18,77 @@ rect_shift(rect, dx = 0, dy = 0)
 \item{dx}{shift in x direction (numeric)}
 
 \item{dy}{shift in y direction (numeric)}
+
+\item{width}{desired absolute width (numeric)}
+
+\item{height}{desired absolute height (numeric)}
+
+\item{anchor}{point to keep fixed during resize: `"center"` (default),
+`"topleft"`, `"topright"`, `"botleft"`, `"botright"`}
+
+\item{fx}{multiplier for width (numeric)}
+
+\item{fy}{multiplier for height (numeric, defaults to `fx`)}
 }
 \value{
-shifted TiffRect
+a `TiffRect` with updated coordinates
 }
 \description{
-Shift a TiffRect by dx and dy
+Functions to transform a \code{\link{TiffRect}} object's position or dimensions.
+}
+\section{Functions}{
+\itemize{
+\item \code{rect_resize_abs()}: Resize to absolute width and height anchored at a fixed point
+
+\item \code{rect_resize_mult()}: Resize by multiplying current width and height
+
+}}
+\examples{
+library(ggplot2)
+library(magrittr)
+r <- TiffRect(10, 20, 10, 20, name = "original")
+
+# rect_shift: show original vs shifted
+r_shifted <- rect_shift(r, dx = 8, dy = 5)
+ggplot() \%>\%
+  rect_annotate(r, fill = "steelblue", alpha = 0.3) \%>\%
+  rect_annotate(r_shifted, fill = "tomato", alpha = 0.3)
+
+# rect_resize_abs: show original vs absolute-resized from different anchors
+r_abs_center  <- rect_resize_abs(r, width = 20, height = 20, anchor = "center")
+r_abs_topleft <- rect_resize_abs(r, width = 20, height = 20, anchor = "topleft")
+ggplot() \%>\%
+  rect_annotate(r, fill = "steelblue", alpha = 0.3) \%>\%
+  rect_annotate(r_abs_center,  fill = "tomato",    alpha = 0.3) \%>\%
+  rect_annotate(r_abs_topleft, fill = "goldenrod", alpha = 0.3)
+
+# rect_resize_mult: show original vs scaled up and down
+r_big   <- rect_resize_mult(r, fx = 2)
+r_small <- rect_resize_mult(r, fx = 0.5)
+ggplot() \%>\%
+  rect_annotate(r,       fill = "steelblue", alpha = 0.3) \%>\%
+  rect_annotate(r_big,   fill = "tomato",    alpha = 0.3) \%>\%
+  rect_annotate(r_small, fill = "seagreen",  alpha = 0.3)
+# Demonstrate how each anchor keeps a different corner fixed
+library(ggplot2)
+library(magrittr)
+r <- TiffRect(10, 20, 10, 20, name = "original")
+r_tl <- rect_resize_abs(r, 15, 15, anchor = "topleft")
+r_br <- rect_resize_abs(r, 15, 15, anchor = "botright")
+ggplot() \%>\%
+  rect_annotate(r_tl, fill = "tomato",    alpha = 0.3) \%>\%
+  rect_annotate(r_br, fill = "seagreen",  alpha = 0.3) \%>\%
+  rect_annotate(r,    fill = "steelblue", alpha = 0.3, color = "red")
+# Stretch width only vs uniform scaling
+library(ggplot2)
+library(magrittr)
+r <- TiffRect(10, 20, 10, 20, name = "original")
+r_wide   <- rect_resize_mult(r, fx = 2,   fy = 1)
+r_tall   <- rect_resize_mult(r, fx = 1,   fy = 2)
+r_scaled <- rect_resize_mult(r, fx = 1.5)
+ggplot() \%>\%
+  rect_annotate(r_wide,   fill = "tomato",    alpha = 0.3) \%>\%
+  rect_annotate(r_tall,   fill = "goldenrod", alpha = 0.3) \%>\%
+  rect_annotate(r_scaled, fill = "seagreen",  alpha = 0.3) \%>\%
+  rect_annotate(r,        fill = "steelblue", alpha = 0.3, color = "red")
 }

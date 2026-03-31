@@ -2,7 +2,7 @@
 % Please edit documentation in R/tiff_image_fetch.R
 \name{convertTidyToRGB}
 \alias{convertTidyToRGB}
-\title{Title}
+\title{Convert a tidy image data frame to RGB}
 \usage{
 convertTidyToRGB(
   img_df,
@@ -13,8 +13,29 @@ convertTidyToRGB(
 )
 }
 \arguments{
-\item{blue_channel}{}
+\item{img_df}{A tidy data frame with columns `i`, `j`, `channel`, and a
+value column (see `value_var`)}
+
+\item{red_channel}{Channel number to map to red (default 1)}
+
+\item{green_channel}{Channel number to map to green (default 2)}
+
+\item{blue_channel}{Channel number to map to blue (default 3)}
+
+\item{value_var}{Name of the column to use for RGB values (default "norm_value")}
+}
+\value{
+A data frame with columns `i`, `j`, `red`, `green`, `blue`, and
+  `chex` (hex color string)
 }
 \description{
-Title
+Combines three channels from a tidy image data frame into a single RGB data
+frame with a hex color column, suitable for display with ggplot2.
+}
+\examples{
+\dontrun{
+  tiff_path <- exampleTiff()
+  img_obj <- fetchTiffData(tiff_path, TiffRect(900, 2300, 1400, 2800))
+  rgb_df <- convertTidyToRGB(img_obj@data, red_channel = 6, green_channel = 1, blue_channel = 5)
+}
 }
