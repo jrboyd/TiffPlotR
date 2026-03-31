@@ -41,7 +41,7 @@
 #'   tiff_path,
 #'   view_rect2
 #' )
-#' 
+#'
 #' view_rect3 = rect_resize_mult(view_rect2, 3)
 #' fetchTiffData(
 #'   tiff_path,
@@ -49,11 +49,11 @@
 #' )
 #' tiff_data = .Last.value
 #' class(tiff_data)
-#' p = ggplot2::last_plot() 
-#' rect_annotate(p, view_rect2) 
+#' p = ggplot2::last_plot()
+#' rect_annotate(p, view_rect2)
 fetchTiffData = function(tiff_path, rect = NULL, resolution = NULL, max_pixels = 800, precalc_max = NULL, show_raw = FALSE, quantile_norm = .999){
   rect = .rect_null_check(rect)
-  
+
   .fetch_tiff_data(tiff_path,
                   x_start = rect@xmin,
                   x_width = rect@xmax - rect@xmin,
@@ -70,7 +70,7 @@ fetchTiffData = function(tiff_path, rect = NULL, resolution = NULL, max_pixels =
 
 #' Title
 #'
-#' @param img_mat 
+#' @param img_mat
 #'
 #' @returns
 #' @export
@@ -84,24 +84,27 @@ makeImageTidy = function(img_mat){
 
 #' Title
 #'
-#' @param img_df 
-#' @param red_channel 
-#' @param green_channel 
-#' @param blue_channel 
+#' @param img_df
+#' @param red_channel
+#' @param green_channel
+#' @param blue_channel
 #'
 #' @returns
 #' @export
 #'
 #' @examples
-convertTidyToRGB = function(img_df, red_channel = 1, green_channel = 2, blue_channel = 3){
+convertTidyToRGB = function(img_df, red_channel = 1, green_channel = 2, blue_channel = 3, value_var = "norm_value"){
   rv = red_channel
   gv = green_channel
   bv = blue_channel
-  
+  stopifnot(is.character(value_var))
+  stopifnot(length(value_var) == 1)
+  stopifnot(value_var %in% colnames(img_df))
+
   rgb_df = subset(img_df, channel %in% c(rv, gv, bv)) %>%
     tidyr::pivot_wider(id_cols = c("i", "j"), names_from = "channel", values_from = all_of(value_var))
   rgb_df = rgb_df %>% mutate(i, j, red = !!sym(as.character(rv)), green = !!sym(as.character(gv)), blue = !!sym(as.character(bv)), .keep = "none")
-  
+
   #strip NA values
   rgb_df = rgb_df %>%
     mutate(red = ifelse(is.na(red), 0, red)) %>%
@@ -155,11 +158,11 @@ convertTidyToRGB = function(img_df, red_channel = 1, green_channel = 2, blue_cha
         min(which(x_under)),
         min(which(y_under))
       )
-      resolution = img_info$resolutionLevel[k]  
+      resolution = img_info$resolutionLevel[k]
       message("selected resolution ", resolution, " to keep final max dimension under ", max_pixels, " pixels")
     }
-    
-    
+
+
   }
   res_info = subset(img_info, resolutionLevel == resolution)
 
@@ -208,6 +211,8 @@ convertTidyToRGB = function(img_df, red_channel = 1, green_channel = 2, blue_cha
   dim(img_data)
   tidy_img = reshape2::melt(img_data@.Data)
   colnames(tidy_img) = c("i", "j", "channel", "value")
+  tidy_img$i = (tidy_img$i + x_start*x_ratio)/x_ratio
+  tidy_img$j = (tidy_img$j + y_start*y_ratio)/y_ratio
   # tidy_img$i = as.integer(tidy_img$i)
   # tidy_img$j = as.integer(tidy_img$j)
 
@@ -236,7 +241,7 @@ convertTidyToRGB = function(img_df, red_channel = 1, green_channel = 2, blue_cha
   }
   message("full resolution image would have been ", x_pix, "x", y_pix, " (", pix_area,  " pixels)")
 
-  
+
   # return_data parameter removed; functions now return a TiffPlotData object
   if(show_raw){
     p = ggplot(tidy_img, aes(x = i, y = j, fill = value))
@@ -286,11 +291,9 @@ convertTidyToRGB = function(img_df, red_channel = 1, green_channel = 2, blue_cha
 #' @import ggplot2
 #'
 #' @examples
-#' \dontrun{
-#'   r <- TiffRect(100,500,200,600)
-#'   fetchTiffData.rgb("image.tiff", r,
-#'                      red_channel=6, green_channel=1, blue_channel=5)
-#' }
+#' tiff_path = exampleTiff()
+#' debug(TiffPlotR:::.fetch_tiff_data.rgb)
+#' fetchTiffData.rgb(tiff_path, rect = TiffRect(900,2300,1400,2800), red_channel=6, green_channel=1, blue_channel=5)
 fetchTiffData.rgb = function(tiff_path,
                               rect = NULL,
                               resolution = NULL,
@@ -366,11 +369,10 @@ fetchTiffData.rgb = function(tiff_path,
     y_start = y_start,
     y_width = y_width,
     resolution = resolution,
-    max_pixels = max_pixels
+    max_pixels = max_pixels,
   )
   img_df = img_obj@data
-  convertTidyToRGB(img_df, red_channel = red_channel, green_channel = green_channel, blue_channel = blue_channel)
-  # rgb_df %>% mutate(chex = rgb(red/max(red, na.rm = TRUE), green/max(green, na.rm = TRUE), blue/max(blue, na.rm = TRUE)))
+  rgb_df = convertTidyToRGB(img_df, red_channel = red_channel, green_channel = green_channel, blue_channel = blue_channel, value_var = value_var)
 
   leg_df = data.frame(channel = c(red_channel, green_channel, blue_channel))
   leg_df$dummy = LETTERS[seq_along(leg_df$channel)]
@@ -395,9 +397,9 @@ fetchTiffData.rgb = function(tiff_path,
       coord_fixed()
   })
   plots_list <- list(rgb = p_rgb)
-  data_df <- as.data.frame(rgb_df)
+  # data_df <- as.data.frame(rgb_df)
   new("TiffPlotData",
-      data = data_df,
+      data = img_obj@data,
       plots = plots_list,
       activePlot = names(plots_list)[1],
       tiff_path = tiff_path,

@@ -4,15 +4,15 @@
 \alias{convertTidyToRGB}
 \title{Title}
 \usage{
-convertTidyToRGB(img_df, red_channel = 1, green_channel = 2, blue_channel = 3)
+convertTidyToRGB(
+  img_df,
+  red_channel = 1,
+  green_channel = 2,
+  blue_channel = 3,
+  value_var = "norm_value"
+)
 }
 \arguments{
-\item{img_df}{}
-
-\item{red_channel}{}
-
-\item{green_channel}{}
-
 \item{blue_channel}{}
 }
 \description{

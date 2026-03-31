@@ -42,9 +42,7 @@ Creates an RGB composite visualization from a rectangular region of a TIFF image
 Combines three specified channels into red, green, and blue components.
 }
 \examples{
-\dontrun{
-  r <- TiffRect(100,500,200,600)
-  fetchTiffData.rgb("image.tiff", r,
-                     red_channel=6, green_channel=1, blue_channel=5)
-}
+tiff_path = exampleTiff()
+debug(TiffPlotR:::.fetch_tiff_data.rgb)
+fetchTiffData.rgb(tiff_path, rect = TiffRect(900,2300,1400,2800), red_channel=6, green_channel=1, blue_channel=5)
 }

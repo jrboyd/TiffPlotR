@@ -57,6 +57,6 @@ fetchTiffData(
 )
 tiff_data = .Last.value
 class(tiff_data)
-p = ggplot2::last_plot() 
-rect_annotate(p, view_rect2) 
+p = ggplot2::last_plot()
+rect_annotate(p, view_rect2)
 }
