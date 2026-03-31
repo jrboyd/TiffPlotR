@@ -398,5 +398,9 @@ rect_annotate <- function(p, rect, color = "green", fill = NA, alpha = 0.2, ...)
   if(!is(rect, "TiffRect")) stop("rect must be a TiffRect")
   if(missing(p)) stop("p must be a ggplot object")
   rect_df <- rect@coords
-  p + ggplot2::geom_rect(data = rect_df, mapping = ggplot2::aes_string(xmin = "xmin", xmax = "xmax", ymin = "ymin", ymax = "ymax"), inherit.aes = FALSE, color = color, fill = fill, alpha = alpha, ...)
+  p + ggplot2::geom_rect(data = rect_df,
+                         mapping = ggplot2::aes(xmin = xmin, xmax = xmax,
+                                                       ymin = ymin, ymax = ymax),
+                         inherit.aes = FALSE,
+                         color = color, fill = fill, alpha = alpha, ...)
 }
