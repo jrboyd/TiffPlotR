@@ -1,5 +1,5 @@
 
-.rect_null_check = function(rect){
+.rect_null_check = function(rect, tiff_path){
     if(is.null(rect)){
         img_info = read_tiff_meta_data(tiff_path)
         max_info = subset(img_info, resolutionLevel == 1)
@@ -52,7 +52,7 @@
 #' p = ggplot2::last_plot()
 #' rect_annotate(p, view_rect2)
 fetchTiffData = function(tiff_path, rect = NULL, resolution = NULL, max_pixels = 800, precalc_max = NULL, show_raw = FALSE, quantile_norm = .999){
-    rect = .rect_null_check(rect)
+    rect = .rect_null_check(rect, tiff_path)
     if(nrow(rect@coords) != 1) stop("fetchTiffData requires a TiffRect with exactly one row")
 
     .fetch_tiff_data(tiff_path,
