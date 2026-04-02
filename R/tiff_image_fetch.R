@@ -328,7 +328,7 @@ fetchTiffData.rgb = function(tiff_path,
                              blue_channel = 5,
                              channel_names = NULL,
                              value_var = "norm_value"){
-    rect = .rect_null_check(rect)
+    rect = .rect_null_check(rect, tiff_path)
     if(nrow(rect@coords) != 1) stop("fetchTiffData.rgb requires a TiffRect with exactly one row")
     .fetch_tiff_data.rgb(tiff_path,
                          x_start = rect@coords$xmin[[1]],
