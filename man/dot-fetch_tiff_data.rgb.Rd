@@ -15,6 +15,7 @@
   red_channel = 6,
   green_channel = 1,
   blue_channel = 5,
+  channel_names = NULL,
   value_var = "norm_value"
 )
 }

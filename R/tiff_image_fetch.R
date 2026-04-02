@@ -1,12 +1,12 @@
 
 .rect_null_check = function(rect){
-  if(is.null(rect)){
-    img_info = read_tiff_meta_data(tiff_path)
-    max_info = subset(img_info, resolutionLevel == 1)
-    rect = TiffRect(1, max_info$sizeX, 1, max_info$sizeY)
-  }
-  if(!is(rect, "TiffRect")) stop("rect must be a TiffRect object")
-  rect
+    if(is.null(rect)){
+        img_info = read_tiff_meta_data(tiff_path)
+        max_info = subset(img_info, resolutionLevel == 1)
+        rect = TiffRect(1, max_info$sizeX, 1, max_info$sizeY)
+    }
+    if(!is(rect, "TiffRect")) stop("rect must be a TiffRect object")
+    rect
 }
 
 #' Plot a rectangular region of a TIFF image
@@ -52,20 +52,20 @@
 #' p = ggplot2::last_plot()
 #' rect_annotate(p, view_rect2)
 fetchTiffData = function(tiff_path, rect = NULL, resolution = NULL, max_pixels = 800, precalc_max = NULL, show_raw = FALSE, quantile_norm = .999){
-  rect = .rect_null_check(rect)
-  if(nrow(rect@coords) != 1) stop("fetchTiffData requires a TiffRect with exactly one row")
+    rect = .rect_null_check(rect)
+    if(nrow(rect@coords) != 1) stop("fetchTiffData requires a TiffRect with exactly one row")
 
-  .fetch_tiff_data(tiff_path,
-                  x_start = rect@coords$xmin[[1]],
-                  x_width = rect@coords$xmax[[1]] - rect@coords$xmin[[1]],
-                  y_start = rect@coords$ymin[[1]],
-                  y_width = rect@coords$ymax[[1]] - rect@coords$ymin[[1]],
-                  resolution = resolution,
-                  max_pixels = max_pixels,
-                  precalc_max = precalc_max,
-                  show_raw = show_raw,
-                  quantile_norm = quantile_norm
-  )
+    .fetch_tiff_data(tiff_path,
+                     x_start = rect@coords$xmin[[1]],
+                     x_width = rect@coords$xmax[[1]] - rect@coords$xmin[[1]],
+                     y_start = rect@coords$ymin[[1]],
+                     y_width = rect@coords$ymax[[1]] - rect@coords$ymin[[1]],
+                     resolution = resolution,
+                     max_pixels = max_pixels,
+                     precalc_max = precalc_max,
+                     show_raw = show_raw,
+                     quantile_norm = quantile_norm
+    )
 }
 
 
@@ -87,9 +87,9 @@ fetchTiffData = function(tiff_path, rect = NULL, resolution = NULL, max_pixels =
 #'   head(tidy)
 #' }
 makeImageTidy = function(img_mat){
-  tidy_img = reshape2::melt(img_data@.Data)
-  colnames(tidy_img) = c("i", "j", "channel", "value")
-  tidy_img
+    tidy_img = reshape2::melt(img_data@.Data)
+    colnames(tidy_img) = c("i", "j", "channel", "value")
+    tidy_img
 }
 
 #' Convert a tidy image data frame to RGB
@@ -115,24 +115,24 @@ makeImageTidy = function(img_mat){
 #'   rgb_df <- convertTidyToRGB(img_obj@data, red_channel = 6, green_channel = 1, blue_channel = 5)
 #' }
 convertTidyToRGB = function(img_df, red_channel = 1, green_channel = 2, blue_channel = 3, value_var = "norm_value"){
-  rv = red_channel
-  gv = green_channel
-  bv = blue_channel
-  stopifnot(is.character(value_var))
-  stopifnot(length(value_var) == 1)
-  stopifnot(value_var %in% colnames(img_df))
+    rv = red_channel
+    gv = green_channel
+    bv = blue_channel
+    stopifnot(is.character(value_var))
+    stopifnot(length(value_var) == 1)
+    stopifnot(value_var %in% colnames(img_df))
 
-  rgb_df = subset(img_df, channel %in% c(rv, gv, bv)) %>%
-    tidyr::pivot_wider(id_cols = c("i", "j"), names_from = "channel", values_from = all_of(value_var))
-  rgb_df = rgb_df %>% mutate(i, j, red = !!sym(as.character(rv)), green = !!sym(as.character(gv)), blue = !!sym(as.character(bv)), .keep = "none")
+    rgb_df = subset(img_df, channel %in% c(rv, gv, bv)) %>%
+        tidyr::pivot_wider(id_cols = c("i", "j"), names_from = "channel", values_from = all_of(value_var))
+    rgb_df = rgb_df %>% mutate(i, j, red = !!sym(as.character(rv)), green = !!sym(as.character(gv)), blue = !!sym(as.character(bv)), .keep = "none")
 
-  #strip NA values
-  rgb_df = rgb_df %>%
-    mutate(red = ifelse(is.na(red), 0, red)) %>%
-    mutate(green = ifelse(is.na(green), 0, green)) %>%
-    mutate(blue = ifelse(is.na(blue), 0, blue))
-  rgb_df = rgb_df %>% mutate(chex = rgb(red/max(red, na.rm = TRUE), green/max(green, na.rm = TRUE), blue/max(blue, na.rm = TRUE)))
-  rgb_df
+    #strip NA values
+    rgb_df = rgb_df %>%
+        mutate(red = ifelse(is.na(red), 0, red)) %>%
+        mutate(green = ifelse(is.na(green), 0, green)) %>%
+        mutate(blue = ifelse(is.na(blue), 0, blue))
+    rgb_df = rgb_df %>% mutate(chex = rgb(red/max(red, na.rm = TRUE), green/max(green, na.rm = TRUE), blue/max(blue, na.rm = TRUE)))
+    rgb_df
 }
 
 #' Plot a TIFF image with custom dimensions
@@ -163,133 +163,133 @@ convertTidyToRGB = function(img_df, red_channel = 1, green_channel = 2, blue_cha
 #'   .fetch_tiff_data("image.tiff", x_start=100, x_width=400, y_start=200, y_width=400)
 #' }
 .fetch_tiff_data = function(tiff_path, x_start, x_width, y_start, y_width, resolution = NULL, max_pixels = 800, precalc_max = NULL, show_raw = FALSE, quantile_norm = .999){
-  img_info = read_tiff_meta_data(tiff_path)
-  max_info = subset(img_info, resolutionLevel == 1)
-  if(is.null(resolution)){
-    #select the highest resolution under max_pixels
-    x_pixels = x_width* img_info$sizeX / max_info$sizeX
-    y_pixels = y_width* img_info$sizeY / max_info$sizeY
-    x_under = x_pixels <= max_pixels
-    y_under = y_pixels <= max_pixels
-    if(!any(x_under) | !any(y_under)){
-      resolution = max(img_info$resolutionLevel)
-      message("selected lowest available resolution ", resolution, " though it exceeds max ", max_pixels, " pixels")
-    }else{
-      k = max(
-        min(which(x_under)),
-        min(which(y_under))
-      )
-      resolution = img_info$resolutionLevel[k]
-      message("selected resolution ", resolution, " to keep final max dimension under ", max_pixels, " pixels")
+    img_info = read_tiff_meta_data(tiff_path)
+    max_info = subset(img_info, resolutionLevel == 1)
+    if(is.null(resolution)){
+        #select the highest resolution under max_pixels
+        x_pixels = x_width* img_info$sizeX / max_info$sizeX
+        y_pixels = y_width* img_info$sizeY / max_info$sizeY
+        x_under = x_pixels <= max_pixels
+        y_under = y_pixels <= max_pixels
+        if(!any(x_under) | !any(y_under)){
+            resolution = max(img_info$resolutionLevel)
+            message("selected lowest available resolution ", resolution, " though it exceeds max ", max_pixels, " pixels")
+        }else{
+            k = max(
+                min(which(x_under)),
+                min(which(y_under))
+            )
+            resolution = img_info$resolutionLevel[k]
+            message("selected resolution ", resolution, " to keep final max dimension under ", max_pixels, " pixels")
+        }
+
+
+    }
+    res_info = subset(img_info, resolutionLevel == resolution)
+
+    x_ratio = res_info$sizeX / max_info$sizeX
+    y_ratio = res_info$sizeY / max_info$sizeY
+    img_data = RBioFormats::read.image(
+        tiff_path,
+        normalize = FALSE,
+        series = 1,
+        resolution = resolution,
+        subset = list(
+            X = seq(x_start*x_ratio, (x_start + x_width)*x_ratio),
+            Y = seq(y_start*y_ratio, (y_start + y_width)* y_ratio)
+        ))
+
+    # 1. Assume 'img_data' is a 2D matrix (or array converted to matrix)
+    # 2. Find indices of non-zero pixels
+    # non_zero_coords <- which(img_data != 0, arr.ind = TRUE)
+    # if(nrow(non_zero_coords) == 0){
+    # stop("No data found in area.")
+    # }
+    if(max(img_data) == 0){
+        stop("No data found in area.")
     }
 
+    # report plotted image stats
+    # x_pix = diff(range(non_zero_coords[, "x"])) %>% as.numeric
+    # y_pix = diff(range(non_zero_coords[, "y"])) %>% as.numeric
+    x_pix = ncol(img_data)
+    y_pix = nrow(img_data)
+    pix_area = x_pix*y_pix
+    if(pix_area >= 1e5){
+        pix_area = paste0(round(pix_area / 1e6, 2), "M")
+    }else if(pix_area >= 1e3){
+        pix_area = paste0(round(pix_area / 1e3, 2), "k")
+    }
+    message("plotted image is ", x_pix, "x", y_pix, " (", pix_area,  " pixels)")
 
-  }
-  res_info = subset(img_info, resolutionLevel == resolution)
+    # 3. Create sparse matrix
+    # tidy_img <- data.frame(
+    #   i = (non_zero_coords[, "x"] + x_start*x_ratio)/x_ratio,
+    #   j = (non_zero_coords[, "y"] + y_start*y_ratio)/y_ratio,
+    #   channel = non_zero_coords[, "c"],
+    #   value = img_data[non_zero_coords]
+    # )
+    dim(img_data)
+    tidy_img = reshape2::melt(img_data@.Data)
+    colnames(tidy_img) = c("i", "j", "channel", "value")
+    tidy_img$i = (tidy_img$i + x_start*x_ratio)/x_ratio
+    tidy_img$j = (tidy_img$j + y_start*y_ratio)/y_ratio
+    # tidy_img$i = as.integer(tidy_img$i)
+    # tidy_img$j = as.integer(tidy_img$j)
 
-  x_ratio = res_info$sizeX / max_info$sizeX
-  y_ratio = res_info$sizeY / max_info$sizeY
-  img_data = RBioFormats::read.image(
-    tiff_path,
-    normalize = FALSE,
-    series = 1,
-    resolution = resolution,
-    subset = list(
-      X = seq(x_start*x_ratio, (x_start + x_width)*x_ratio),
-      Y = seq(y_start*y_ratio, (y_start + y_width)* y_ratio)
-    ))
+    if(is.null(precalc_max)){
+        precalc_max = tidy_img  %>% group_by(channel) %>% summarise(min_value = 0, max_value = quantile(value, quantile_norm))
+    }
+    stopifnot(c("channel", "min_value", "max_value") %in% colnames(precalc_max))
 
-  # 1. Assume 'img_data' is a 2D matrix (or array converted to matrix)
-  # 2. Find indices of non-zero pixels
-  # non_zero_coords <- which(img_data != 0, arr.ind = TRUE)
-  # if(nrow(non_zero_coords) == 0){
-    # stop("No data found in area.")
-  # }
-  if(max(img_data) == 0){
-    stop("No data found in area.")
-  }
+    tidy_img = merge(tidy_img, precalc_max %>% select(channel, min_value, max_value), all.x = TRUE)
+    tidy_img = tidy_img %>% mutate(norm_value = (value - min_value) / (max_value - min_value))
+    tidy_img = tidy_img %>% select(!c(min_value, max_value))
 
-  # report plotted image stats
-  # x_pix = diff(range(non_zero_coords[, "x"])) %>% as.numeric
-  # y_pix = diff(range(non_zero_coords[, "y"])) %>% as.numeric
-  x_pix = ncol(img_data)
-  y_pix = nrow(img_data)
-  pix_area = x_pix*y_pix
-  if(pix_area >= 1e5){
-    pix_area = paste0(round(pix_area / 1e6, 2), "M")
-  }else if(pix_area >= 1e3){
-    pix_area = paste0(round(pix_area / 1e3, 2), "k")
-  }
-  message("plotted image is ", x_pix, "x", y_pix, " (", pix_area,  " pixels)")
-
-  # 3. Create sparse matrix
-  # tidy_img <- data.frame(
-  #   i = (non_zero_coords[, "x"] + x_start*x_ratio)/x_ratio,
-  #   j = (non_zero_coords[, "y"] + y_start*y_ratio)/y_ratio,
-  #   channel = non_zero_coords[, "c"],
-  #   value = img_data[non_zero_coords]
-  # )
-  dim(img_data)
-  tidy_img = reshape2::melt(img_data@.Data)
-  colnames(tidy_img) = c("i", "j", "channel", "value")
-  tidy_img$i = (tidy_img$i + x_start*x_ratio)/x_ratio
-  tidy_img$j = (tidy_img$j + y_start*y_ratio)/y_ratio
-  # tidy_img$i = as.integer(tidy_img$i)
-  # tidy_img$j = as.integer(tidy_img$j)
-
-  if(is.null(precalc_max)){
-    precalc_max = tidy_img  %>% group_by(channel) %>% summarise(min_value = 0, max_value = quantile(value, quantile_norm))
-  }
-  stopifnot(c("channel", "min_value", "max_value") %in% colnames(precalc_max))
-
-  tidy_img = merge(tidy_img, precalc_max %>% select(channel, min_value, max_value), all.x = TRUE)
-  tidy_img = tidy_img %>% mutate(norm_value = (value - min_value) / (max_value - min_value))
-  tidy_img = tidy_img %>% select(!c(min_value, max_value))
-
-  #cap norm_value to 1
-  tidy_img = tidy_img %>% mutate(norm_value = ifelse(norm_value > 1, 1, norm_value))
-  tidy_img = tidy_img %>% mutate(norm_value = ifelse(norm_value < 0, 0, norm_value))
+    #cap norm_value to 1
+    tidy_img = tidy_img %>% mutate(norm_value = ifelse(norm_value > 1, 1, norm_value))
+    tidy_img = tidy_img %>% mutate(norm_value = ifelse(norm_value < 0, 0, norm_value))
 
 
-  # report fullresolution image stats
-  x_pix = diff(range(tidy_img$i)) %>% as.numeric
-  y_pix = diff(range(tidy_img$j)) %>% as.numeric
-  pix_area = x_pix*y_pix
-  if(pix_area >= 1e5){
-    pix_area = paste0(round(pix_area / 1e6, 2), "M")
-  }else if(pix_area >= 1e3){
-    pix_area = paste0(round(pix_area / 1e3, 2), "k")
-  }
-  message("full resolution image would have been ", x_pix, "x", y_pix, " (", pix_area,  " pixels)")
+    # report fullresolution image stats
+    x_pix = diff(range(tidy_img$i)) %>% as.numeric
+    y_pix = diff(range(tidy_img$j)) %>% as.numeric
+    pix_area = x_pix*y_pix
+    if(pix_area >= 1e5){
+        pix_area = paste0(round(pix_area / 1e6, 2), "M")
+    }else if(pix_area >= 1e3){
+        pix_area = paste0(round(pix_area / 1e3, 2), "k")
+    }
+    message("full resolution image would have been ", x_pix, "x", y_pix, " (", pix_area,  " pixels)")
 
 
-  # return_data parameter removed; functions now return a TiffPlotData object
-  if(show_raw){
-    p = ggplot(tidy_img, aes(x = i, y = j, fill = value))
-  }else{
-    p = ggplot(tidy_img, aes(x = i, y = j, fill = norm_value))
-  }
-  p = p +
-    facet_wrap(~channel) +
-    scale_y_reverse() +
-    geom_raster() +
-    scale_fill_viridis_c(option = "magma") +
-    theme(panel.background = element_rect(fill = "gray20"), panel.grid = element_blank())
+    # return_data parameter removed; functions now return a TiffPlotData object
+    if(show_raw){
+        p = ggplot(tidy_img, aes(x = i, y = j, fill = value))
+    }else{
+        p = ggplot(tidy_img, aes(x = i, y = j, fill = norm_value))
+    }
+    p = p +
+        facet_wrap(~channel) +
+        scale_y_reverse() +
+        geom_raster() +
+        scale_fill_viridis_c(option = "magma") +
+        theme(panel.background = element_rect(fill = "gray20"), panel.grid = element_blank())
 
-  plots_list = list()
-  plots_list[[ifelse(show_raw, "raw", "normalized")]] = p
-  data_df <- as.data.frame(tidy_img)
-  # record rectangle corresponding to requested region
-  rect_obj <- TiffRect(x_start, x_start + x_width, y_start, y_start + y_width)
-  new("TiffPlotData",
-      data = data_df,
-      plots = plots_list,
-      activePlot = names(plots_list)[1],
-      tiff_path = tiff_path,
-      resolution = resolution,
-      precalc_max = if(is.null(precalc_max)) data.frame() else precalc_max,
-      rect = rect_obj,
-      img_info = img_info)
+    plots_list = list()
+    plots_list[[ifelse(show_raw, "raw", "normalized")]] = p
+    data_df <- as.data.frame(tidy_img)
+    # record rectangle corresponding to requested region
+    rect_obj <- TiffRect(x_start, x_start + x_width, y_start, y_start + y_width)
+    new("TiffPlotData",
+        data = data_df,
+        plots = plots_list,
+        activePlot = names(plots_list)[1],
+        tiff_path = tiff_path,
+        resolution = resolution,
+        precalc_max = if(is.null(precalc_max)) data.frame() else precalc_max,
+        rect = rect_obj,
+        img_info = img_info)
 }
 
 #' Plot a rectangular region of a TIFF image as RGB
@@ -313,30 +313,36 @@ convertTidyToRGB = function(img_df, red_channel = 1, green_channel = 2, blue_cha
 #'
 #' @examples
 #' tiff_path = exampleTiff()
-#' debug(TiffPlotR:::.fetch_tiff_data.rgb)
-#' fetchTiffData.rgb(tiff_path, rect = TiffRect(900,2300,1400,2800), red_channel=6, green_channel=1, blue_channel=5)
+#' fetchTiffData.rgb(tiff_path, rect = TiffRect(900,2300,1400,2800), red_channel=2, green_channel=3, blue_channel=1)
+#'
+#' channel_names = c("DAPI", "probe1", "probe2", "probe3", "probe4")
+#' fetchTiffData.rgb(tiff_path, rect = TiffRect(900,2300,1400,2800), red_channel=2, green_channel=3, blue_channel=1, channel_names = channel_names)
+#'
+#' fetchTiffData.rgb(tiff_path, rect = TiffRect(900,2300,1400,2800), red_channel=5, green_channel=4, blue_channel=1, channel_names = channel_names)
 fetchTiffData.rgb = function(tiff_path,
-                              rect = NULL,
-                              resolution = NULL,
-                              max_pixels = 800,
-                              red_channel = 6,
-                              green_channel = 1,
-                              blue_channel = 5,
-                              value_var = "norm_value"){
-  rect = .rect_null_check(rect)
-  if(nrow(rect@coords) != 1) stop("fetchTiffData.rgb requires a TiffRect with exactly one row")
-  .fetch_tiff_data.rgb(tiff_path,
-                                  x_start = rect@coords$xmin[[1]],
-                                  x_width = rect@coords$xmax[[1]] - rect@coords$xmin[[1]],
-                                  y_start = rect@coords$ymin[[1]],
-                                  y_width = rect@coords$ymax[[1]] - rect@coords$ymin[[1]],
-                      resolution = resolution,
-                      max_pixels = max_pixels,
-                      red_channel = red_channel,
-                      green_channel = green_channel,
-                      blue_channel = blue_channel,
-                      value_var = value_var
-  )
+                             rect = NULL,
+                             resolution = NULL,
+                             max_pixels = 800,
+                             red_channel = 6,
+                             green_channel = 1,
+                             blue_channel = 5,
+                             channel_names = NULL,
+                             value_var = "norm_value"){
+    rect = .rect_null_check(rect)
+    if(nrow(rect@coords) != 1) stop("fetchTiffData.rgb requires a TiffRect with exactly one row")
+    .fetch_tiff_data.rgb(tiff_path,
+                         x_start = rect@coords$xmin[[1]],
+                         x_width = rect@coords$xmax[[1]] - rect@coords$xmin[[1]],
+                         y_start = rect@coords$ymin[[1]],
+                         y_width = rect@coords$ymax[[1]] - rect@coords$ymin[[1]],
+                         resolution = resolution,
+                         max_pixels = max_pixels,
+                         red_channel = red_channel,
+                         green_channel = green_channel,
+                         blue_channel = blue_channel,
+                         channel_names = channel_names,
+                         value_var = value_var
+    )
 }
 
 #' Plot a TIFF image as RGB with custom dimensions
@@ -374,61 +380,71 @@ fetchTiffData.rgb = function(tiff_path,
 #' .fetch_tiff_data.rgb(tiff_path, x_start=900, x_width=1400, y_start=1400, y_width=1400, red_channel=6, green_channel=1, blue_channel=5)
 #' fetchTiffData.rgb(tiff_path, rect = TiffRect(900,2300,1400,2800), red_channel=6, green_channel=1, blue_channel=5)
 .fetch_tiff_data.rgb = function(
-    tiff_path,
-    x_start, x_width,
-    y_start, y_width,
-    resolution = NULL,
-    max_pixels = 800,
-    red_channel = 6,
-    green_channel = 1,
-    blue_channel = 5,
-    value_var = "norm_value"
+        tiff_path,
+        x_start, x_width,
+        y_start, y_width,
+        resolution = NULL,
+        max_pixels = 800,
+        red_channel = 6,
+        green_channel = 1,
+        blue_channel = 5,
+        channel_names = NULL,
+        value_var = "norm_value"
 ){
-  img_obj = .fetch_tiff_data(
-    tiff_path = tiff_path,
-    x_start = x_start,
-    x_width = x_width,
-    y_start = y_start,
-    y_width = y_width,
-    resolution = resolution,
-    max_pixels = max_pixels,
-  )
-  img_df = img_obj@data
-  rgb_df = convertTidyToRGB(img_df, red_channel = red_channel, green_channel = green_channel, blue_channel = blue_channel, value_var = value_var)
+    img_obj = .fetch_tiff_data(
+        tiff_path = tiff_path,
+        x_start = x_start,
+        x_width = x_width,
+        y_start = y_start,
+        y_width = y_width,
+        resolution = resolution,
+        max_pixels = max_pixels,
+    )
+    img_df = img_obj@data
+    rgb_df = convertTidyToRGB(img_df, red_channel = red_channel, green_channel = green_channel, blue_channel = blue_channel, value_var = value_var)
 
-  leg_df = data.frame(channel = c(red_channel, green_channel, blue_channel))
-  leg_df$dummy = LETTERS[seq_along(leg_df$channel)]
-  leg_df$dummy = factor(leg_df$dummy)
-  leg_df$colors = c("red", "green", "blue")
-  leg_cols = leg_df$colors
-  names(leg_cols) = leg_df$dummy
-  # leg_df$channel = factor(leg_df$channel, levels = leg_df$channel)
+    leg_df = data.frame(channel = c(red_channel, green_channel, blue_channel))
+    leg_df$dummy = as.character(leg_df$channel)
+    leg_df$dummy = factor(leg_df$dummy)
+    leg_df$colors = c("red", "green", "blue")
+    leg_cols = leg_df$colors
 
-  suppressWarnings({
-    p_rgb = ggplot() +
-      geom_raster(data = rgb_df, aes(x = i, y = j, fill = chex)) +
-      geom_point(data = leg_df, aes(color = dummy), x = NA, y = NA, alpha = 0) +
-      scale_color_manual(values = leg_cols, labels = leg_df$channel) +
-      guides(color = guide_legend(override.aes = list(size = 12, shape = 16, alpha = 1),
-                                  theme = theme(legend.background = element_blank(), legend.key = element_blank()))) +
-      scale_y_reverse() +
-      theme(panel.spacing = unit(0, "npc"), panel.background = element_blank(), axis.text = element_text(size = 6)) +
-      theme(legend.position = "bottom") +
-      scale_fill_identity() +
-      labs(x= "pixel", y = "pixel") +
-      coord_fixed()
-  })
-  plots_list <- list(rgb = p_rgb)
-  # data_df <- as.data.frame(rgb_df)
-  new("TiffPlotData",
-      data = img_obj@data,
-      plots = plots_list,
-      activePlot = names(plots_list)[1],
-      tiff_path = tiff_path,
-      resolution = img_obj@resolution,
-      precalc_max = img_obj@precalc_max,
-      rect = img_obj@rect,
-      img_info = img_obj@img_info)
+    # leg_df$channel = factor(leg_df$channel, levels = leg_df$channel)
+
+    if(is.null(channel_names)){
+        leg_df$channel_name = as.character(leg_df$dummy)
+
+    }else{
+        leg_df$channel_name = channel_names[leg_df$channel]
+    }
+    names(leg_cols) = leg_df$channel_name
+    # browser()
+    suppressWarnings({
+        p_rgb = ggplot() +
+            geom_raster(data = rgb_df, aes(x = i, y = j, fill = chex)) +
+            geom_point(data = leg_df, aes(color = channel_name), x = NA, y = NA, alpha = 0) +
+            scale_color_manual(values = leg_cols, name = NULL) +
+            guides(color = guide_legend(override.aes = list(size = 12, shape = 16, alpha = 1),
+                                        theme = theme(legend.background = element_blank(), legend.key = element_blank()))) +
+            scale_y_reverse() +
+            theme(panel.spacing = unit(0, "npc"), panel.background = element_blank(), axis.text = element_text(size = 6)) +
+            theme(legend.position = "bottom") +
+            scale_fill_identity() +
+            labs(x= "pixel", y = "pixel") +
+            coord_fixed()
+
+    })
+    plots_list <- list(rgb = p_rgb)
+    # data_df <- as.data.frame(rgb_df)
+    new("TiffPlotData",
+        data = img_obj@data,
+        plots = plots_list,
+        activePlot = names(plots_list)[1],
+        tiff_path = tiff_path,
+        resolution = img_obj@resolution,
+        precalc_max = img_obj@precalc_max,
+        rect = img_obj@rect,
+        img_info = img_obj@img_info)
 }
 
 #' Read TIFF image metadata
@@ -453,19 +469,19 @@ fetchTiffData.rgb = function(tiff_path,
 #' }
 #'
 read_tiff_meta_data = function(tiff_path){
-  img_info_df = RBioFormats::read.metadata(tiff_path)
-  if(!is(img_info_df, "ImageMetadataList")){
-    if(is(img_info_df, "ImageMetadata")){
-      img_info_df = list(img_info_df)
-    }else{
-      stop('unexpected class type from RBioFormats::read.metadata')
+    img_info_df = RBioFormats::read.metadata(tiff_path)
+    if(!is(img_info_df, "ImageMetadataList")){
+        if(is(img_info_df, "ImageMetadata")){
+            img_info_df = list(img_info_df)
+        }else{
+            stop('unexpected class type from RBioFormats::read.metadata')
+        }
     }
-  }
-  df.l = lapply(img_info_df@.Data, function(tmp){
-    as.data.frame(tmp$coreMetadata[c("series", "sizeX", "sizeY", "sizeC", "resolutionLevel")]  )
-  })
-  img_info_df = do.call(rbind, df.l)
-  subset(img_info_df, series == 1)
+    df.l = lapply(img_info_df@.Data, function(tmp){
+        as.data.frame(tmp$coreMetadata[c("series", "sizeX", "sizeY", "sizeC", "resolutionLevel")]  )
+    })
+    img_info_df = do.call(rbind, df.l)
+    subset(img_info_df, series == 1)
 }
 
 #' Calculate quantile values for image channels
@@ -491,20 +507,20 @@ read_tiff_meta_data = function(tiff_path){
 #' }
 #'
 calc_qmax = function(tiff_path, resolution){
-  message("calc_qmax for ", resolution)
-  img_data = RBioFormats::read.image(
-    tiff_path,
-    normalize = FALSE,
-    series = 1,
-    resolution = resolution
-  )
-  # qmaxes = apply(img_data, MARGIN = 3, FUN = quantile, probs = .995)
+    message("calc_qmax for ", resolution)
+    img_data = RBioFormats::read.image(
+        tiff_path,
+        normalize = FALSE,
+        series = 1,
+        resolution = resolution
+    )
+    # qmaxes = apply(img_data, MARGIN = 3, FUN = quantile, probs = .995)
 
-  qres = apply(img_data, MARGIN = 3, FUN = quantile, probs = c(0, .1, .5, .75, .9, .95, .995, .998, .9999))
-  qres
-  qmaxes = qres["99.8%",]
-  qmins = qres["90%",]
-  data.frame(channel = seq_along(qmaxes), max_value = qmaxes, min_value = qmins, resolution = resolution)
+    qres = apply(img_data, MARGIN = 3, FUN = quantile, probs = c(0, .1, .5, .75, .9, .95, .995, .998, .9999))
+    qres
+    qmaxes = qres["99.8%",]
+    qmins = qres["90%",]
+    data.frame(channel = seq_along(qmaxes), max_value = qmaxes, min_value = qmins, resolution = resolution)
 }
 
 #' Find high-intensity regions in a TIFF image
@@ -529,30 +545,30 @@ calc_qmax = function(tiff_path, resolution){
 #' }
 #'
 find_qmax_regions = function(tiff_path, resolution = 5){
-  info_df = read_tiff_meta_data(tiff_path)
-  info_df.max = subset(info_df, resolutionLevel == min(resolutionLevel))
-  info_df.sel = subset(info_df, resolutionLevel == resolution)
-  img_obj = fetchTiffData(tiff_path, 0, info_df.max$sizeX, 0, info_df.max$sizeY, resolution = resolution)
-  img_data = img_obj@data
-  img_qmaxes = img_data %>% group_by(channel) %>% summarise(qmax = quantile(value, .998))
-  qmaxes_todo = split(img_qmaxes$qmax, img_qmaxes$channel)
+    info_df = read_tiff_meta_data(tiff_path)
+    info_df.max = subset(info_df, resolutionLevel == min(resolutionLevel))
+    info_df.sel = subset(info_df, resolutionLevel == resolution)
+    img_obj = fetchTiffData(tiff_path, 0, info_df.max$sizeX, 0, info_df.max$sizeY, resolution = resolution)
+    img_data = img_obj@data
+    img_qmaxes = img_data %>% group_by(channel) %>% summarise(qmax = quantile(value, .998))
+    qmaxes_todo = split(img_qmaxes$qmax, img_qmaxes$channel)
 
-  browser()
-  img_data = as.data.table(img_data)
-  region_data = list()
-  for(i_chan in as.integer(img_qmaxes$channel)){
-    i_qmax = subset(img_qmaxes, channel == i_chan)$qmax
-    over_qmax = img_data[channel == i_chan][value >= i_qmax]
-    # use kmeans to find regions that aren't too close to one another
-    kres = kmeans(over_qmax, centers = 20)
-    over_qmax
-    cent_dt = as.data.table(kres$centers)
-    # centroids aren't necessarily points, find closest actual point to center
-    cent_dt[, c("nearest_i", "nearest_j") := {min_idx = which.min(sqrt((i - over_qmax$i)^2 + (j - over_qmax$j) ^ 2)); list(over_qmax$i[min_idx], over_qmax$j[min_idx])}, .(i, j)]
+    browser()
+    img_data = as.data.table(img_data)
+    region_data = list()
+    for(i_chan in as.integer(img_qmaxes$channel)){
+        i_qmax = subset(img_qmaxes, channel == i_chan)$qmax
+        over_qmax = img_data[channel == i_chan][value >= i_qmax]
+        # use kmeans to find regions that aren't too close to one another
+        kres = kmeans(over_qmax, centers = 20)
+        over_qmax
+        cent_dt = as.data.table(kres$centers)
+        # centroids aren't necessarily points, find closest actual point to center
+        cent_dt[, c("nearest_i", "nearest_j") := {min_idx = which.min(sqrt((i - over_qmax$i)^2 + (j - over_qmax$j) ^ 2)); list(over_qmax$i[min_idx], over_qmax$j[min_idx])}, .(i, j)]
 
-    region_data[[i_chan]] = cent_dt[, .(i = nearest_i, j = nearest_j, channel)]
-  }
-  do.call(rbind, region_data)
+        region_data[[i_chan]] = cent_dt[, .(i = nearest_i, j = nearest_j, channel)]
+    }
+    do.call(rbind, region_data)
 }
 
 
@@ -564,6 +580,6 @@ find_qmax_regions = function(tiff_path, resolution = 5){
 #' @examples
 #' exampleTiff()
 exampleTiff = function(){
-  system.file("extdata/301_CellPellet_NegCTL_Scan1_PC3Guise.ome.tiff", package = "TiffPlotR", mustWork = TRUE)
+    system.file("extdata/301_CellPellet_NegCTL_Scan1_PC3Guise.ome.tiff", package = "TiffPlotR", mustWork = TRUE)
 }
 

@@ -12,6 +12,7 @@ fetchTiffData.rgb(
   red_channel = 6,
   green_channel = 1,
   blue_channel = 5,
+  channel_names = NULL,
   value_var = "norm_value"
 )
 }
@@ -43,6 +44,10 @@ Combines three specified channels into red, green, and blue components.
 }
 \examples{
 tiff_path = exampleTiff()
-debug(TiffPlotR:::.fetch_tiff_data.rgb)
-fetchTiffData.rgb(tiff_path, rect = TiffRect(900,2300,1400,2800), red_channel=6, green_channel=1, blue_channel=5)
+fetchTiffData.rgb(tiff_path, rect = TiffRect(900,2300,1400,2800), red_channel=2, green_channel=3, blue_channel=1)
+
+channel_names = c("DAPI", "probe1", "probe2", "probe3", "probe4")
+fetchTiffData.rgb(tiff_path, rect = TiffRect(900,2300,1400,2800), red_channel=2, green_channel=3, blue_channel=1, channel_names = channel_names)
+
+fetchTiffData.rgb(tiff_path, rect = TiffRect(900,2300,1400,2800), red_channel=5, green_channel=4, blue_channel=1, channel_names = channel_names)
 }
