@@ -12,7 +12,8 @@ fetchTiffData(
   precalc_max = NULL,
   show_raw = FALSE,
   quantile_norm = 0.999,
-  channel_names = NULL
+  channel_names = NULL,
+  selected_channels = NULL
 )
 }
 \arguments{
@@ -63,6 +64,21 @@ rect_annotate(img_res3, view_rect)
 img_res.labels = fetchTiffData(
   tiff_path,
   view_rect3,
-  channel_names = LETTERS[1:6]
+  channel_names = c("DAPI", paste("channel", LETTERS[1:5]))
+)
+img_res.labels
+
+fetchTiffData(
+  tiff_path,
+  view_rect,
+  channel_names = c("DAPI", paste("channel", LETTERS[1:5])),
+  selected_channels = c(4, 1:2)
+)
+
+fetchTiffData(
+  tiff_path,
+  view_rect,
+  channel_names = c("DAPI", paste("channel", LETTERS[1:5])),
+  selected_channels = c("channel B", "channel E", "DAPI")
 )
 }

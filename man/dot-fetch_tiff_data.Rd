@@ -15,7 +15,8 @@
   precalc_max = NULL,
   show_raw = FALSE,
   quantile_norm = 0.999,
-  channel_names = NULL
+  channel_names = NULL,
+  selected_channels = NULL
 )
 }
 \arguments{

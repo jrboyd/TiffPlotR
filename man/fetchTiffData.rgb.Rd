@@ -9,9 +9,9 @@ fetchTiffData.rgb(
   rect = NULL,
   resolution = NULL,
   max_pixels = 800,
-  red_channel = 6,
-  green_channel = 1,
-  blue_channel = 5,
+  red_channel = 2,
+  green_channel = 3,
+  blue_channel = 1,
   channel_names = NULL,
   value_var = "norm_value"
 )

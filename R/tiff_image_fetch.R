@@ -54,10 +54,26 @@
 #' img_res.labels = fetchTiffData(
 #'   tiff_path,
 #'   view_rect3,
-#'   channel_names = c("DAPI", paste("channel ", LETTERS[1:5]))
+#'   channel_names = c("DAPI", paste("channel", LETTERS[1:5]))
 #' )
 #' img_res.labels
-fetchTiffData = function(tiff_path, rect = NULL, resolution = NULL, max_pixels = 800, precalc_max = NULL, show_raw = FALSE, quantile_norm = .999, channel_names = NULL){
+#'
+#' # select channels by index or name, also controls order
+#' fetchTiffData(
+#'   tiff_path,
+#'   view_rect,
+#'   channel_names = c("DAPI", paste("channel", LETTERS[1:5])),
+#'   selected_channels = c(4, 1:2)
+#' )
+
+#'
+#' fetchTiffData(
+#'   tiff_path,
+#'   view_rect,
+#'   channel_names = c("DAPI", paste("channel", LETTERS[1:5])),
+#'   selected_channels = c("channel B", "channel E", "DAPI")
+#' )
+fetchTiffData = function(tiff_path, rect = NULL, resolution = NULL, max_pixels = 800, precalc_max = NULL, show_raw = FALSE, quantile_norm = .999, channel_names = NULL, selected_channels = NULL){
     rect = .rect_null_check(rect, tiff_path)
     if(nrow(rect@coords) != 1) stop("fetchTiffData requires a TiffRect with exactly one row")
     .fetch_tiff_data(tiff_path,
@@ -70,7 +86,8 @@ fetchTiffData = function(tiff_path, rect = NULL, resolution = NULL, max_pixels =
                      precalc_max = precalc_max,
                      show_raw = show_raw,
                      quantile_norm = quantile_norm,
-                     channel_names = channel_names
+                     channel_names = channel_names,
+                     selected_channels = selected_channels
     )
 }
 
@@ -168,7 +185,12 @@ convertTidyToRGB = function(img_df, red_channel = 1, green_channel = 2, blue_cha
 #' \dontrun{
 #'   .fetch_tiff_data("image.tiff", x_start=100, x_width=400, y_start=200, y_width=400)
 #' }
-.fetch_tiff_data = function(tiff_path, x_start, x_width, y_start, y_width, resolution = NULL, max_pixels = 800, precalc_max = NULL, show_raw = FALSE, quantile_norm = .999, channel_names = NULL){
+.fetch_tiff_data = function(tiff_path, x_start, x_width, y_start, y_width,
+                            resolution = NULL, max_pixels = 800,
+                            precalc_max = NULL, show_raw = FALSE,
+                            quantile_norm = .999,
+                            channel_names = NULL,
+                            selected_channels = NULL){
     img_info = read_tiff_meta_data(tiff_path)
     max_info = subset(img_info, resolutionLevel == 1)
     if(is.null(resolution)){
@@ -279,6 +301,30 @@ convertTidyToRGB = function(img_df, red_channel = 1, green_channel = 2, blue_cha
         }
         tidy_img$channel = channel_names[tidy_img$channel]
         tidy_img$channel = factor(tidy_img$channel, levels = channel_names)
+    }
+    # wait to selectchannels until possibly converted to names
+    if(!is.null(selected_channels)){
+        if(is.numeric(selected_channels)){
+            if(!is.null(channel_names)){
+                selected_channels = channel_names[selected_channels]
+            }
+        }
+        if(!(is.numeric(selected_channels) & is.numeric(tidy_img$channel))){
+            .is_char_or_fact = function(x){
+                is.character(x) | is.factor(x)
+            }
+            if(!(.is_char_or_fact(selected_channels) & .is_char_or_fact(tidy_img$channel))){
+                stop("selected channels and channel are not compatible types.")
+            }
+        }
+        if(!all(selected_channels %in% unique(tidy_img$channel))){
+            stop("Not all selected_channels are present. Offending values:\n",
+                 paste(setdiff(selected_channels, unique(tidy_img$channel)), collapse = "\n")
+            )
+        }
+        tidy_img = tidy_img %>% dplyr::filter(channel %in% selected_channels)
+        #selected channels also impose order
+        tidy_img$channel = factor(tidy_img$channel, levels = selected_channels)
     }
 
     # return_data parameter removed; functions now return a TiffPlotData object
@@ -475,7 +521,6 @@ apply_coord_cartesian = function(img_data){
         leg_df$channel_name = channel_names[leg_df$channel]
     }
     names(leg_cols) = leg_df$channel_name
-    # browser()
     suppressWarnings({
         p_rgb = ggplot() +
             geom_raster(data = rgb_df, aes(x = i, y = j, fill = chex)) +
