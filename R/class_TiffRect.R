@@ -393,7 +393,7 @@ rect_test_contains <- function(rect, other, subset = FALSE){
 #' @param ... additional args passed to geom_rect
 #' @return ggplot object with rectangle layer added
 #' @export
-#' @importFrom ggplot2 geom_rect aes ggplot2
+#' @importFrom ggplot2 geom_rect aes ggplot
 methods::setGeneric("rect_annotate", function(p, rect, color = "green", fill = NA, alpha = 0.2, ...){
   standardGeneric("rect_annotate")
 })
@@ -407,10 +407,22 @@ methods::setGeneric("rect_annotate", function(p, rect, color = "green", fill = N
                            color = color, fill = fill, alpha = alpha, ...)
 }
 
-setOldClass("ggplot")
 #' @rdname rect_annotate
 #' @export
-setMethod("rect_annotate", signature(p = "ggplot", rect = "TiffRect"), .annotate_ggplot)
+setMethod("rect_annotate", signature(p = "ANY", rect = "ANY"),
+          function(p, rect, color = "green", fill = NA, alpha = 0.2, ...){
+              if (!inherits(p, "ggplot")) stop("p must be a ggplot or TiffPlotData object")
+              if (!inherits(rect, "TiffRect")) stop("rect must be a TiffRect")
+              stop("unexpected error")
+          })
+
+#' @rdname rect_annotate
+#' @export
+setMethod("rect_annotate", signature(p = "ANY", rect = "TiffRect"),
+          function(p, rect, color = "green", fill = NA, alpha = 0.2, ...){
+            if (!inherits(p, "ggplot")) stop("p must be a ggplot or TiffPlotData object")
+            .annotate_ggplot(p, rect, color, fill, alpha, ...)
+          })
 
 #' @rdname rect_annotate
 #' @return for `p` as `TiffPlotData`, returns a `TiffPlotData` with the active plot annotated
@@ -440,4 +452,55 @@ setMethod("rect_annotate", signature(p = "TiffPlotData", rect = "TiffRect"),
                                                     ...)
             validObject(p)
             p
+          })
+
+#' Subset a \code{\link{TiffRect}} by row index
+#'
+#' @param x TiffRect object
+#' @param i integer, logical, or character index
+#' @param j unused
+#' @param drop unused
+#' @return a `TiffRect` containing only the selected rows
+#' @export
+#' @examples
+#' r <- TiffRect(xmin = 1:4, xmax = 2:5, ymin = 1:4, ymax = 2:5,
+#'               name = c("a", "b", "c", "d"))
+#' r[2:3]          # rows 2 and 3
+#' r[c(TRUE, FALSE, TRUE, FALSE)]  # logical index
+setMethod("[", signature(x = "TiffRect"),
+          function(x, i, j, ..., drop = FALSE){
+            new("TiffRect", coords = x@coords[i, , drop = FALSE])
+          })
+
+#' Combine \code{\link{TiffRect}} objects
+#'
+#' Concatenates the coordinate rows of two or more `TiffRect` objects.
+#' Duplicate names are made unique automatically (same rule as in `TiffRect()`).
+#'
+#' @param ... one or more `TiffRect` objects
+#' @return a single `TiffRect` with all rows combined
+#' @export
+#' @examples
+#' r1 <- TiffRect(0, 5, 0, 5, name = "a")
+#' r2 <- TiffRect(10, 15, 10, 15, name = "b")
+#' r3 <- c(r1, r2)
+setMethod("c", signature(x = "TiffRect"),
+          function(x, ...){
+            parts <- c(list(x), list(...))
+            if(!all(vapply(parts, is, logical(1), "TiffRect"))){
+              stop("all arguments to c() must be TiffRect objects")
+            }
+            combined <- do.call(rbind, lapply(parts, function(r) r@coords))
+            rownames(combined) <- NULL
+            unique_rect_names <- function(nms){
+              out <- nms
+              dup_keys <- unique(nms[duplicated(nms) | duplicated(nms, fromLast = TRUE)])
+              for(key in dup_keys){
+                idx <- which(nms == key)
+                out[idx] <- paste0(key, "_", seq_along(idx))
+              }
+              out
+            }
+            combined$name <- unique_rect_names(combined$name)
+            new("TiffRect", coords = combined)
           })

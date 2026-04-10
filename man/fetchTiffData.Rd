@@ -50,7 +50,6 @@ img_res2 = fetchTiffData(
   tiff_path,
   view_rect2
 )
-rect_annotate(img_res2@plots[[1]], view_rect)
 rect_annotate(img_res2, view_rect)
 
 view_rect3 = rect_resize_mult(view_rect2, 3)
@@ -58,9 +57,12 @@ img_res3 = fetchTiffData(
   tiff_path,
   view_rect3
 )
-\%>\% rect_annotate(view_rect)
-tiff_data = .Last.value
-class(tiff_data)
-p = ggplot2::last_plot()
-rect_annotate(p, view_rect2)
+rect_annotate(img_res3, view_rect)
+
+
+img_res.labels = fetchTiffData(
+  tiff_path,
+  view_rect3,
+  channel_names = LETTERS[1:6]
+)
 }

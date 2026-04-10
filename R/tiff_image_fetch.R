@@ -49,6 +49,14 @@
 #'   view_rect3
 #' )
 #' rect_annotate(img_res3, view_rect)
+#'
+#'
+#' img_res.labels = fetchTiffData(
+#'   tiff_path,
+#'   view_rect3,
+#'   channel_names = c("DAPI", paste("channel ", LETTERS[1:5]))
+#' )
+#' img_res.labels
 fetchTiffData = function(tiff_path, rect = NULL, resolution = NULL, max_pixels = 800, precalc_max = NULL, show_raw = FALSE, quantile_norm = .999, channel_names = NULL){
     rect = .rect_null_check(rect, tiff_path)
     if(nrow(rect@coords) != 1) stop("fetchTiffData requires a TiffRect with exactly one row")
@@ -260,6 +268,18 @@ convertTidyToRGB = function(img_df, red_channel = 1, green_channel = 2, blue_cha
     }
     message("full resolution image would have been ", x_pix, "x", y_pix, " (", pix_area,  " pixels)")
 
+    if(!is.null(channel_names)){
+        nchan = length(unique(tidy_img$channel))
+        if(length(channel_names) != nchan){
+            if(length(channel_names) < nchan){
+                stop("Not enough channel names specified, expected ", nchan, " channels.")
+            }else{
+                warning("Too many channel names specified, only found ", nchan, " channels.")
+            }
+        }
+        tidy_img$channel = channel_names[tidy_img$channel]
+        tidy_img$channel = factor(tidy_img$channel, levels = channel_names)
+    }
 
     # return_data parameter removed; functions now return a TiffPlotData object
     if(show_raw){
@@ -267,9 +287,7 @@ convertTidyToRGB = function(img_df, red_channel = 1, green_channel = 2, blue_cha
     }else{
         p = ggplot(tidy_img, aes(x = i, y = j, fill = norm_value))
     }
-    if(!is.null(channel_names)){
-        browser()
-    }
+
     p = p +
         facet_wrap(~channel) +
         scale_y_reverse() +
@@ -326,9 +344,9 @@ fetchTiffData.rgb = function(tiff_path,
                              rect = NULL,
                              resolution = NULL,
                              max_pixels = 800,
-                             red_channel = 6,
-                             green_channel = 1,
-                             blue_channel = 5,
+                             red_channel = 2,
+                             green_channel = 3,
+                             blue_channel = 1,
                              channel_names = NULL,
                              value_var = "norm_value"){
     rect = .rect_null_check(rect, tiff_path)

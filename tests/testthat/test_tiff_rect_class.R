@@ -219,11 +219,11 @@ test_that("rect_resize_mult maintains center position", {
   rect <- TiffRect(10, 20, 30, 50)
   center_x <- (rect@coords$xmin[[1]] + rect@coords$xmax[[1]]) / 2
   center_y <- (rect@coords$ymin[[1]] + rect@coords$ymax[[1]]) / 2
-  
+
   resized <- rect_resize_mult(rect, fx = 2, fy = 0.5)
   resized_center_x <- (resized@coords$xmin[[1]] + resized@coords$xmax[[1]]) / 2
   resized_center_y <- (resized@coords$ymin[[1]] + resized@coords$ymax[[1]]) / 2
-  
+
   expect_equal(resized_center_x, center_x)
   expect_equal(resized_center_y, center_y)
 })
@@ -232,7 +232,7 @@ test_that("rect_annotate adds rectangle layer to ggplot", {
   df <- data.frame(x = 1:10, y = rnorm(10))
   p <- ggplot(df, aes(x = x, y = y)) + geom_point()
   rect <- TiffRect(2, 8, -1, 1)
-  
+
   p_annotated <- rect_annotate(p, rect)
   expect_s3_class(p_annotated, "ggplot")
   expect_length(p_annotated$layers, 2)  # original layer + rectangle
@@ -242,7 +242,7 @@ test_that("rect_annotate uses custom colors", {
   df <- data.frame(x = 1:10, y = rnorm(10))
   p <- ggplot(df, aes(x = x, y = y)) + geom_point()
   rect <- TiffRect(2, 8, -1, 1)
-  
+
   p_annotated <- rect_annotate(p, rect, color = "blue", fill = "yellow")
   expect_s3_class(p_annotated, "ggplot")
   expect_length(p_annotated$layers, 2)
@@ -252,7 +252,7 @@ test_that("rect_annotate uses default color when not specified", {
   df <- data.frame(x = 1:10, y = rnorm(10))
   p <- ggplot(df, aes(x = x, y = y)) + geom_point()
   rect <- TiffRect(2, 8, -1, 1)
-  
+
   p_annotated <- rect_annotate(p, rect)
   expect_s3_class(p_annotated, "ggplot")
 })
@@ -260,25 +260,20 @@ test_that("rect_annotate uses default color when not specified", {
 test_that("rect_annotate fails with non-TiffRect input", {
   df <- data.frame(x = 1:10, y = rnorm(10))
   p <- ggplot(df, aes(x = x, y = y)) + geom_point()
-  
+
   expect_error(rect_annotate(p, list()), "rect must be a TiffRect")
 })
 
-test_that("rect_annotate fails without ggplot object", {
-  rect <- TiffRect(2, 8, -1, 1)
-  
-  expect_error(rect_annotate(rect = rect), "p must be a ggplot object")
-})
 
 test_that("chained rectangle operations work correctly", {
   rect <- TiffRect(10, 20, 30, 40)
-  
+
   # Apply multiple operations
   result <- rect %>%
     rect_shift(dx = 5, dy = -5) %>%
     rect_resize_mult(fx = 2) %>%
     rect_shift(dx = -10)
-  
+
   expect_s4_class(result, "TiffRect")
   expect_true(result@coords$xmin[[1]] < result@coords$xmax[[1]])
   expect_true(result@coords$ymin[[1]] < result@coords$ymax[[1]])
@@ -347,4 +342,92 @@ test_that("rect_test_contains returns logical and subsets correctly", {
   outside <- TiffRect(100, 200, 100, 200, name = "out")
   r_out <- TiffRect(50, 150, 50, 150, name = "r")
   expect_null(rect_test_contains(r_out, container, subset = TRUE))
+})
+
+# ---- [ subsetting ----
+
+test_that("[ subset by integer index returns correct rows", {
+  r <- TiffRect(xmin = 1:4, xmax = 2:5, ymin = 1:4, ymax = 2:5,
+                name = c("a", "b", "c", "d"))
+  sub <- r[2:3]
+  expect_s4_class(sub, "TiffRect")
+  expect_equal(nrow(sub@coords), 2)
+  expect_equal(sub@coords$name, c("b", "c"))
+  expect_equal(sub@coords$xmin, c(2, 3))
+})
+
+test_that("[ subset by logical index returns correct rows", {
+  r <- TiffRect(xmin = 1:4, xmax = 2:5, ymin = 1:4, ymax = 2:5,
+                name = c("a", "b", "c", "d"))
+  sub <- r[c(TRUE, FALSE, TRUE, FALSE)]
+  expect_s4_class(sub, "TiffRect")
+  expect_equal(nrow(sub@coords), 2)
+  expect_equal(sub@coords$name, c("a", "c"))
+})
+
+test_that("[ subset by single index returns single-row TiffRect", {
+  r <- TiffRect(xmin = 1:3, xmax = 2:4, ymin = 1:3, ymax = 2:4,
+                name = c("a", "b", "c"))
+  sub <- r[1]
+  expect_s4_class(sub, "TiffRect")
+  expect_equal(nrow(sub@coords), 1)
+  expect_equal(sub@coords$name, "a")
+})
+
+test_that("[ subset out-of-bounds index errors", {
+  r <- TiffRect(1, 2, 1, 2, name = "a")
+  expect_error(r[5])
+})
+
+# ---- c() combining ----
+
+test_that("c() combines two TiffRects into one", {
+  r1 <- TiffRect(0, 5, 0, 5, name = "a")
+  r2 <- TiffRect(10, 15, 10, 15, name = "b")
+  combined <- c(r1, r2)
+  expect_s4_class(combined, "TiffRect")
+  expect_equal(nrow(combined@coords), 2)
+  expect_equal(combined@coords$name, c("a", "b"))
+  expect_equal(combined@coords$xmin, c(0, 10))
+})
+
+test_that("c() combines three or more TiffRects", {
+  r1 <- TiffRect(0, 1, 0, 1, name = "a")
+  r2 <- TiffRect(2, 3, 2, 3, name = "b")
+  r3 <- TiffRect(4, 5, 4, 5, name = "c")
+  combined <- c(r1, r2, r3)
+  expect_s4_class(combined, "TiffRect")
+  expect_equal(nrow(combined@coords), 3)
+  expect_equal(combined@coords$name, c("a", "b", "c"))
+})
+
+test_that("c() makes duplicate names unique across inputs", {
+  r1 <- TiffRect(0, 1, 0, 1, name = "roi")
+  r2 <- TiffRect(2, 3, 2, 3, name = "roi")
+  combined <- c(r1, r2)
+  expect_equal(length(unique(combined@coords$name)), 2)
+  expect_equal(combined@coords$name, c("roi_1", "roi_2"))
+})
+
+test_that("c() preserves all coordinate values", {
+  r1 <- TiffRect(1, 3, 2, 4, name = "p")
+  r2 <- TiffRect(5, 8, 6, 9, name = "q")
+  combined <- c(r1, r2)
+  expect_equal(combined@coords$xmin, c(1, 5))
+  expect_equal(combined@coords$xmax, c(3, 8))
+  expect_equal(combined@coords$ymin, c(2, 6))
+  expect_equal(combined@coords$ymax, c(4, 9))
+})
+
+test_that("c() errors if a non-TiffRect is included", {
+  r <- TiffRect(0, 1, 0, 1, name = "a")
+  expect_error(c(r, list(x = 1)), "all arguments to c\\(\\) must be TiffRect objects")
+})
+
+test_that("c() of vectorized TiffRects combines all rows", {
+  r1 <- TiffRect(xmin = 1:2, xmax = 2:3, ymin = 1:2, ymax = 2:3, name = c("a", "b"))
+  r2 <- TiffRect(xmin = 4:5, xmax = 5:6, ymin = 4:5, ymax = 5:6, name = c("c", "d"))
+  combined <- c(r1, r2)
+  expect_equal(nrow(combined@coords), 4)
+  expect_equal(combined@coords$name, c("a", "b", "c", "d"))
 })

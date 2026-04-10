@@ -2,13 +2,16 @@
 % Please edit documentation in R/class_TiffRect.R
 \name{rect_annotate}
 \alias{rect_annotate}
-\alias{rect_annotate,ggplot,TiffRect-method}
+\alias{rect_annotate,ANY,ANY-method}
+\alias{rect_annotate,ANY,TiffRect-method}
 \alias{rect_annotate,TiffPlotData,TiffRect-method}
 \title{Annotate a ggplot with a \code{\link{TiffRect}}}
 \usage{
 rect_annotate(p, rect, color = "green", fill = NA, alpha = 0.2, ...)
 
-\S4method{rect_annotate}{ggplot,TiffRect}(p, rect, color = "green", fill = NA, alpha = 0.2, ...)
+\S4method{rect_annotate}{ANY,ANY}(p, rect, color = "green", fill = NA, alpha = 0.2, ...)
+
+\S4method{rect_annotate}{ANY,TiffRect}(p, rect, color = "green", fill = NA, alpha = 0.2, ...)
 
 \S4method{rect_annotate}{TiffPlotData,TiffRect}(p, rect, color = "green", fill = NA, alpha = 0.2, ...)
 }
