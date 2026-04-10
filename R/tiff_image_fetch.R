@@ -32,29 +32,26 @@
 #' @examples
 #' tiff_path = exampleTiff()
 #' view_rect = TiffRect(900,2300,1400,2800)
-#' fetchTiffData(
+#' img_res1 = fetchTiffData(
 #'   tiff_path,
 #'   view_rect
 #' )
 #' view_rect2 = rect_shift(view_rect, dx = 1000, dy = 500)
-#' fetchTiffData(
+#' img_res2 = fetchTiffData(
 #'   tiff_path,
 #'   view_rect2
 #' )
+#' rect_annotate(img_res2, view_rect)
 #'
 #' view_rect3 = rect_resize_mult(view_rect2, 3)
-#' fetchTiffData(
+#' img_res3 = fetchTiffData(
 #'   tiff_path,
 #'   view_rect3
 #' )
-#' tiff_data = .Last.value
-#' class(tiff_data)
-#' p = ggplot2::last_plot()
-#' rect_annotate(p, view_rect2)
-fetchTiffData = function(tiff_path, rect = NULL, resolution = NULL, max_pixels = 800, precalc_max = NULL, show_raw = FALSE, quantile_norm = .999){
+#' rect_annotate(img_res3, view_rect)
+fetchTiffData = function(tiff_path, rect = NULL, resolution = NULL, max_pixels = 800, precalc_max = NULL, show_raw = FALSE, quantile_norm = .999, channel_names = NULL){
     rect = .rect_null_check(rect, tiff_path)
     if(nrow(rect@coords) != 1) stop("fetchTiffData requires a TiffRect with exactly one row")
-
     .fetch_tiff_data(tiff_path,
                      x_start = rect@coords$xmin[[1]],
                      x_width = rect@coords$xmax[[1]] - rect@coords$xmin[[1]],
@@ -64,7 +61,8 @@ fetchTiffData = function(tiff_path, rect = NULL, resolution = NULL, max_pixels =
                      max_pixels = max_pixels,
                      precalc_max = precalc_max,
                      show_raw = show_raw,
-                     quantile_norm = quantile_norm
+                     quantile_norm = quantile_norm,
+                     channel_names = channel_names
     )
 }
 
@@ -162,7 +160,7 @@ convertTidyToRGB = function(img_df, red_channel = 1, green_channel = 2, blue_cha
 #' \dontrun{
 #'   .fetch_tiff_data("image.tiff", x_start=100, x_width=400, y_start=200, y_width=400)
 #' }
-.fetch_tiff_data = function(tiff_path, x_start, x_width, y_start, y_width, resolution = NULL, max_pixels = 800, precalc_max = NULL, show_raw = FALSE, quantile_norm = .999){
+.fetch_tiff_data = function(tiff_path, x_start, x_width, y_start, y_width, resolution = NULL, max_pixels = 800, precalc_max = NULL, show_raw = FALSE, quantile_norm = .999, channel_names = NULL){
     img_info = read_tiff_meta_data(tiff_path)
     max_info = subset(img_info, resolutionLevel == 1)
     if(is.null(resolution)){
@@ -269,12 +267,17 @@ convertTidyToRGB = function(img_df, red_channel = 1, green_channel = 2, blue_cha
     }else{
         p = ggplot(tidy_img, aes(x = i, y = j, fill = norm_value))
     }
+    if(!is.null(channel_names)){
+        browser()
+    }
     p = p +
         facet_wrap(~channel) +
         scale_y_reverse() +
         geom_raster() +
         scale_fill_viridis_c(option = "magma") +
         theme(panel.background = element_rect(fill = "gray20"), panel.grid = element_blank())
+
+    p = .apply_coord_rect(p, TiffRect(x_start, x_start+x_width, y_start, y_start+y_width), ggplot2::coord_fixed)
 
     plots_list = list()
     plots_list[[ifelse(show_raw, "raw", "normalized")]] = p
@@ -343,6 +346,42 @@ fetchTiffData.rgb = function(tiff_path,
                          channel_names = channel_names,
                          value_var = value_var
     )
+}
+
+.apply_coord_rect = function(p, r, coord_FUN){
+    p + coord_FUN(xlim = c(r@coords$xmin, r@coords$xmax), ylim = c(r@coords$ymin, r@coords$ymax))
+}
+
+.apply_coord_FUN = function(img_data, coord_FUN){
+    r = img_data@rect
+    img_data@plots = lapply(img_data@plots, function(p){
+        .apply_coord_rect(p, r, coord_FUN)
+    })
+
+}
+
+#' Title
+#'
+#' @param img_data
+#'
+#' @returns
+#' @export
+#'
+#' @examples
+apply_coord_fixed = function(img_data){
+    .apply_coord_FUN(img_data, ggplot2::coord_fixed)
+}
+
+#' Title
+#'
+#' @param img_data
+#'
+#' @returns
+#' @export
+#'
+#' @examples
+apply_coord_cartesian = function(img_data){
+    .apply_coord_FUN(img_data, ggplot2::coord_cartesian)
 }
 
 #' Plot a TIFF image as RGB with custom dimensions
@@ -430,10 +469,9 @@ fetchTiffData.rgb = function(tiff_path,
             theme(panel.spacing = unit(0, "npc"), panel.background = element_blank(), axis.text = element_text(size = 6)) +
             theme(legend.position = "bottom") +
             scale_fill_identity() +
-            labs(x= "pixel", y = "pixel") +
-            coord_fixed()
-
+            labs(x= "pixel", y = "pixel")
     })
+    p_rgb = .apply_coord_rect(p_rgb, TiffRect(x_start, x_start+x_width, y_start, y_start+y_width), ggplot2::coord_fixed)
     plots_list <- list(rgb = p_rgb)
     # data_df <- as.data.frame(rgb_df)
     new("TiffPlotData",

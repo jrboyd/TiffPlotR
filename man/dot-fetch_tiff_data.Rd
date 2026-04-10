@@ -14,7 +14,8 @@
   max_pixels = 800,
   precalc_max = NULL,
   show_raw = FALSE,
-  quantile_norm = 0.999
+  quantile_norm = 0.999,
+  channel_names = NULL
 )
 }
 \arguments{

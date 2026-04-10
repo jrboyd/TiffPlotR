@@ -393,14 +393,51 @@ rect_test_contains <- function(rect, other, subset = FALSE){
 #' @param ... additional args passed to geom_rect
 #' @return ggplot object with rectangle layer added
 #' @export
-#' @importFrom ggplot2 geom_rect aes
-rect_annotate <- function(p, rect, color = "green", fill = NA, alpha = 0.2, ...){
-  if(!is(rect, "TiffRect")) stop("rect must be a TiffRect")
-  if(missing(p)) stop("p must be a ggplot object")
-  rect_df <- rect@coords
-  p + ggplot2::geom_rect(data = rect_df,
-                         mapping = ggplot2::aes(xmin = xmin, xmax = xmax,
-                                                       ymin = ymin, ymax = ymax),
-                         inherit.aes = FALSE,
-                         color = color, fill = fill, alpha = alpha, ...)
+#' @importFrom ggplot2 geom_rect aes ggplot2
+methods::setGeneric("rect_annotate", function(p, rect, color = "green", fill = NA, alpha = 0.2, ...){
+  standardGeneric("rect_annotate")
+})
+
+.annotate_ggplot = function(p, rect, color = "green", fill = NA, alpha = 0.2, ...){
+    rect_df <- rect@coords
+    p + ggplot2::geom_rect(data = rect_df,
+                           mapping = ggplot2::aes(xmin = xmin, xmax = xmax,
+                                                  ymin = ymin, ymax = ymax),
+                           inherit.aes = FALSE,
+                           color = color, fill = fill, alpha = alpha, ...)
 }
+
+setOldClass("ggplot")
+#' @rdname rect_annotate
+#' @export
+setMethod("rect_annotate", signature(p = "ggplot", rect = "TiffRect"), .annotate_ggplot)
+
+#' @rdname rect_annotate
+#' @return for `p` as `TiffPlotData`, returns a `TiffPlotData` with the active plot annotated
+#' @export
+setMethod("rect_annotate", signature(p = "TiffPlotData", rect = "TiffRect"),
+          function(p, rect, color = "green", fill = NA, alpha = 0.2, ...){
+            active_name <- p@activePlot
+            if(!grepl("annotated", active_name)){
+                anno_name = paste0(active_name, ".annotated")
+            }else{
+                anno_name = active_name
+            }
+            p@activePlot = anno_name
+
+            if(!active_name %in% names(p@plots)){
+              stop("activePlot is not present in plots")
+            }
+            active_plot <- p@plots[[active_name]]
+            if(!is(active_plot, "ggplot")){
+              stop("active plot must be a ggplot object")
+            }
+            p@plots[[anno_name]] <- .annotate_ggplot(active_plot,
+                                                    rect,
+                                                    color = color,
+                                                    fill = fill,
+                                                    alpha = alpha,
+                                                    ...)
+            validObject(p)
+            p
+          })

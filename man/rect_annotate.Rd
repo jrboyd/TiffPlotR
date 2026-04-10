@@ -2,9 +2,15 @@
 % Please edit documentation in R/class_TiffRect.R
 \name{rect_annotate}
 \alias{rect_annotate}
+\alias{rect_annotate,ggplot,TiffRect-method}
+\alias{rect_annotate,TiffPlotData,TiffRect-method}
 \title{Annotate a ggplot with a \code{\link{TiffRect}}}
 \usage{
 rect_annotate(p, rect, color = "green", fill = NA, alpha = 0.2, ...)
+
+\S4method{rect_annotate}{ggplot,TiffRect}(p, rect, color = "green", fill = NA, alpha = 0.2, ...)
+
+\S4method{rect_annotate}{TiffPlotData,TiffRect}(p, rect, color = "green", fill = NA, alpha = 0.2, ...)
 }
 \arguments{
 \item{p}{ggplot object}
@@ -21,6 +27,8 @@ rect_annotate(p, rect, color = "green", fill = NA, alpha = 0.2, ...)
 }
 \value{
 ggplot object with rectangle layer added
+
+for `p` as `TiffPlotData`, returns a `TiffPlotData` with the active plot annotated
 }
 \description{
 Adds one or more \code{\link{TiffRect}} regions as \code{geom_rect} layers.

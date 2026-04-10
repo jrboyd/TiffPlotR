@@ -11,7 +11,8 @@ fetchTiffData(
   max_pixels = 800,
   precalc_max = NULL,
   show_raw = FALSE,
-  quantile_norm = 0.999
+  quantile_norm = 0.999,
+  channel_names = NULL
 )
 }
 \arguments{
@@ -40,21 +41,24 @@ coordinates to image dimensions.
 \examples{
 tiff_path = exampleTiff()
 view_rect = TiffRect(900,2300,1400,2800)
-fetchTiffData(
+img_res1 = fetchTiffData(
   tiff_path,
   view_rect
 )
 view_rect2 = rect_shift(view_rect, dx = 1000, dy = 500)
-fetchTiffData(
+img_res2 = fetchTiffData(
   tiff_path,
   view_rect2
 )
+rect_annotate(img_res2@plots[[1]], view_rect)
+rect_annotate(img_res2, view_rect)
 
 view_rect3 = rect_resize_mult(view_rect2, 3)
-fetchTiffData(
+img_res3 = fetchTiffData(
   tiff_path,
   view_rect3
 )
+\%>\% rect_annotate(view_rect)
 tiff_data = .Last.value
 class(tiff_data)
 p = ggplot2::last_plot()
