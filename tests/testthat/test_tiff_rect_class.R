@@ -257,6 +257,26 @@ test_that("rect_annotate uses default color when not specified", {
   expect_s3_class(p_annotated, "ggplot")
 })
 
+test_that("rect_annotate can draw center points instead of rectangles", {
+  df <- data.frame(x = 1:10, y = rnorm(10))
+  p <- ggplot(df, aes(x = x, y = y)) + geom_point()
+  rect <- TiffRect(2, 8, -1, 1)
+
+  p_annotated <- rect_annotate(p, rect, annotate_center = TRUE)
+  expect_s3_class(p_annotated, "ggplot")
+  expect_length(p_annotated$layers, 2)
+  expect_true(inherits(p_annotated$layers[[2]]$geom, "GeomPoint"))
+})
+
+test_that("rect_annotate validate annotate_center argument", {
+  df <- data.frame(x = 1:10, y = rnorm(10))
+  p <- ggplot(df, aes(x = x, y = y)) + geom_point()
+  rect <- TiffRect(2, 8, -1, 1)
+
+  expect_error(rect_annotate(p, rect, annotate_center = "yes"), "annotate_center must be TRUE or FALSE")
+  expect_error(rect_annotate(p, rect, annotate_center = c(TRUE, FALSE)), "annotate_center must be TRUE or FALSE")
+})
+
 test_that("rect_annotate fails with non-TiffRect input", {
   df <- data.frame(x = 1:10, y = rnorm(10))
   p <- ggplot(df, aes(x = x, y = y)) + geom_point()
@@ -430,4 +450,39 @@ test_that("c() of vectorized TiffRects combines all rows", {
   combined <- c(r1, r2)
   expect_equal(nrow(combined@coords), 4)
   expect_equal(combined@coords$name, c("a", "b", "c", "d"))
+})
+
+# ---- rect_centers ----
+
+test_that("rect_centers returns centers as data.frame", {
+  r <- TiffRect(xmin = c(0, 10), xmax = c(4, 14), ymin = c(2, 20), ymax = c(6, 24), name = c("a", "b"))
+  pts <- rect_centers(r)
+
+  expect_s3_class(pts, "data.frame")
+  expect_equal(names(pts), c("x", "y", "name", "anchor"))
+  expect_equal(pts$x, c(2, 12))
+  expect_equal(pts$y, c(4, 22))
+  expect_equal(pts$name, c("a", "b"))
+  expect_equal(unique(pts$anchor), "center")
+})
+
+test_that("rect_centers supports corner anchors", {
+  r <- TiffRect(10, 20, 30, 40, name = "roi")
+
+  tl <- rect_centers(r, anchor = "topleft")
+  tr <- rect_centers(r, anchor = "topright")
+  bl <- rect_centers(r, anchor = "botleft")
+  br <- rect_centers(r, anchor = "botright")
+
+  expect_equal(c(tl$x[[1]], tl$y[[1]]), c(10, 30))
+  expect_equal(c(tr$x[[1]], tr$y[[1]]), c(20, 30))
+  expect_equal(c(bl$x[[1]], bl$y[[1]]), c(10, 40))
+  expect_equal(c(br$x[[1]], br$y[[1]]), c(20, 40))
+})
+
+test_that("rect_centers validates rect and anchor", {
+  r <- TiffRect(0, 1, 0, 1)
+  expect_error(rect_centers(list()), "rect must be a TiffRect")
+  expect_error(rect_centers(r, anchor = "middle"), "anchor must be one of")
+  expect_error(rect_centers(r, anchor = c("center", "topleft")), "anchor must be one of")
 })

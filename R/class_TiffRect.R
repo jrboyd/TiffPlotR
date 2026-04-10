@@ -39,7 +39,7 @@ setClass("TiffRect",
          }
 )
 
-utils::globalVariables(c("xmin", "xmax", "ymin", "ymax", "name"))
+utils::globalVariables(c("xmin", "xmax", "ymin", "ymax", "name", "x", "y"))
 
 #' Construct a TiffRect
 #'
@@ -220,6 +220,51 @@ rect_resize_mult <- function(rect, fx = 1, fy = NULL, anchor = "center"){
   rect_resize_abs(rect, width = w, height = h, anchor = anchor)
 }
 
+#' Return anchor points for \code{\link{TiffRect}} rows
+#'
+#' Computes one point per rectangle and returns the result as a data.frame.
+#' By default this returns rectangle centers, but corner anchors are also supported.
+#'
+#' @param rect TiffRect
+#' @param anchor one of `"center"`, `"topleft"`, `"topright"`, `"botleft"`, `"botright"`
+#' @return data.frame with columns `x`, `y`, `name`, and `anchor`
+#' @export
+#' @examples
+#' r <- TiffRect(xmin = c(0, 10), xmax = c(4, 14), ymin = c(0, 10), ymax = c(6, 16), name = c("a", "b"))
+#' rect_centers(r)
+#' rect_centers(r, anchor = "topleft")
+rect_centers <- function(rect, anchor = "center"){
+  if(!is(rect, "TiffRect")) stop("rect must be a TiffRect")
+  anchors <- c("center", "topleft", "topright", "botleft", "botright")
+  if(length(anchor) != 1L || !anchor %in% anchors){
+    stop("anchor must be one of: center, topleft, topright, botleft, botright")
+  }
+
+  coords <- rect@coords
+  if(anchor == "center"){
+    x <- (coords$xmin + coords$xmax) / 2
+    y <- (coords$ymin + coords$ymax) / 2
+  } else if(anchor == "topleft"){
+    x <- coords$xmin
+    y <- coords$ymin
+  } else if(anchor == "topright"){
+    x <- coords$xmax
+    y <- coords$ymin
+  } else if(anchor == "botleft"){
+    x <- coords$xmin
+    y <- coords$ymax
+  } else {
+    x <- coords$xmax
+    y <- coords$ymax
+  }
+
+  data.frame(x = x,
+             y = y,
+             name = coords$name,
+             anchor = rep(anchor, nrow(coords)),
+             stringsAsFactors = FALSE)
+}
+
 #' Spatial relationship functions for \code{\link{TiffRect}} objects
 #'
 #' Functions to query spatial relationships between \code{\link{TiffRect}}
@@ -390,27 +435,42 @@ rect_test_contains <- function(rect, other, subset = FALSE){
 #' @param color border color (default "red")
 #' @param fill fill color (default NA)
 #' @param alpha fill alpha (default 0.2)
+#' @param annotate_center logical; when `TRUE`, plot rectangle center points instead of rectangle outlines
 #' @param ... additional args passed to geom_rect
 #' @return ggplot object with rectangle layer added
 #' @export
 #' @importFrom ggplot2 geom_rect aes ggplot
-methods::setGeneric("rect_annotate", function(p, rect, color = "green", fill = NA, alpha = 0.2, ...){
+methods::setGeneric("rect_annotate", function(p, rect, color = "green", fill = NA, alpha = 0.2, annotate_center = FALSE, ...){
   standardGeneric("rect_annotate")
 })
 
-.annotate_ggplot = function(p, rect, color = "green", fill = NA, alpha = 0.2, ...){
-    rect_df <- rect@coords
-    p + ggplot2::geom_rect(data = rect_df,
-                           mapping = ggplot2::aes(xmin = xmin, xmax = xmax,
-                                                  ymin = ymin, ymax = ymax),
-                           inherit.aes = FALSE,
-                           color = color, fill = fill, alpha = alpha, ...)
+.annotate_ggplot = function(p, rect, color = "green", fill = NA, alpha = 0.2, annotate_center = FALSE, ...){
+    if(length(annotate_center) != 1L || !is.logical(annotate_center)){
+      stop("annotate_center must be TRUE or FALSE")
+    }
+
+    if(isTRUE(annotate_center)){
+      point_df <- rect_centers(rect, anchor = "center")
+      p + ggplot2::annotate("point",
+                            x = point_df$x,
+                            y = point_df$y,
+                            color = color,
+                            alpha = alpha,
+                            ...)
+    } else {
+      rect_df <- rect@coords
+      p + ggplot2::geom_rect(data = rect_df,
+                             mapping = ggplot2::aes(xmin = xmin, xmax = xmax,
+                                                    ymin = ymin, ymax = ymax),
+                             inherit.aes = FALSE,
+                             color = color, fill = fill, alpha = alpha, ...)
+    }
 }
 
 #' @rdname rect_annotate
 #' @export
 setMethod("rect_annotate", signature(p = "ANY", rect = "ANY"),
-          function(p, rect, color = "green", fill = NA, alpha = 0.2, ...){
+      function(p, rect, color = "green", fill = NA, alpha = 0.2, annotate_center = FALSE, ...){
               if (!inherits(p, "ggplot")) stop("p must be a ggplot or TiffPlotData object")
               if (!inherits(rect, "TiffRect")) stop("rect must be a TiffRect")
               stop("unexpected error")
@@ -419,16 +479,16 @@ setMethod("rect_annotate", signature(p = "ANY", rect = "ANY"),
 #' @rdname rect_annotate
 #' @export
 setMethod("rect_annotate", signature(p = "ANY", rect = "TiffRect"),
-          function(p, rect, color = "green", fill = NA, alpha = 0.2, ...){
+          function(p, rect, color = "green", fill = NA, alpha = 0.2, annotate_center = FALSE, ...){
             if (!inherits(p, "ggplot")) stop("p must be a ggplot or TiffPlotData object")
-            .annotate_ggplot(p, rect, color, fill, alpha, ...)
+            .annotate_ggplot(p, rect, color, fill, alpha, annotate_center, ...)
           })
 
 #' @rdname rect_annotate
 #' @return for `p` as `TiffPlotData`, returns a `TiffPlotData` with the active plot annotated
 #' @export
 setMethod("rect_annotate", signature(p = "TiffPlotData", rect = "TiffRect"),
-          function(p, rect, color = "green", fill = NA, alpha = 0.2, ...){
+          function(p, rect, color = "green", fill = NA, alpha = 0.2, annotate_center = FALSE, ...){
             active_name <- p@activePlot
             if(!grepl("annotated", active_name)){
                 anno_name = paste0(active_name, ".annotated")
@@ -449,6 +509,7 @@ setMethod("rect_annotate", signature(p = "TiffPlotData", rect = "TiffRect"),
                                                     color = color,
                                                     fill = fill,
                                                     alpha = alpha,
+                                                    annotate_center = annotate_center,
                                                     ...)
             validObject(p)
             p

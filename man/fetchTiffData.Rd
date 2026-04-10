@@ -68,6 +68,7 @@ img_res.labels = fetchTiffData(
 )
 img_res.labels
 
+# select channels by index or name, also controls order
 fetchTiffData(
   tiff_path,
   view_rect,

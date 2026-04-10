@@ -7,13 +7,45 @@
 \alias{rect_annotate,TiffPlotData,TiffRect-method}
 \title{Annotate a ggplot with a \code{\link{TiffRect}}}
 \usage{
-rect_annotate(p, rect, color = "green", fill = NA, alpha = 0.2, ...)
+rect_annotate(
+  p,
+  rect,
+  color = "green",
+  fill = NA,
+  alpha = 0.2,
+  annotate_center = FALSE,
+  ...
+)
 
-\S4method{rect_annotate}{ANY,ANY}(p, rect, color = "green", fill = NA, alpha = 0.2, ...)
+\S4method{rect_annotate}{ANY,ANY}(
+  p,
+  rect,
+  color = "green",
+  fill = NA,
+  alpha = 0.2,
+  annotate_center = FALSE,
+  ...
+)
 
-\S4method{rect_annotate}{ANY,TiffRect}(p, rect, color = "green", fill = NA, alpha = 0.2, ...)
+\S4method{rect_annotate}{ANY,TiffRect}(
+  p,
+  rect,
+  color = "green",
+  fill = NA,
+  alpha = 0.2,
+  annotate_center = FALSE,
+  ...
+)
 
-\S4method{rect_annotate}{TiffPlotData,TiffRect}(p, rect, color = "green", fill = NA, alpha = 0.2, ...)
+\S4method{rect_annotate}{TiffPlotData,TiffRect}(
+  p,
+  rect,
+  color = "green",
+  fill = NA,
+  alpha = 0.2,
+  annotate_center = FALSE,
+  ...
+)
 }
 \arguments{
 \item{p}{ggplot object}
@@ -25,6 +57,8 @@ rect_annotate(p, rect, color = "green", fill = NA, alpha = 0.2, ...)
 \item{fill}{fill color (default NA)}
 
 \item{alpha}{fill alpha (default 0.2)}
+
+\item{annotate_center}{logical; when `TRUE`, plot rectangle center points instead of rectangle outlines}
 
 \item{...}{additional args passed to geom_rect}
 }
