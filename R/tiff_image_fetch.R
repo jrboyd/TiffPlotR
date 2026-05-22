@@ -110,8 +110,11 @@ fetchTiffData = function(tiff_path, rect = NULL, resolution = NULL, max_pixels =
 #'   head(tidy)
 #' }
 makeImageTidy = function(img_mat){
-    tidy_img = reshape2::melt(img_data@.Data)
-    colnames(tidy_img) = c("i", "j", "channel", "value")
+    tidy_img <- as.data.frame.table(img_mat, responseName = "value") %>%
+        tibble::as_tibble() %>%
+        dplyr::mutate(x = as.integer(x), y = as.integer(y), c = as.integer(c)) %>%
+        dplyr::rename(i = x, j = y, channel = c)
+
     tidy_img
 }
 
@@ -257,9 +260,7 @@ convertTidyToRGB = function(img_df, red_channel = 1, green_channel = 2, blue_cha
     #   channel = non_zero_coords[, "c"],
     #   value = img_data[non_zero_coords]
     # )
-    dim(img_data)
-    tidy_img = reshape2::melt(img_data@.Data)
-    colnames(tidy_img) = c("i", "j", "channel", "value")
+    tidy_img = makeImageTidy(img_data@.Data)
     tidy_img$i = (tidy_img$i + x_start*x_ratio)/x_ratio
     tidy_img$j = (tidy_img$j + y_start*y_ratio)/y_ratio
     # tidy_img$i = as.integer(tidy_img$i)

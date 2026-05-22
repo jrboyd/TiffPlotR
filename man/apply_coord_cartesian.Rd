@@ -6,9 +6,6 @@
 \usage{
 apply_coord_cartesian(img_data)
 }
-\arguments{
-\item{img_data}{}
-}
 \description{
 Title
 }
