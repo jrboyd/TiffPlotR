@@ -4,6 +4,7 @@ img_meta_df = read_tiff_meta_data(tf)
 sel_size = img_meta_df %>% filter(sizeX == min(sizeX))
 
 img_data = fetchTiffData(tf)
+fetchTiffData.rgb(tf)
 img_data@data
 
 fetchTiffArray(tf)

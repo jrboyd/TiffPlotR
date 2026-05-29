@@ -10,6 +10,30 @@
     rect
 }
 
+.resolution_null_check = function(resolution, tiff_path, rect, max_pixels){
+    if(is.null(resolution)){
+        img_info = read_tiff_meta_data(tiff_path)
+        max_info = subset(img_info, resolutionLevel == 1)
+        #select the highest resolution under max_pixels
+        x_pixels = rect$width* img_info$sizeX / max_info$sizeX
+        y_pixels = rect$height* img_info$sizeY / max_info$sizeY
+        x_under = x_pixels <= max_pixels
+        y_under = y_pixels <= max_pixels
+        if(!any(x_under) | !any(y_under)){
+            resolution = max(img_info$resolutionLevel)
+            message("selected lowest available resolution ", resolution, " though it exceeds max ", max_pixels, " pixels")
+        }else{
+            k = max(
+                min(which(x_under)),
+                min(which(y_under))
+            )
+            resolution = img_info$resolutionLevel[k]
+            message("selected resolution ", resolution, " to keep final max dimension under ", max_pixels, " pixels")
+        }
+    }
+    resolution
+}
+
 #' Plot a rectangular region of a TIFF image
 #'
 #' Creates a visualization of a rectangular region from a TIFF image file.
@@ -176,31 +200,7 @@ fetchTiffArray = function(tiff_path, rect = NULL,
     img_info = read_tiff_meta_data(tiff_path)
     max_info = subset(img_info, resolutionLevel == 1)
 
-    rect$width = rect@coords$xmax[[1]] - rect@coords$xmin[[1]]
-    x_end = rect@coords$xmax[[1]]
-    rect$ymin = rect@coords$ymin[[1]]
-    rect$height = rect@coords$ymax[[1]] - rect@coords$ymin[[1]]
-
-    if(is.null(resolution)){
-        #select the highest resolution under max_pixels
-        x_pixels = rect$width* img_info$sizeX / max_info$sizeX
-        y_pixels = rect$height* img_info$sizeY / max_info$sizeY
-        x_under = x_pixels <= max_pixels
-        y_under = y_pixels <= max_pixels
-        if(!any(x_under) | !any(y_under)){
-            resolution = max(img_info$resolutionLevel)
-            message("selected lowest available resolution ", resolution, " though it exceeds max ", max_pixels, " pixels")
-        }else{
-            k = max(
-                min(which(x_under)),
-                min(which(y_under))
-            )
-            resolution = img_info$resolutionLevel[k]
-            message("selected resolution ", resolution, " to keep final max dimension under ", max_pixels, " pixels")
-        }
-
-
-    }
+    resolution = .resolution_null_check(resolution = resolution, tiff_path = tiff_path, rect = rect, max_pixels = max_pixels)
     res_info = subset(img_info, resolutionLevel == resolution)
 
     x_ratio = res_info$sizeX / max_info$sizeX
@@ -273,7 +273,15 @@ fetchTiffArray = function(tiff_path, rect = NULL,
     message("plotted image is ", x_pix, "x", y_pix, " (", pix_area,  " pixels)")
 
     # 3. Create sparse matrix
+    resolution = .resolution_null_check(resolution = resolution, tiff_path = tiff_path, rect = rect, max_pixels = max_pixels)
+
+    img_info = read_tiff_meta_data(tiff_path)
+    max_info = subset(img_info, resolutionLevel == 1)
+    res_info = subset(img_info, resolutionLevel == resolution)
+
     tidy_img = makeImageTidy(img_data@.Data)
+    x_ratio = res_info$sizeX / max_info$sizeX
+    y_ratio = res_info$sizeY / max_info$sizeY
     tidy_img$i = (tidy_img$i + rect$xmin*x_ratio)/x_ratio
     tidy_img$j = (tidy_img$j + rect$ymin*y_ratio)/y_ratio
 
@@ -300,7 +308,7 @@ fetchTiffArray = function(tiff_path, rect = NULL,
     }else if(pix_area >= 1e3){
         pix_area = paste0(round(pix_area / 1e3, 2), "k")
     }
-    message("full resolution image would have been ", x_pix, "x", y_pix, " (", pix_area,  " pixels)")
+    message("full resolution image would have been ", round(x_pix), "x", round(y_pix), " (", pix_area,  " pixels)")
 
     if(!is.null(channel_names)){
         nchan = length(unique(tidy_img$channel))
