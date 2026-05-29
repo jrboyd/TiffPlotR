@@ -6,10 +6,7 @@
 \usage{
 .fetch_tiff_data.rgb(
   tiff_path,
-  x_start,
-  x_width,
-  y_start,
-  y_width,
+  rect = NULL,
   resolution = NULL,
   max_pixels = 800,
   red_channel = 6,
@@ -21,14 +18,6 @@
 }
 \arguments{
 \item{tiff_path}{Path to the TIFF image file}
-
-\item{x_start}{Starting x coordinate (in original image coordinates)}
-
-\item{x_width}{Width of region to read in x direction (in original image coordinates)}
-
-\item{y_start}{Starting y coordinate (in original image coordinates)}
-
-\item{y_width}{Width of region to read in y direction (in original image coordinates)}
 
 \item{resolution}{Resolution level to read from the TIFF file. If NULL, automatically selects resolution}
 
@@ -55,11 +44,10 @@ automatic quantile normalization and legend display.
 \examples{
 tiff_path = exampleTiff()
 .fetch_tiff_data(tiff_path,
-  x_start=900, x_width=1400,
-  y_start=1400, y_width=1400)
+  rect = TiffRect(900, 2300, 1400, 2800))
 fetchTiffData(tiff_path,
   rect = TiffRect(900,2300,1400,2800))
 
-.fetch_tiff_data.rgb(tiff_path, x_start=900, x_width=1400, y_start=1400, y_width=1400, red_channel=6, green_channel=1, blue_channel=5)
+.fetch_tiff_data.rgb(tiff_path, rect = TiffRect(900, 2300, 1400, 2800), red_channel=6, green_channel=1, blue_channel=5)
 fetchTiffData.rgb(tiff_path, rect = TiffRect(900,2300,1400,2800), red_channel=6, green_channel=1, blue_channel=5)
 }

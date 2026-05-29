@@ -6,6 +6,7 @@
         rect = TiffRect(1, max_info$sizeX, 1, max_info$sizeY)
     }
     if(!is(rect, "TiffRect")) stop("rect must be a TiffRect object")
+    if(!length(rect) == 1) stop("fetchTiffData requires a TiffRect with exactly one row")
     rect
 }
 
@@ -75,12 +76,8 @@
 #' )
 fetchTiffData = function(tiff_path, rect = NULL, resolution = NULL, max_pixels = 800, precalc_max = NULL, show_raw = FALSE, quantile_norm = .999, channel_names = NULL, selected_channels = NULL){
     rect = .rect_null_check(rect, tiff_path)
-    if(nrow(rect@coords) != 1) stop("fetchTiffData requires a TiffRect with exactly one row")
     .fetch_tiff_data(tiff_path,
-                     x_start = rect@coords$xmin[[1]],
-                     x_width = rect@coords$xmax[[1]] - rect@coords$xmin[[1]],
-                     y_start = rect@coords$ymin[[1]],
-                     y_width = rect@coords$ymax[[1]] - rect@coords$ymin[[1]],
+                     rect,
                      resolution = resolution,
                      max_pixels = max_pixels,
                      precalc_max = precalc_max,
@@ -161,45 +158,33 @@ convertTidyToRGB = function(img_df, red_channel = 1, green_channel = 2, blue_cha
     rgb_df
 }
 
-#' Plot a TIFF image with custom dimensions
+
+#' Title
 #'
-#' Reads a region from a TIFF image file and creates a ggplot visualization.
-#' Automatically handles multi-resolution TIFF files and selects appropriate
-#' resolution based on desired pixel dimensions.
+#' @param tiff_path
+#' @param rect
+#' @param resolution
+#' @param max_pixels
 #'
-#' @param tiff_path Path to the TIFF image file
-#' @param x_start Starting x coordinate (in original image coordinates)
-#' @param x_width Width of region to read in x direction (in original image coordinates)
-#' @param y_start Starting y coordinate (in original image coordinates)
-#' @param y_width Width of region to read in y direction (in original image coordinates)
-#' @param resolution Resolution level to read from the TIFF file. If NULL, automatically selects resolution to keep image under max_pixels
-#' @param max_pixels Maximum dimension in pixels for the plotted image. Used for automatic resolution selection
-#' @param precalc_max Optional data frame with precalculated min/max values per channel for normalization
-#' @param show_raw If TRUE, displays raw pixel values; if FALSE (default), displays normalized values
-#' @param quantile_norm Quantile for normalization (default 0.999). Values are divided by this quantile
-#'
-#' @returns A TiffPlotData object containing the sparse image data and a named list of ggplot objects. It also records `tiff_path`, `resolution`, `precalc_max` and `rect` slots.
-#' @importFrom dplyr group_by mutate select summarise
-#' @importFrom magrittr %>%
-#' @import ggplot2
-#' @importFrom RBioFormats read.image
+#' @returns
+#' @export
 #'
 #' @examples
-#' \dontrun{
-#'   .fetch_tiff_data("image.tiff", x_start=100, x_width=400, y_start=200, y_width=400)
-#' }
-.fetch_tiff_data = function(tiff_path, x_start, x_width, y_start, y_width,
-                            resolution = NULL, max_pixels = 800,
-                            precalc_max = NULL, show_raw = FALSE,
-                            quantile_norm = .999,
-                            channel_names = NULL,
-                            selected_channels = NULL){
+fetchTiffArray = function(tiff_path, rect = NULL,
+                          resolution = NULL, max_pixels = 800){
+    rect = .rect_null_check(rect, tiff_path)
     img_info = read_tiff_meta_data(tiff_path)
     max_info = subset(img_info, resolutionLevel == 1)
+
+    rect$width = rect@coords$xmax[[1]] - rect@coords$xmin[[1]]
+    x_end = rect@coords$xmax[[1]]
+    rect$ymin = rect@coords$ymin[[1]]
+    rect$height = rect@coords$ymax[[1]] - rect@coords$ymin[[1]]
+
     if(is.null(resolution)){
         #select the highest resolution under max_pixels
-        x_pixels = x_width* img_info$sizeX / max_info$sizeX
-        y_pixels = y_width* img_info$sizeY / max_info$sizeY
+        x_pixels = rect$width* img_info$sizeX / max_info$sizeX
+        y_pixels = rect$height* img_info$sizeY / max_info$sizeY
         x_under = x_pixels <= max_pixels
         y_under = y_pixels <= max_pixels
         if(!any(x_under) | !any(y_under)){
@@ -220,15 +205,49 @@ convertTidyToRGB = function(img_df, red_channel = 1, green_channel = 2, blue_cha
 
     x_ratio = res_info$sizeX / max_info$sizeX
     y_ratio = res_info$sizeY / max_info$sizeY
-    img_data = RBioFormats::read.image(
+    RBioFormats::read.image(
         tiff_path,
         normalize = FALSE,
         series = 1,
         resolution = resolution,
         subset = list(
-            X = seq(x_start*x_ratio, (x_start + x_width)*x_ratio),
-            Y = seq(y_start*y_ratio, (y_start + y_width)* y_ratio)
+            X = seq(rect$xmin*x_ratio, (rect$xmin + rect$width)*x_ratio),
+            Y = seq(rect$ymin*y_ratio, (rect$ymin + rect$height)* y_ratio)
         ))
+}
+
+#' Plot a TIFF image with custom dimensions
+#'
+#' Reads a region from a TIFF image file and creates a ggplot visualization.
+#' Automatically handles multi-resolution TIFF files and selects appropriate
+#' resolution based on desired pixel dimensions.
+#'
+#' @param tiff_path Path to the TIFF image file
+#' @param rect
+#' @param resolution Resolution level to read from the TIFF file. If NULL, automatically selects resolution to keep image under max_pixels
+#' @param max_pixels Maximum dimension in pixels for the plotted image. Used for automatic resolution selection
+#' @param precalc_max Optional data frame with precalculated min/max values per channel for normalization
+#' @param show_raw If TRUE, displays raw pixel values; if FALSE (default), displays normalized values
+#' @param quantile_norm Quantile for normalization (default 0.999). Values are divided by this quantile
+#'
+#' @returns A TiffPlotData object containing the sparse image data and a named list of ggplot objects. It also records `tiff_path`, `resolution`, `precalc_max` and `rect` slots.
+#' @importFrom dplyr group_by mutate select summarise
+#' @importFrom magrittr %>%
+#' @import ggplot2
+#' @importFrom RBioFormats read.image
+#'
+#' @examples
+.fetch_tiff_data = function(tiff_path, rect,
+                            resolution = NULL, max_pixels = 800,
+                            precalc_max = NULL, show_raw = FALSE,
+                            quantile_norm = .999,
+                            channel_names = NULL,
+                            selected_channels = NULL){
+    img_data = fetchTiffArray(
+        tiff_path = tiff_path,
+        rect = rect,
+        resolution = resolution,
+        max_pixels = max_pixels)
 
     # 1. Assume 'img_data' is a 2D matrix (or array converted to matrix)
     # 2. Find indices of non-zero pixels
@@ -254,17 +273,9 @@ convertTidyToRGB = function(img_df, red_channel = 1, green_channel = 2, blue_cha
     message("plotted image is ", x_pix, "x", y_pix, " (", pix_area,  " pixels)")
 
     # 3. Create sparse matrix
-    # tidy_img <- data.frame(
-    #   i = (non_zero_coords[, "x"] + x_start*x_ratio)/x_ratio,
-    #   j = (non_zero_coords[, "y"] + y_start*y_ratio)/y_ratio,
-    #   channel = non_zero_coords[, "c"],
-    #   value = img_data[non_zero_coords]
-    # )
     tidy_img = makeImageTidy(img_data@.Data)
-    tidy_img$i = (tidy_img$i + x_start*x_ratio)/x_ratio
-    tidy_img$j = (tidy_img$j + y_start*y_ratio)/y_ratio
-    # tidy_img$i = as.integer(tidy_img$i)
-    # tidy_img$j = as.integer(tidy_img$j)
+    tidy_img$i = (tidy_img$i + rect$xmin*x_ratio)/x_ratio
+    tidy_img$j = (tidy_img$j + rect$ymin*y_ratio)/y_ratio
 
     if(is.null(precalc_max)){
         precalc_max = tidy_img  %>% group_by(channel) %>% summarise(min_value = 0, max_value = quantile(value, quantile_norm))
@@ -342,13 +353,12 @@ convertTidyToRGB = function(img_df, red_channel = 1, green_channel = 2, blue_cha
         scale_fill_viridis_c(option = "magma") +
         theme(panel.background = element_rect(fill = "gray20"), panel.grid = element_blank())
 
-    p = .apply_coord_rect(p, TiffRect(x_start, x_start+x_width, y_start, y_start+y_width), ggplot2::coord_fixed)
+    p = .apply_coord_rect(p, rect, ggplot2::coord_fixed)
 
     plots_list = list()
     plots_list[[ifelse(show_raw, "raw", "normalized")]] = p
     data_df <- as.data.frame(tidy_img)
     # record rectangle corresponding to requested region
-    rect_obj <- TiffRect(x_start, x_start + x_width, y_start, y_start + y_width)
     new("TiffPlotData",
         data = data_df,
         plots = plots_list,
@@ -356,8 +366,8 @@ convertTidyToRGB = function(img_df, red_channel = 1, green_channel = 2, blue_cha
         tiff_path = tiff_path,
         resolution = resolution,
         precalc_max = if(is.null(precalc_max)) data.frame() else precalc_max,
-        rect = rect_obj,
-        img_info = img_info)
+        rect = rect,
+        img_info = read_tiff_meta_data(tiff_path))
 }
 
 #' Plot a rectangular region of a TIFF image as RGB
@@ -399,10 +409,7 @@ fetchTiffData.rgb = function(tiff_path,
     rect = .rect_null_check(rect, tiff_path)
     if(nrow(rect@coords) != 1) stop("fetchTiffData.rgb requires a TiffRect with exactly one row")
     .fetch_tiff_data.rgb(tiff_path,
-                         x_start = rect@coords$xmin[[1]],
-                         x_width = rect@coords$xmax[[1]] - rect@coords$xmin[[1]],
-                         y_start = rect@coords$ymin[[1]],
-                         y_width = rect@coords$ymax[[1]] - rect@coords$ymin[[1]],
+                         rect = rect,
                          resolution = resolution,
                          max_pixels = max_pixels,
                          red_channel = red_channel,
@@ -456,10 +463,7 @@ apply_coord_cartesian = function(img_data){
 #' automatic quantile normalization and legend display.
 #'
 #' @param tiff_path Path to the TIFF image file
-#' @param x_start Starting x coordinate (in original image coordinates)
-#' @param x_width Width of region to read in x direction (in original image coordinates)
-#' @param y_start Starting y coordinate (in original image coordinates)
-#' @param y_width Width of region to read in y direction (in original image coordinates)
+#' @param rect
 #' @param resolution Resolution level to read from the TIFF file. If NULL, automatically selects resolution
 #' @param max_pixels Maximum dimension in pixels for the plotted image
 #' @param precalc_max Optional data frame with precalculated min/max values per channel for normalization
@@ -476,17 +480,15 @@ apply_coord_cartesian = function(img_data){
 #' @examples
 #' tiff_path = exampleTiff()
 #' .fetch_tiff_data(tiff_path,
-#'   x_start=900, x_width=1400,
-#'   y_start=1400, y_width=1400)
+#'   rect = TiffRect(900, 2300, 1400, 2800))
 #' fetchTiffData(tiff_path,
 #'   rect = TiffRect(900,2300,1400,2800))
 #'
-#' .fetch_tiff_data.rgb(tiff_path, x_start=900, x_width=1400, y_start=1400, y_width=1400, red_channel=6, green_channel=1, blue_channel=5)
+#' .fetch_tiff_data.rgb(tiff_path, rect = TiffRect(900, 2300, 1400, 2800), red_channel=6, green_channel=1, blue_channel=5)
 #' fetchTiffData.rgb(tiff_path, rect = TiffRect(900,2300,1400,2800), red_channel=6, green_channel=1, blue_channel=5)
 .fetch_tiff_data.rgb = function(
         tiff_path,
-        x_start, x_width,
-        y_start, y_width,
+        rect = NULL,
         resolution = NULL,
         max_pixels = 800,
         red_channel = 6,
@@ -497,10 +499,7 @@ apply_coord_cartesian = function(img_data){
 ){
     img_obj = .fetch_tiff_data(
         tiff_path = tiff_path,
-        x_start = x_start,
-        x_width = x_width,
-        y_start = y_start,
-        y_width = y_width,
+        rect = rect,
         resolution = resolution,
         max_pixels = max_pixels,
     )
@@ -535,7 +534,7 @@ apply_coord_cartesian = function(img_data){
             scale_fill_identity() +
             labs(x= "pixel", y = "pixel")
     })
-    p_rgb = .apply_coord_rect(p_rgb, TiffRect(x_start, x_start+x_width, y_start, y_start+y_width), ggplot2::coord_fixed)
+    p_rgb = .apply_coord_rect(p_rgb, rect, ggplot2::coord_fixed)
     plots_list <- list(rgb = p_rgb)
     # data_df <- as.data.frame(rgb_df)
     new("TiffPlotData",

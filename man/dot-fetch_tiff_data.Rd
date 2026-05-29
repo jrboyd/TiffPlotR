@@ -6,10 +6,7 @@
 \usage{
 .fetch_tiff_data(
   tiff_path,
-  x_start,
-  x_width,
-  y_start,
-  y_width,
+  rect,
   resolution = NULL,
   max_pixels = 800,
   precalc_max = NULL,
@@ -21,14 +18,6 @@
 }
 \arguments{
 \item{tiff_path}{Path to the TIFF image file}
-
-\item{x_start}{Starting x coordinate (in original image coordinates)}
-
-\item{x_width}{Width of region to read in x direction (in original image coordinates)}
-
-\item{y_start}{Starting y coordinate (in original image coordinates)}
-
-\item{y_width}{Width of region to read in y direction (in original image coordinates)}
 
 \item{resolution}{Resolution level to read from the TIFF file. If NULL, automatically selects resolution to keep image under max_pixels}
 
@@ -47,9 +36,4 @@ A TiffPlotData object containing the sparse image data and a named list of ggplo
 Reads a region from a TIFF image file and creates a ggplot visualization.
 Automatically handles multi-resolution TIFF files and selects appropriate
 resolution based on desired pixel dimensions.
-}
-\examples{
-\dontrun{
-  .fetch_tiff_data("image.tiff", x_start=100, x_width=400, y_start=200, y_width=400)
-}
 }

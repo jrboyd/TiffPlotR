@@ -102,6 +102,81 @@ setMethod("show", "TiffRect", function(object){
   print(object@coords, row.names = FALSE)
 })
 
+
+#### Names ####
+
+
+#' @param x A TiffRect object
+setMethod("names", "TiffRect",
+          function(x)
+          {
+              c(
+                  "xmin",
+                  "xmax",
+                  "ymin",
+                  "ymax",
+                  "name",
+                  "width",
+                  "height"
+              )
+
+          })
+
+#' @rdname TiffRect
+#' @param name Name of slot to be replaced/retrieved
+setMethod("$", "TiffRect",
+          function(x, name)
+          {
+              switch (name,
+                      xmin = x@coords$xmin,
+                      xmax = x@coords$xmax,
+                      ymin = x@coords$ymin,
+                      ymax = x@coords$ymax,
+                      name = x@coords$name,
+                      width = x@coords$xmax - x@coords$xmin,
+                      height = x@coords$ymax - x@coords$ymin
+              )
+          })
+
+#' #' @rdname TiffRect
+#' #' @param value New value for slot.
+#' setReplaceMethod("$", "TiffRect",
+#'                  function(x, name, value)
+#'                  {
+#'                      warn_msg = "This assignment is not supported.  No effect."
+#'                      switch (name,
+#'                              view_size = {
+#'                                  if(is.null(value)){
+#'                                      value = -1
+#'                                  }
+#'                                  if(is.na(value)){
+#'                                      value = -1
+#'                                  }
+#'                                  x@view_size = value
+#'                              },
+#'                              window_size = {
+#'                                  x@window_size = value
+#'                              },
+#'                              read_mode = {
+#'                                  stopifnot(value %in% c("bam_SE", "bam_PE", "bigwig", "null"))
+#'                                  x@read_mode = value
+#'                              },
+#'                              fetch_options = {
+#'                                  x@fetch_options = value
+#'                              },
+#'                              meta_data = {
+#'                                  x@meta_data = value
+#'                              },
+#'                              warning(warn_msg)
+#'                      )
+#'                      validObject(x)
+#'                      x
+#'                  })
+
+
+
+#### Shift and resize ####
+
 #' Shift and resize \code{\link{TiffRect}} objects
 #'
 #' Functions to transform a \code{\link{TiffRect}} object's position or dimensions.

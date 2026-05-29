@@ -2,9 +2,12 @@
 % Please edit documentation in R/class_TiffRect.R
 \name{TiffRect}
 \alias{TiffRect}
+\alias{$,TiffRect-method}
 \title{Construct a TiffRect}
 \usage{
 TiffRect(xmin, xmax, ymin, ymax, name = "rect")
+
+\S4method{$}{TiffRect}(x, name)
 }
 \arguments{
 \item{xmin}{left x coordinate}
@@ -15,7 +18,7 @@ TiffRect(xmin, xmax, ymin, ymax, name = "rect")
 
 \item{ymax}{top y coordinate}
 
-\item{name}{optional name(s). Recycled when length 1}
+\item{name}{Name of slot to be replaced/retrieved}
 }
 \value{
 a `TiffRect` object
