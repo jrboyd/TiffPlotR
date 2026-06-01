@@ -2,10 +2,13 @@
 % Please edit documentation in R/class_TiffRect.R
 \name{TiffRect}
 \alias{TiffRect}
+\alias{names,TiffRect-method}
 \alias{$,TiffRect-method}
 \title{Construct a TiffRect}
 \usage{
 TiffRect(xmin, xmax, ymin, ymax, name = "rect")
+
+\S4method{names}{TiffRect}(x)
 
 \S4method{$}{TiffRect}(x, name)
 }
@@ -19,6 +22,8 @@ TiffRect(xmin, xmax, ymin, ymax, name = "rect")
 \item{ymax}{top y coordinate}
 
 \item{name}{Name of slot to be replaced/retrieved}
+
+\item{x}{A TiffRect object}
 }
 \value{
 a `TiffRect` object

@@ -2,10 +2,23 @@
 % Please edit documentation in R/tiff_image_fetch.R
 \name{apply_coord_fixed}
 \alias{apply_coord_fixed}
-\title{Title}
+\title{Apply \code{coord_fixed()} to stored plots}
 \usage{
 apply_coord_fixed(img_data)
 }
+\arguments{
+\item{img_data}{A \linkS4class{TiffPlotData} object.}
+}
+\value{
+The modified \linkS4class{TiffPlotData} object.
+}
 \description{
-Title
+Applies \code{ggplot2::coord_fixed()} to each plot stored in a
+\linkS4class{TiffPlotData} object using its rectangle extent.
+}
+\examples{
+\dontrun{
+obj <- fetchTiffData(exampleTiff(), TiffRect(900, 2300, 1400, 2800))
+obj <- apply_coord_fixed(obj)
+}
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/tiff_image_fetch.R
 \name{fetchTiffData}
 \alias{fetchTiffData}
-\title{Plot a rectangular region of a TIFF image}
+\title{Fetch TIFF image data for a rectangular region}
 \usage{
 fetchTiffData(
   tiff_path,
@@ -17,64 +17,43 @@ fetchTiffData(
 )
 }
 \arguments{
-\item{tiff_path}{Path to the TIFF image file}
+\item{tiff_path}{Path to the TIFF image file.}
 
-\item{rect}{A \linkS4class{TiffRect} object defining the rectangle region. If default of NULL< full region will be used.}
+\item{rect}{A \linkS4class{TiffRect} object defining the requested region.
+If NULL, the full image extent at maximum resolution is used.}
 
-\item{resolution}{Resolution level to read from the TIFF file. If NULL, automatically selects resolution to keep image under max_pixels}
+\item{resolution}{Resolution level to read. If NULL, a resolution is selected
+automatically to keep dimensions under \code{max_pixels}.}
 
-\item{max_pixels}{Maximum dimension in pixels for the plotted image. Used for automatic resolution selection}
+\item{max_pixels}{Maximum pixel dimension used when \code{resolution = NULL}.}
 
-\item{precalc_max}{Optional data frame with precalculated min/max values per channel for normalization}
+\item{precalc_max}{Optional data frame with \code{channel},
+\code{min_value}, and \code{max_value} for normalization.}
 
-\item{show_raw}{If TRUE, displays raw pixel values; if FALSE (default), displays normalized values}
+\item{show_raw}{If TRUE, plot raw values. If FALSE (default), plot
+normalized values.}
 
-\item{quantile_norm}{Quantile for normalization (default 0.999). Values are divided by this quantile}
+\item{quantile_norm}{Quantile used to estimate per-channel max values when
+\code{precalc_max} is NULL.}
+
+\item{channel_names}{Optional character vector used to rename channels.}
+
+\item{selected_channels}{Optional subset of channels to keep, as channel
+indices or names.}
 }
 \value{
-A TiffPlotData object containing the sparse image data and a named ggplot object.  The returned object also has slots `tiff_path`, `resolution`, `precalc_max`, `rect`, and `img_info` describing provenance of the image region.
+A \linkS4class{TiffPlotData} object with image data in
+  \code{@data} and a faceted plot in \code{@plots}.
 }
 \description{
-Creates a visualization of a rectangular region from a TIFF image file.
-This function is a wrapper around .fetch_tiff_data that converts rectangle
-coordinates to image dimensions.
+Reads a rectangular subset of a multi-resolution TIFF and returns a
+normalized, tidy representation with a faceted ggplot wrapped in a
+\linkS4class{TiffPlotData} object.
 }
 \examples{
-tiff_path = exampleTiff()
-view_rect = TiffRect(900,2300,1400,2800)
-img_res1 = fetchTiffData(
-  tiff_path,
-  view_rect
-)
-view_rect2 = rect_shift(view_rect, dx = 1000, dy = 500)
-img_res2 = fetchTiffData(
-  tiff_path,
-  view_rect2
-)
-rect_annotate(img_res2, view_rect)
-
-view_rect3 = rect_resize_mult(view_rect2, 3)
-img_res3 = fetchTiffData(
-  tiff_path,
-  view_rect3
-)
-rect_annotate(img_res3, view_rect)
-
-
-img_res.labels = fetchTiffData(
-  tiff_path,
-  view_rect3,
-  channel_names = c("DAPI", paste("channel", LETTERS[1:5]))
-)
-img_res.labels
-
-# select channels by index or name, also controls order
-fetchTiffData(
-  tiff_path,
-  view_rect,
-  channel_names = c("DAPI", paste("channel", LETTERS[1:5])),
-  selected_channels = c(4, 1:2)
-)
+tiff_path <- exampleTiff()
+view_rect <- TiffRect(900, 2300, 1400, 2800)
+img <- fetchTiffData(tiff_path, view_rect)
 
 fetchTiffData(
   tiff_path,

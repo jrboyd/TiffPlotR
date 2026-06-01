@@ -2,10 +2,32 @@
 % Please edit documentation in R/tiff_image_fetch.R
 \name{fetchTiffArray}
 \alias{fetchTiffArray}
-\title{Title}
+\title{Read a TIFF region as an array}
 \usage{
 fetchTiffArray(tiff_path, rect = NULL, resolution = NULL, max_pixels = 800)
 }
+\arguments{
+\item{tiff_path}{Path to the TIFF image file.}
+
+\item{rect}{A \linkS4class{TiffRect} object defining the requested region.
+If NULL, the full image extent at maximum resolution is used.}
+
+\item{resolution}{Resolution level to read. If NULL, a resolution is selected
+automatically to keep dimensions under \code{max_pixels}.}
+
+\item{max_pixels}{Maximum pixel dimension used when \code{resolution = NULL}.}
+}
+\value{
+An image array returned by \code{RBioFormats::read.image()} for the
+  selected region and resolution.
+}
 \description{
-Title
+Convenience wrapper around \code{RBioFormats::read.image()} that applies
+\linkS4class{TiffRect}-based coordinate subsetting and resolution selection.
+}
+\examples{
+\dontrun{
+arr <- fetchTiffArray(exampleTiff(), rect = TiffRect(900, 2300, 1400, 2800))
+dim(arr)
+}
 }

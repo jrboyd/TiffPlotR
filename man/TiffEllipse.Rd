@@ -2,12 +2,21 @@
 % Please edit documentation in R/class_A_TiffShape.R
 \name{TiffEllipse}
 \alias{TiffEllipse}
+\alias{show,TiffEllipse-method}
+\alias{names,TiffEllipse-method}
 \alias{$,TiffEllipse-method}
+\alias{[,TiffEllipse-method}
 \title{Construct a TiffEllipse}
 \usage{
 TiffEllipse(x0, y0, radius_x, radius_y = radius_x, name = "ellipse")
 
+\S4method{show}{TiffEllipse}(object)
+
+\S4method{names}{TiffEllipse}(x)
+
 \S4method{$}{TiffEllipse}(x, name)
+
+\S4method{[}{TiffEllipse}(x, i, j, ..., drop = FALSE)
 }
 \arguments{
 \item{x0}{x center coordinate}
@@ -19,9 +28,21 @@ TiffEllipse(x0, y0, radius_x, radius_y = radius_x, name = "ellipse")
 \item{radius_y}{ellipse y radius (defaults to radius_x)}
 
 \item{name}{Name of slot to be replaced/retrieved}
+
+\item{object}{A TiffEllipse object}
+
+\item{x}{TiffEllipse object}
+
+\item{i}{integer, logical, or character index}
+
+\item{j}{unused}
+
+\item{drop}{unused}
 }
 \value{
 a `TiffEllipse` object
+
+a `TiffEllipse` containing only the selected rows
 }
 \description{
 Construct a TiffEllipse

@@ -149,7 +149,7 @@ TiffPolygon <- function(x, y, name = "polygon") {
   new("TiffPolygon", coords = coords_df)
 }
 
-
+#' @rdname TiffEllipse
 #' @param object A TiffEllipse object
 setMethod("show", "TiffEllipse", function(object) {
   n <- nrow(object@coords)
@@ -157,7 +157,7 @@ setMethod("show", "TiffEllipse", function(object) {
   print(object@coords, row.names = FALSE)
 })
 
-
+#' @rdname TiffPolygon
 #' @param object A TiffPolygon object
 setMethod("show", "TiffPolygon", function(object) {
   n <- nrow(object@coords)
@@ -169,13 +169,13 @@ setMethod("show", "TiffPolygon", function(object) {
   print(out, row.names = FALSE)
 })
 
-
+#' @rdname TiffEllipse
 #' @param x A TiffEllipse object
 setMethod("names", "TiffEllipse", function(x) {
   c("x0", "y0", "radius_x", "radius_y", "name", "width", "height")
 })
 
-
+#' @rdname TiffPolygon
 #' @param x A TiffPolygon object
 setMethod("names", "TiffPolygon", function(x) {
   c("x", "y", "name", "n_points")
@@ -211,6 +211,7 @@ setMethod("$", "TiffPolygon", function(x, name) {
 })
 
 
+#' @rdname TiffEllipse
 #' @param x TiffEllipse object
 #' @param i integer, logical, or character index
 #' @param j unused
@@ -223,6 +224,7 @@ setMethod("[", signature(x = "TiffEllipse"),
           })
 
 
+#' @rdname TiffPolygon
 #' @param x TiffPolygon object
 #' @param i integer, logical, or character index
 #' @param j unused

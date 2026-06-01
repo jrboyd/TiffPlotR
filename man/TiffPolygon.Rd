@@ -2,22 +2,41 @@
 % Please edit documentation in R/class_A_TiffShape.R
 \name{TiffPolygon}
 \alias{TiffPolygon}
+\alias{show,TiffPolygon-method}
+\alias{names,TiffPolygon-method}
 \alias{$,TiffPolygon-method}
+\alias{[,TiffPolygon-method}
 \title{Construct a TiffPolygon}
 \usage{
 TiffPolygon(x, y, name = "polygon")
 
+\S4method{show}{TiffPolygon}(object)
+
+\S4method{names}{TiffPolygon}(x)
+
 \S4method{$}{TiffPolygon}(x, name)
+
+\S4method{[}{TiffPolygon}(x, i, j, ..., drop = FALSE)
 }
 \arguments{
-\item{x}{numeric vector of x vertices or list of numeric vectors}
+\item{x}{TiffPolygon object}
 
 \item{y}{numeric vector of y vertices or list of numeric vectors}
 
 \item{name}{Name of slot to be replaced/retrieved}
+
+\item{object}{A TiffPolygon object}
+
+\item{i}{integer, logical, or character index}
+
+\item{j}{unused}
+
+\item{drop}{unused}
 }
 \value{
 a `TiffPolygon` object
+
+a `TiffPolygon` containing only the selected rows
 }
 \description{
 Construct a TiffPolygon

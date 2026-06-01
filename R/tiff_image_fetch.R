@@ -34,63 +34,36 @@
     resolution
 }
 
-#' Plot a rectangular region of a TIFF image
+#' Fetch TIFF image data for a rectangular region
 #'
-#' Creates a visualization of a rectangular region from a TIFF image file.
-#' This function is a wrapper around .fetch_tiff_data that converts rectangle
-#' coordinates to image dimensions.
+#' Reads a rectangular subset of a multi-resolution TIFF and returns a
+#' normalized, tidy representation with a faceted ggplot wrapped in a
+#' \linkS4class{TiffPlotData} object.
 #'
-#' @param tiff_path Path to the TIFF image file
-#' @param rect A \linkS4class{TiffRect} object defining the rectangle region. If default of NULL< full region will be used.
-#' @param resolution Resolution level to read from the TIFF file. If NULL, automatically selects resolution to keep image under max_pixels
-#' @param max_pixels Maximum dimension in pixels for the plotted image. Used for automatic resolution selection
-#' @param precalc_max Optional data frame with precalculated min/max values per channel for normalization
-#' @param show_raw If TRUE, displays raw pixel values; if FALSE (default), displays normalized values
-#' @param quantile_norm Quantile for normalization (default 0.999). Values are divided by this quantile
+#' @param tiff_path Path to the TIFF image file.
+#' @param rect A \linkS4class{TiffRect} object defining the requested region.
+#'   If NULL, the full image extent at maximum resolution is used.
+#' @param resolution Resolution level to read. If NULL, a resolution is selected
+#'   automatically to keep dimensions under \code{max_pixels}.
+#' @param max_pixels Maximum pixel dimension used when \code{resolution = NULL}.
+#' @param precalc_max Optional data frame with \code{channel},
+#'   \code{min_value}, and \code{max_value} for normalization.
+#' @param show_raw If TRUE, plot raw values. If FALSE (default), plot
+#'   normalized values.
+#' @param quantile_norm Quantile used to estimate per-channel max values when
+#'   \code{precalc_max} is NULL.
+#' @param channel_names Optional character vector used to rename channels.
+#' @param selected_channels Optional subset of channels to keep, as channel
+#'   indices or names.
 #'
-#' @returns A TiffPlotData object containing the sparse image data and a named ggplot object.  The returned object also has slots `tiff_path`, `resolution`, `precalc_max`, `rect`, and `img_info` describing provenance of the image region.
+#' @returns A \linkS4class{TiffPlotData} object with image data in
+#'   \code{@data} and a faceted plot in \code{@plots}.
 #' @export
-#' @importFrom dplyr group_by mutate select
-#' @importFrom magrittr %>%
-#' @import ggplot2
 #'
 #' @examples
-#' tiff_path = exampleTiff()
-#' view_rect = TiffRect(900,2300,1400,2800)
-#' img_res1 = fetchTiffData(
-#'   tiff_path,
-#'   view_rect
-#' )
-#' view_rect2 = rect_shift(view_rect, dx = 1000, dy = 500)
-#' img_res2 = fetchTiffData(
-#'   tiff_path,
-#'   view_rect2
-#' )
-#' rect_annotate(img_res2, view_rect)
-#'
-#' view_rect3 = rect_resize_mult(view_rect2, 3)
-#' img_res3 = fetchTiffData(
-#'   tiff_path,
-#'   view_rect3
-#' )
-#' rect_annotate(img_res3, view_rect)
-#'
-#'
-#' img_res.labels = fetchTiffData(
-#'   tiff_path,
-#'   view_rect3,
-#'   channel_names = c("DAPI", paste("channel", LETTERS[1:5]))
-#' )
-#' img_res.labels
-#'
-#' # select channels by index or name, also controls order
-#' fetchTiffData(
-#'   tiff_path,
-#'   view_rect,
-#'   channel_names = c("DAPI", paste("channel", LETTERS[1:5])),
-#'   selected_channels = c(4, 1:2)
-#' )
-
+#' tiff_path <- exampleTiff()
+#' view_rect <- TiffRect(900, 2300, 1400, 2800)
+#' img <- fetchTiffData(tiff_path, view_rect)
 #'
 #' fetchTiffData(
 #'   tiff_path,
@@ -183,17 +156,27 @@ convertTidyToRGB = function(img_df, red_channel = 1, green_channel = 2, blue_cha
 }
 
 
-#' Title
+#' Read a TIFF region as an array
 #'
-#' @param tiff_path
-#' @param rect
-#' @param resolution
-#' @param max_pixels
+#' Convenience wrapper around \code{RBioFormats::read.image()} that applies
+#' \linkS4class{TiffRect}-based coordinate subsetting and resolution selection.
 #'
-#' @returns
+#' @param tiff_path Path to the TIFF image file.
+#' @param rect A \linkS4class{TiffRect} object defining the requested region.
+#'   If NULL, the full image extent at maximum resolution is used.
+#' @param resolution Resolution level to read. If NULL, a resolution is selected
+#'   automatically to keep dimensions under \code{max_pixels}.
+#' @param max_pixels Maximum pixel dimension used when \code{resolution = NULL}.
+#'
+#' @returns An image array returned by \code{RBioFormats::read.image()} for the
+#'   selected region and resolution.
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#' arr <- fetchTiffArray(exampleTiff(), rect = TiffRect(900, 2300, 1400, 2800))
+#' dim(arr)
+#' }
 fetchTiffArray = function(tiff_path, rect = NULL,
                           resolution = NULL, max_pixels = 800){
     rect = .rect_null_check(rect, tiff_path)
@@ -223,7 +206,7 @@ fetchTiffArray = function(tiff_path, rect = NULL,
 #' resolution based on desired pixel dimensions.
 #'
 #' @param tiff_path Path to the TIFF image file
-#' @param rect
+#' @param rect A \linkS4class{TiffRect} object defining the rectangle region
 #' @param resolution Resolution level to read from the TIFF file. If NULL, automatically selects resolution to keep image under max_pixels
 #' @param max_pixels Maximum dimension in pixels for the plotted image. Used for automatic resolution selection
 #' @param precalc_max Optional data frame with precalculated min/max values per channel for normalization
@@ -236,7 +219,6 @@ fetchTiffArray = function(tiff_path, rect = NULL,
 #' @import ggplot2
 #' @importFrom RBioFormats read.image
 #'
-#' @examples
 .fetch_tiff_data = function(tiff_path, rect,
                             resolution = NULL, max_pixels = 800,
                             precalc_max = NULL, show_raw = FALSE,
@@ -440,26 +422,40 @@ fetchTiffData.rgb = function(tiff_path,
 
 }
 
-#' Title
+#' Apply \code{coord_fixed()} to stored plots
 #'
-#' @param img_data
+#' Applies \code{ggplot2::coord_fixed()} to each plot stored in a
+#' \linkS4class{TiffPlotData} object using its rectangle extent.
 #'
-#' @returns
+#' @param img_data A \linkS4class{TiffPlotData} object.
+#'
+#' @returns The modified \linkS4class{TiffPlotData} object.
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#' obj <- fetchTiffData(exampleTiff(), TiffRect(900, 2300, 1400, 2800))
+#' obj <- apply_coord_fixed(obj)
+#' }
 apply_coord_fixed = function(img_data){
     .apply_coord_FUN(img_data, ggplot2::coord_fixed)
 }
 
-#' Title
+#' Apply \code{coord_cartesian()} to stored plots
 #'
-#' @param img_data
+#' Applies \code{ggplot2::coord_cartesian()} to each plot stored in a
+#' \linkS4class{TiffPlotData} object using its rectangle extent.
 #'
-#' @returns
+#' @param img_data A \linkS4class{TiffPlotData} object.
+#'
+#' @returns The modified \linkS4class{TiffPlotData} object.
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#' obj <- fetchTiffData(exampleTiff(), TiffRect(900, 2300, 1400, 2800))
+#' obj <- apply_coord_cartesian(obj)
+#' }
 apply_coord_cartesian = function(img_data){
     .apply_coord_FUN(img_data, ggplot2::coord_cartesian)
 }
@@ -471,7 +467,7 @@ apply_coord_cartesian = function(img_data){
 #' automatic quantile normalization and legend display.
 #'
 #' @param tiff_path Path to the TIFF image file
-#' @param rect
+#' @param rect A \linkS4class{TiffRect} object defining the rectangle region
 #' @param resolution Resolution level to read from the TIFF file. If NULL, automatically selects resolution
 #' @param max_pixels Maximum dimension in pixels for the plotted image
 #' @param precalc_max Optional data frame with precalculated min/max values per channel for normalization

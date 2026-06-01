@@ -19,6 +19,8 @@
 \arguments{
 \item{tiff_path}{Path to the TIFF image file}
 
+\item{rect}{A \linkS4class{TiffRect} object defining the rectangle region}
+
 \item{resolution}{Resolution level to read from the TIFF file. If NULL, automatically selects resolution to keep image under max_pixels}
 
 \item{max_pixels}{Maximum dimension in pixels for the plotted image. Used for automatic resolution selection}

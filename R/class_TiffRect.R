@@ -93,7 +93,7 @@ setMethod("show", "TiffRect", function(object){
 
 #### Names ####
 
-
+#' @rdname TiffRect
 #' @param x A TiffRect object
 setMethod("names", "TiffRect",
           function(x)
