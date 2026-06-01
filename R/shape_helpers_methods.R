@@ -356,3 +356,68 @@ ggplot_add.TiffEllipse <- function(object, plot, object_name) {
 ggplot_add.TiffPolygon <- function(object, plot, object_name) {
   shape_annotate(plot, object)
 }
+
+
+#' Create a style-aware shape layer for ggplot2 `+`
+#'
+#' Wraps a `TiffShape` object together with annotation arguments so you can
+#' use styled `+` chaining in ggplot2.
+#'
+#' @param shape A `TiffShape` object (`TiffRect`, `TiffEllipse`, or `TiffPolygon`).
+#' @param color Border/line color.
+#' @param fill Fill color.
+#' @param alpha Alpha transparency.
+#' @param annotate_center If `TRUE`, annotate center points instead of boundaries.
+#' @param n Number of vertices used to draw ellipse boundaries.
+#' @param ... Additional arguments passed to ggplot layer calls.
+#' @return A `TiffShapeLayer` object usable with `ggplot +`.
+#' @export
+#' @examples
+#' library(ggplot2)
+#' r <- TiffRect(10, 30, 10, 25)
+#' ggplot() +
+#'   coord_fixed(xlim = c(0, 40), ylim = c(0, 40)) +
+#'   shape_layer(r, color = "red", fill = "tomato", alpha = 0.3)
+shape_layer <- function(shape,
+                        color = "green",
+                        fill = NA,
+                        alpha = 0.2,
+                        annotate_center = FALSE,
+                        n = 120L,
+                        ...) {
+  if (!is(shape, "TiffShape")) {
+    stop("shape must be a TiffShape")
+  }
+
+  structure(
+    list(
+      shape = shape,
+      params = c(
+        list(
+          color = color,
+          fill = fill,
+          alpha = alpha,
+          annotate_center = annotate_center,
+          n = n
+        ),
+        list(...)
+      )
+    ),
+    class = "TiffShapeLayer"
+  )
+}
+
+
+#' Add a `TiffShapeLayer` to a ggplot using `+`
+#'
+#' @param object A `TiffShapeLayer` object created by `shape_layer()`.
+#' @param plot A ggplot object.
+#' @param object_name Unused; required by `ggplot_add`.
+#' @return ggplot object with shape annotation added.
+#' @exportS3Method ggplot2::ggplot_add
+ggplot_add.TiffShapeLayer <- function(object, plot, object_name) {
+  do.call(
+    shape_annotate,
+    c(list(p = plot, shape = object$shape), object$params)
+  )
+}

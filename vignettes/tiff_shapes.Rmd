@@ -184,6 +184,45 @@ empty_canvas() %>%
   ggtitle("shape_annotate(..., annotate_center = TRUE)")
 ```
 
+## Working with ggplot2
+
+You can annotate shapes in three complementary styles.
+
+### 1) magrittr pipe with shape_annotate
+
+```{r ggplot-pipe-style}
+empty_canvas() %>%
+  shape_annotate(rect0, color = "#1f77b4", fill = "#1f77b4", alpha = 0.2) %>%
+  shape_annotate(ellipse0, color = "#2ca02c", fill = NA, alpha = 0.8) %>%
+  shape_annotate(poly0, color = "#d62728", fill = "#d62728", alpha = 0.15) +
+  ggtitle("Pipe style: shape_annotate")
+```
+
+### 2) Native ggplot2 `+` with shape objects
+
+When using `+` directly with shape objects, default annotation aesthetics are used.
+
+```{r ggplot-plus-shape}
+empty_canvas() +
+  rect0 +
+  ellipse0 +
+  poly0 +
+  ggtitle("Plus style: ggplot + shape")
+```
+
+### 3) Native ggplot2 `+` with shape_layer for custom styling
+
+Use `shape_layer()` when you want `+` chaining plus explicit annotation parameters.
+
+```{r ggplot-plus-shape-layer}
+empty_canvas() +
+  shape_layer(rect0, color = "#1f77b4", fill = "#1f77b4", alpha = 0.2) +
+  shape_layer(ellipse0, color = "#2ca02c", fill = NA, alpha = 0.9, linewidth = 1.1) +
+  shape_layer(poly0, color = "#d62728", fill = "#d62728", alpha = 0.15) +
+  shape_layer(poly0, annotate_center = TRUE, color = "black", size = 2.5, alpha = 1) +
+  ggtitle("Plus style with custom aesthetics: shape_layer")
+```
+
 ## Multi-row shapes
 
 All three shape classes support storing multiple rows in one object.
