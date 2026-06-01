@@ -103,8 +103,8 @@ test_that("rect_shift with only dy shifts y coordinates", {
 })
 
 test_that("rect_shift fails with non-TiffRect input", {
-  expect_error(rect_shift(list(), dx = 5), "rect must be a TiffRect")
-  expect_error(rect_shift(data.frame(x = 1:10), dx = 5), "rect must be a TiffRect")
+  expect_error(rect_shift(list(), dx = 5), "shape must be a TiffShape")
+  expect_error(rect_shift(data.frame(x = 1:10), dx = 5), "shape must be a TiffShape")
 })
 
 test_that("rect_shift with negative values works correctly", {
@@ -171,7 +171,7 @@ test_that("rect_resize_abs fails with invalid anchor", {
 })
 
 test_that("rect_resize_abs fails with non-TiffRect input", {
-  expect_error(rect_resize_abs(list(), width = 10, height = 10), "rect must be a TiffRect")
+  expect_error(rect_resize_abs(list(), width = 10, height = 10), "shape must be a TiffShape")
 })
 
 test_that("rect_resize_abs coerces numeric inputs", {
@@ -212,7 +212,7 @@ test_that("rect_resize_mult with only fx uses fx for both dimensions", {
 })
 
 test_that("rect_resize_mult fails with non-TiffRect input", {
-  expect_error(rect_resize_mult(list(), fx = 2), "rect must be a TiffRect")
+  expect_error(rect_resize_mult(list(), fx = 2), "shape must be a TiffShape")
 })
 
 test_that("rect_resize_mult maintains center position", {

@@ -2,11 +2,14 @@
 % Please edit documentation in R/class_A_TiffShape.R, R/class_TiffRect.R
 \name{shape_resize_mult}
 \alias{shape_resize_mult}
+\alias{shape_resize_mult,ANY-method}
 \alias{shape_resize_mult,TiffShape-method}
 \alias{shape_resize_mult,TiffRect-method}
 \title{Resize shape geometry by multiplicative scale factors}
 \usage{
 shape_resize_mult(shape, fx = 1, fy = NULL, anchor = "center")
+
+\S4method{shape_resize_mult}{ANY}(shape, fx = 1, fy = NULL, anchor = "center")
 
 \S4method{shape_resize_mult}{TiffShape}(shape, fx = 1, fy = NULL, anchor = "center")
 

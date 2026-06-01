@@ -486,6 +486,13 @@ methods::setGeneric("shape_resize_mult", function(shape, fx = 1, fy = NULL, anch
 
 #' @rdname shape_resize_mult
 #' @export
+setMethod("shape_resize_mult", signature(shape = "ANY"),
+          function(shape, fx = 1, fy = NULL, anchor = "center") {
+              stop("shape must be a TiffShape")
+          })
+
+#' @rdname shape_resize_mult
+#' @export
 setMethod("shape_resize_mult", signature(shape = "TiffShape"),
           function(shape, fx = 1, fy = NULL, anchor = "center") {
             if (is.null(fy)) {
