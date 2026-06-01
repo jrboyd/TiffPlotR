@@ -4,41 +4,7 @@
 \alias{rect_shift}
 \alias{rect_resize_abs}
 \alias{rect_resize_mult}
-\title{#' @rdname TiffRect
-#' @param value New value for slot.
-setReplaceMethod("$", "TiffRect",
-                 function(x, name, value)
-                 {
-                     warn_msg = "This assignment is not supported.  No effect."
-                     switch (name,
-                             view_size = {
-                                 if(is.null(value)){
-                                     value = -1
-                                 }
-                                 if(is.na(value)){
-                                     value = -1
-                                 }
-                                 x@view_size = value
-                             },
-                             window_size = {
-                                 x@window_size = value
-                             },
-                             read_mode = {
-                                 stopifnot(value %in% c("bam_SE", "bam_PE", "bigwig", "null"))
-                                 x@read_mode = value
-                             },
-                             fetch_options = {
-                                 x@fetch_options = value
-                             },
-                             meta_data = {
-                                 x@meta_data = value
-                             },
-                             warning(warn_msg)
-                     )
-                     validObject(x)
-                     x
-                 })
-Shift and resize \code{\link{TiffRect}} objects}
+\title{Shift and resize \code{\link{TiffRect}} objects}
 \usage{
 rect_shift(rect, dx = 0, dy = 0)
 
