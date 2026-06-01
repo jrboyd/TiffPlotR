@@ -638,6 +638,19 @@ setMethod("rect_annotate", signature(p = "TiffPlotData", rect = "TiffRect"),
             shape_annotate(p, rect, color = color, fill = fill, alpha = alpha, annotate_center = annotate_center, ...)
           })
 
+#' Add a `TiffRect` to a ggplot using `+`
+#'
+#' Enables syntax like `ggplot(...) + my_rect`.
+#'
+#' @param object A `TiffRect` object.
+#' @param plot A ggplot object.
+#' @param object_name Unused; required by `ggplot_add`.
+#' @return ggplot object with rectangle annotation added.
+#' @exportS3Method ggplot2::ggplot_add
+ggplot_add.TiffRect <- function(object, plot, object_name){
+  shape_annotate(plot, object)
+}
+
 #' Subset a \code{\link{TiffRect}} by row index
 #'
 #' @param x TiffRect object

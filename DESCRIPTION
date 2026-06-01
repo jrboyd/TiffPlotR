@@ -21,4 +21,14 @@ Imports:
     tidyr,
     xml2,
     base64enc
+Collate:
+  'class_TiffShape.R'
+  'shape_generics.R'
+  'class_TiffEllipse.R'
+  'class_TiffPolygon.R'
+  'shape_helpers_methods.R'
+  'class_TiffPlotData.R'
+  'class_TiffRect.R'
+  'ome_annotations.R'
+  'tiff_image_fetch.R'
 Config/roxygen2/version: 8.0.0
