@@ -1,0 +1,275 @@
+---
+title: "Working with TiffShape Classes"
+author: "TiffPlotR"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Working with TiffShape Classes}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 8,
+  fig.height = 6
+)
+```
+
+## Overview
+
+This vignette demonstrates how to:
+
+1. Create each concrete `TiffShape` class.
+2. Shift and resize shapes with the `shape_*` generics.
+3. Use `ggplot2` to visualize each manipulation.
+
+```{r libraries}
+library(TiffPlotR)
+library(ggplot2)
+library(tidyverse)
+```
+
+## A plotting helper
+
+We will draw all examples on the same coordinate system so shape changes are easy to compare.
+
+```{r helper-plot}
+empty_canvas <- function(xlim = c(0, 100), ylim = c(0, 100)) {
+  ggplot() +
+    coord_fixed(xlim = xlim, ylim = ylim) +
+    theme_minimal(base_size = 12) +
+    labs(x = "x", y = "y")
+}
+```
+
+## Create all TiffShape classes
+
+### TiffRect
+
+```{r create-rect}
+rect0 <- TiffRect(
+  xmin = 15,
+  xmax = 45,
+  ymin = 20,
+  ymax = 60,
+  name = "rect0"
+)
+
+rect0
+```
+
+```{r plot-rect}
+empty_canvas() %>%
+  shape_annotate(rect0, color = "#1f77b4", fill = "#1f77b4", alpha = 0.25) +
+  ggtitle("TiffRect")
+```
+
+### TiffEllipse
+
+```{r create-ellipse}
+ellipse0 <- TiffEllipse(
+  x0 = 65,
+  y0 = 40,
+  radius_x = 18,
+  radius_y = 10,
+  name = "ellipse0"
+)
+
+ellipse0
+```
+
+```{r plot-ellipse}
+empty_canvas() %>%
+  shape_annotate(ellipse0, color = "#2ca02c", fill = "#2ca02c", alpha = 0.25) +
+  ggtitle("TiffEllipse")
+```
+
+### TiffPolygon
+
+```{r create-polygon}
+poly0 <- TiffPolygon(
+  x = c(20, 35, 50, 30),
+  y = c(75, 92, 78, 65),
+  name = "poly0"
+)
+
+poly0
+```
+
+```{r plot-polygon}
+empty_canvas() %>%
+  shape_annotate(poly0, color = "#d62728", fill = "#d62728", alpha = 0.25) +
+  ggtitle("TiffPolygon")
+```
+
+## Shift shapes with shape_shift
+
+```{r shift-shapes}
+rect_shifted <- shape_shift(rect0, dx = 12, dy = -8)
+ellipse_shifted <- shape_shift(ellipse0, dx = -10, dy = 15)
+poly_shifted <- shape_shift(poly0, dx = 25, dy = -12)
+```
+
+```{r plot-shift-rect}
+empty_canvas() %>%
+  shape_annotate(rect0, color = "grey50", fill = "grey70", alpha = 0.2) %>%
+  shape_annotate(rect_shifted, color = "#1f77b4", fill = "#1f77b4", alpha = 0.3) +
+  ggtitle("shape_shift on TiffRect (gray = original, blue = shifted)")
+```
+
+```{r plot-shift-ellipse}
+empty_canvas() %>%
+  shape_annotate(ellipse0, color = "grey50", fill = "grey70", alpha = 0.2) %>%
+  shape_annotate(ellipse_shifted, color = "#2ca02c", fill = "#2ca02c", alpha = 0.3) +
+  ggtitle("shape_shift on TiffEllipse (gray = original, green = shifted)")
+```
+
+```{r plot-shift-polygon}
+empty_canvas() %>%
+  shape_annotate(poly0, color = "grey50", fill = "grey70", alpha = 0.2) %>%
+  shape_annotate(poly_shifted, color = "#d62728", fill = "#d62728", alpha = 0.3) +
+  ggtitle("shape_shift on TiffPolygon (gray = original, red = shifted)")
+```
+
+## Resize shapes with shape_resize_abs
+
+```{r resize-abs}
+rect_abs <- shape_resize_abs(rect0, width = 18, height = 18, anchor = "center")
+ellipse_abs <- shape_resize_abs(ellipse0, width = 20, height = 30, anchor = "center")
+poly_abs <- shape_resize_abs(poly0, width = 35, height = 20, anchor = "center")
+```
+
+```{r plot-resize-abs}
+empty_canvas() %>%
+  shape_annotate(rect0, color = "grey50", fill = "grey70", alpha = 0.15) %>%
+  shape_annotate(rect_abs, color = "#1f77b4", fill = "#1f77b4", alpha = 0.25) %>%
+  shape_annotate(ellipse0, color = "grey50", fill = "grey70", alpha = 0.15)  %>%
+  shape_annotate(ellipse_abs, color = "#2ca02c", fill = "#2ca02c", alpha = 0.25)  %>%
+  shape_annotate(poly0, color = "grey50", fill = "grey70", alpha = 0.15)  %>%
+  shape_annotate(poly_abs, color = "#d62728", fill = "#d62728", alpha = 0.25) +
+  ggtitle("shape_resize_abs (gray = original, color = resized)")
+```
+
+## Resize shapes with shape_resize_mult
+
+```{r resize-mult}
+rect_mult <- shape_resize_mult(rect0, fx = 1.5, fy = 0.7)
+ellipse_mult <- shape_resize_mult(ellipse0, fx = 0.6, fy = 1.4)
+poly_mult <- shape_resize_mult(poly0, fx = 1.8, fy = 1.2)
+```
+
+```{r plot-resize-mult}
+empty_canvas() %>%
+  shape_annotate(rect0, color = "grey50", fill = "grey70", alpha = 0.15) %>%
+  shape_annotate(rect_mult, color = "#1f77b4", fill = "#1f77b4", alpha = 0.25) %>%
+  shape_annotate(ellipse0, color = "grey50", fill = "grey70", alpha = 0.15) %>%
+  shape_annotate(ellipse_mult, color = "#2ca02c", fill = "#2ca02c", alpha = 0.25) %>%
+  shape_annotate(poly0, color = "grey50", fill = "grey70", alpha = 0.15) %>%
+  shape_annotate(poly_mult, color = "#d62728", fill = "#d62728", alpha = 0.25) +
+  ggtitle("shape_resize_mult (gray = original, color = resized)")
+```
+
+## Annotate centers
+
+```{r centers}
+empty_canvas() %>%
+  shape_annotate(rect0, color = "#1f77b4", fill = NA, alpha = 0.6) %>%
+  shape_annotate(ellipse0, color = "#2ca02c", fill = NA, alpha = 0.6) %>%
+  shape_annotate(poly0, color = "#d62728", fill = NA, alpha = 0.6) %>%
+  shape_annotate(rect0, annotate_center = TRUE, color = "#1f77b4", alpha = 1, size = 3) %>%
+  shape_annotate(ellipse0, annotate_center = TRUE, color = "#2ca02c", alpha = 1, size = 3) %>%
+  shape_annotate(poly0, annotate_center = TRUE, color = "#d62728", alpha = 1, size = 3) +
+  ggtitle("shape_annotate(..., annotate_center = TRUE)")
+```
+
+## Multi-row shapes
+
+All three shape classes support storing multiple rows in one object.
+
+```{r multi-row-create}
+rect_multi <- TiffRect(
+  xmin = c(5, 20, 35),
+  xmax = c(15, 30, 50),
+  ymin = c(5, 10, 20),
+  ymax = c(18, 24, 34),
+  name = c("r", "r", "r")
+)
+
+ellipse_multi <- TiffEllipse(
+  x0 = c(70, 82, 90),
+  y0 = c(70, 82, 65),
+  radius_x = c(6, 4, 5),
+  radius_y = c(3, 7, 4),
+  name = c("e", "e", "e")
+)
+
+poly_multi <- TiffPolygon(
+  x = list(
+    c(55, 62, 58),
+    c(60, 68, 70, 64),
+    c(48, 54, 50)
+  ),
+  y = list(
+    c(20, 22, 30),
+    c(32, 30, 38, 42),
+    c(40, 46, 52)
+  ),
+  name = c("p", "p", "p")
+)
+
+rect_multi
+ellipse_multi
+poly_multi
+```
+
+```{r multi-row-plot-base}
+empty_canvas() %>%
+  shape_annotate(rect_multi, color = "#1f77b4", fill = "#1f77b4", alpha = 0.2) %>%
+  shape_annotate(ellipse_multi, color = "#2ca02c", fill = "#2ca02c", alpha = 0.2) %>%
+  shape_annotate(poly_multi, color = "#d62728", fill = "#d62728", alpha = 0.2) +
+  ggtitle("Multi-row TiffShape objects in one plot")
+```
+
+```{r multi-row-shift}
+rect_multi_shift <- shape_shift(rect_multi, dx = 8, dy = -3)
+ellipse_multi_shift <- shape_shift(ellipse_multi, dx = -6, dy = 5)
+poly_multi_shift <- shape_shift(poly_multi, dx = 4, dy = -6)
+
+empty_canvas() %>%
+  shape_annotate(rect_multi, color = "grey50", fill = "grey70", alpha = 0.12) %>%
+  shape_annotate(ellipse_multi, color = "grey50", fill = "grey70", alpha = 0.12) %>%
+  shape_annotate(poly_multi, color = "grey50", fill = "grey70", alpha = 0.12) %>%
+  shape_annotate(rect_multi_shift, color = "#1f77b4", fill = "#1f77b4", alpha = 0.25) %>%
+  shape_annotate(ellipse_multi_shift, color = "#2ca02c", fill = "#2ca02c", alpha = 0.25) %>%
+  shape_annotate(poly_multi_shift, color = "#d62728", fill = "#d62728", alpha = 0.25) +
+  ggtitle("Multi-row shape_shift (gray = original, color = shifted)")
+
+
+```
+
+```{r multi-row-resize}
+rect_multi_resized <- shape_resize_mult(rect_multi, fx = c(1.0, 1.4, 0.7), fy = c(1.2, 0.9, 1.5))
+ellipse_multi_resized <- shape_resize_mult(ellipse_multi, fx = c(1.3, 0.7, 1.1), fy = c(0.8, 1.4, 1.2))
+poly_multi_resized <- shape_resize_mult(poly_multi, fx = c(0.8, 1.5, 1.2), fy = c(1.4, 0.9, 0.8))
+
+empty_canvas() %>%
+  shape_annotate(rect_multi, color = "grey50", fill = "grey70", alpha = 0.12) %>%
+  shape_annotate(ellipse_multi, color = "grey50", fill = "grey70", alpha = 0.12) %>%
+  shape_annotate(poly_multi, color = "grey50", fill = "grey70", alpha = 0.12) %>%
+  shape_annotate(rect_multi_resized, color = "#1f77b4", fill = "#1f77b4", alpha = 0.25) %>%
+  shape_annotate(ellipse_multi_resized, color = "#2ca02c", fill = "#2ca02c", alpha = 0.25) %>%
+  shape_annotate(poly_multi_resized, color = "#d62728", fill = "#d62728", alpha = 0.25) +
+  ggtitle("Multi-row shape_resize_mult with per-row scale factors")
+```
+
+## Backward compatibility
+
+Rectangle-specific helpers remain available and dispatch the new shape generics.
+
+```{r legacy-rect}
+legacy_rect <- rect_shift(rect0, dx = 5, dy = 5)
+identical_coords <- identical(legacy_rect@coords, shape_shift(rect0, dx = 5, dy = 5)@coords)
+identical_coords
+```

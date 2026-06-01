@@ -556,6 +556,39 @@ setMethod("shape_resize_mult", signature(shape = "TiffShape"),
 }
 
 
+#' Return shape center points
+#'
+#' Computes one representative center point per shape row.
+#'
+#' @param shape A `TiffShape` object.
+#' @return data.frame with columns `x` and `y`.
+#' @export
+methods::setGeneric("shape_center_points", function(shape) {
+  standardGeneric("shape_center_points")
+})
+
+#' @rdname shape_center_points
+#' @export
+setMethod("shape_center_points", signature(shape = "TiffEllipse"),
+          function(shape) {
+            .shape_center_points(shape)
+          })
+
+#' @rdname shape_center_points
+#' @export
+setMethod("shape_center_points", signature(shape = "TiffPolygon"),
+          function(shape) {
+            .shape_center_points(shape)
+          })
+
+#' @rdname shape_center_points
+#' @export
+setMethod("shape_center_points", signature(shape = "ANY"),
+          function(shape) {
+            stop("shape must be a TiffShape")
+          })
+
+
 #' Annotate ggplot objects with shape geometry
 #'
 #' @param p ggplot object.
@@ -588,7 +621,7 @@ setMethod("shape_annotate", signature(p = "ANY", shape = "TiffEllipse"),
             if (!inherits(p, "ggplot")) stop("p must be a ggplot or TiffPlotData object")
 
             if (isTRUE(annotate_center)) {
-              center_df <- .shape_center_points(shape)
+              center_df <- shape_center_points(shape)
               return(
                 p + ggplot2::annotate("point", x = center_df$x, y = center_df$y,
                                       color = color, alpha = alpha, ...)
@@ -614,7 +647,7 @@ setMethod("shape_annotate", signature(p = "ANY", shape = "TiffPolygon"),
             if (!inherits(p, "ggplot")) stop("p must be a ggplot or TiffPlotData object")
 
             if (isTRUE(annotate_center)) {
-              center_df <- .shape_center_points(shape)
+              center_df <- shape_center_points(shape)
               return(
                 p + ggplot2::annotate("point", x = center_df$x, y = center_df$y,
                                       color = color, alpha = alpha, ...)

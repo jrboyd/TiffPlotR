@@ -57,6 +57,27 @@ test_that("shape_shift rejects non-shape input", {
   expect_error(shape_shift(list(), 1, 1), "shape must be a TiffShape")
 })
 
+test_that("shape_center_points works for all shape classes", {
+  rect <- TiffRect(0, 10, 0, 20)
+  ell <- TiffEllipse(x0 = 5, y0 = 9, radius_x = 2, radius_y = 3)
+  poly <- TiffPolygon(x = c(0, 2, 2), y = c(0, 0, 4))
+
+  rc <- shape_center_points(rect)
+  ec <- shape_center_points(ell)
+  pc <- shape_center_points(poly)
+
+  expect_true(is.data.frame(rc))
+  expect_true(is.data.frame(ec))
+  expect_true(is.data.frame(pc))
+
+  expect_equal(rc$x, 5)
+  expect_equal(rc$y, 10)
+  expect_equal(ec$x, 5)
+  expect_equal(ec$y, 9)
+  expect_equal(pc$x, mean(c(0, 2, 2)))
+  expect_equal(pc$y, mean(c(0, 0, 4)))
+})
+
 test_that("shape_resize_abs and shape_resize_mult work for each shape", {
   rect <- TiffRect(0, 10, 0, 20)
   rect2 <- shape_resize_abs(rect, width = 20, height = 10)

@@ -165,6 +165,17 @@ setMethod("$", "TiffRect",
 
 #### Shift and resize ####
 
+#' @rdname shape_center_points
+#' @export
+setMethod("shape_center_points", signature(shape = "TiffRect"),
+          function(shape) {
+            data.frame(
+              x = (shape@coords$xmin + shape@coords$xmax) / 2,
+              y = (shape@coords$ymin + shape@coords$ymax) / 2,
+              stringsAsFactors = FALSE
+            )
+          })
+
 #' @rdname shape_shift
 #' @export
 setMethod("shape_shift", signature(shape = "TiffRect"),
