@@ -1,7 +1,7 @@
 Package: TiffPlotR
 Type: Package
 Title: Efficient ggplot2 plots from TIFF image file.
-Version: 0.1.4
+Version: 0.1.5
 Authors@R: c(
     person(
       "Joseph", "Boyd",
@@ -18,5 +18,7 @@ Imports:
     dplyr,
     magrittr,
     RBioFormats,
-    tidyr
+    tidyr,
+    xml2,
+    base64enc
 Config/roxygen2/version: 8.0.0

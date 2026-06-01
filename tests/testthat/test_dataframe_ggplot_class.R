@@ -256,7 +256,7 @@ test_that("$ operator raises error for non-existent names", {
 # if example tiff is available the plotting helpers should populate img_info
 test_that("plot_tiff_image returns img_info slot", {
     tiff_path <- exampleTiff()
-    obj <- TiffPlotR:::.fetch_tiff_data(tiff_path, x_start=0, x_width=50, y_start=0, y_width=10,
+    obj <- TiffPlotR:::.fetch_tiff_data(tiff_path, TiffRect(0, 50, 0, 10),
                                         resolution=1, max_pixels=10)
     expect_s4_class(obj, "TiffPlotData")
     expect_true(nrow(obj@img_info) > 0)
