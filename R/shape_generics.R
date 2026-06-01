@@ -38,9 +38,10 @@ methods::setGeneric("shape_resize_mult", function(shape, fx = 1, fy = NULL, anch
 #' Computes one representative center point per shape row.
 #'
 #' @param shape A `TiffShape` object.
-#' @return data.frame with columns `x` and `y`.
+#' @param anchor Anchor point to return for each shape row.
+#' @return data.frame with columns `x`, `y`, `name`, and `anchor`.
 #' @export
-methods::setGeneric("shape_center_points", function(shape) {
+methods::setGeneric("shape_center_points", function(shape, anchor = "center") {
   standardGeneric("shape_center_points")
 })
 

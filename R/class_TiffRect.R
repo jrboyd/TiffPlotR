@@ -168,10 +168,35 @@ setMethod("$", "TiffRect",
 #' @rdname shape_center_points
 #' @export
 setMethod("shape_center_points", signature(shape = "TiffRect"),
-          function(shape) {
+          function(shape, anchor = "center") {
+            anchors <- c("center", "topleft", "topright", "botleft", "botright")
+            if (length(anchor) != 1L || !anchor %in% anchors) {
+              stop("anchor must be one of: center, topleft, topright, botleft, botright")
+            }
+
+            coords <- shape@coords
+            if (anchor == "center") {
+              x <- (coords$xmin + coords$xmax) / 2
+              y <- (coords$ymin + coords$ymax) / 2
+            } else if (anchor == "topleft") {
+              x <- coords$xmin
+              y <- coords$ymin
+            } else if (anchor == "topright") {
+              x <- coords$xmax
+              y <- coords$ymin
+            } else if (anchor == "botleft") {
+              x <- coords$xmin
+              y <- coords$ymax
+            } else {
+              x <- coords$xmax
+              y <- coords$ymax
+            }
+
             data.frame(
-              x = (shape@coords$xmin + shape@coords$xmax) / 2,
-              y = (shape@coords$ymin + shape@coords$ymax) / 2,
+              x = x,
+              y = y,
+              name = coords$name,
+              anchor = rep(anchor, nrow(coords)),
               stringsAsFactors = FALSE
             )
           })

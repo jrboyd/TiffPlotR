@@ -124,22 +124,21 @@
 }
 
 
-.shape_center_points <- function(shape) {
-  if (is(shape, "TiffEllipse")) {
-    data.frame(
-      x = shape@coords$x0,
-      y = shape@coords$y0,
-      stringsAsFactors = FALSE
-    )
-  } else if (is(shape, "TiffPolygon")) {
-    data.frame(
-      x = vapply(shape@coords$x, mean, numeric(1)),
-      y = vapply(shape@coords$y, mean, numeric(1)),
-      stringsAsFactors = FALSE
-    )
-  } else {
-    stop("shape must be a TiffShape")
+.shape_center_points <- function(shape, anchor = "center") {
+  anchors <- c("center", "topleft", "topright", "botleft", "botright")
+  if (length(anchor) != 1L || !anchor %in% anchors) {
+    stop("anchor must be one of: center, topleft, topright, botleft, botright")
   }
+
+  bbox <- .shape_bbox(shape)
+  anc <- .shape_anchor_coords(bbox, anchor)
+  data.frame(
+    x = anc$ax,
+    y = anc$ay,
+    name = shape@coords$name,
+    anchor = rep(anchor, nrow(shape@coords)),
+    stringsAsFactors = FALSE
+  )
 }
 
 
@@ -249,21 +248,21 @@ setMethod("shape_resize_mult", signature(shape = "TiffShape"),
 #' @rdname shape_center_points
 #' @export
 setMethod("shape_center_points", signature(shape = "TiffEllipse"),
-          function(shape) {
-            .shape_center_points(shape)
+          function(shape, anchor = "center") {
+            .shape_center_points(shape, anchor = anchor)
           })
 
 #' @rdname shape_center_points
 #' @export
 setMethod("shape_center_points", signature(shape = "TiffPolygon"),
-          function(shape) {
-            .shape_center_points(shape)
+          function(shape, anchor = "center") {
+            .shape_center_points(shape, anchor = anchor)
           })
 
 #' @rdname shape_center_points
 #' @export
 setMethod("shape_center_points", signature(shape = "ANY"),
-          function(shape) {
+          function(shape, anchor = "center") {
             stop("shape must be a TiffShape")
           })
 
@@ -418,6 +417,137 @@ shape_layer <- function(shape,
 ggplot_add.TiffShapeLayer <- function(object, plot, object_name) {
   do.call(
     shape_annotate,
+    c(list(p = plot, shape = object$shape), object$params)
+  )
+}
+
+
+#' Draw shape names on a ggplot
+#'
+#' @param p ggplot object or `TiffPlotData`.
+#' @param shape A `TiffShape` object.
+#' @param color Text color.
+#' @param size Text size.
+#' @param anchor Anchor point used to place labels.
+#' @param hjust Horizontal justification passed to `geom_text`.
+#' @param vjust Vertical justification passed to `geom_text`.
+#' @param nudge_x Horizontal label offset.
+#' @param nudge_y Vertical label offset.
+#' @param ... Additional arguments passed to `geom_text`.
+#' @return A ggplot object, or a `TiffPlotData` object when `p` is `TiffPlotData`.
+#' @export
+shape_name_annotate <- function(p,
+                                shape,
+                                color = "black",
+                                size = 3,
+                                anchor = "center",
+                                hjust = 0.5,
+                                vjust = 0.5,
+                                nudge_x = 0,
+                                nudge_y = 0,
+                                ...) {
+  if (!is(shape, "TiffShape")) {
+    stop("shape must be a TiffShape")
+  }
+
+  if (is(p, "TiffPlotData")) {
+    active_name <- p@activePlot
+    if (!active_name %in% names(p@plots)) {
+      stop("activePlot is not present in plots")
+    }
+    p@plots[[active_name]] <- shape_name_annotate(
+      p@plots[[active_name]],
+      shape,
+      color = color,
+      size = size,
+      anchor = anchor,
+      hjust = hjust,
+      vjust = vjust,
+      nudge_x = nudge_x,
+      nudge_y = nudge_y,
+      ...
+    )
+    validObject(p)
+    return(p)
+  }
+
+  if (!inherits(p, "ggplot")) {
+    stop("p must be a ggplot or TiffPlotData object")
+  }
+
+  point_df <- shape_center_points(shape, anchor = anchor)
+  p + ggplot2::geom_text(
+    data = point_df,
+    mapping = ggplot2::aes(x = x, y = y, label = name),
+    inherit.aes = FALSE,
+    color = color,
+    size = size,
+    hjust = hjust,
+    vjust = vjust,
+    nudge_x = nudge_x,
+    nudge_y = nudge_y,
+    ...
+  )
+}
+
+
+#' Create a shape-name layer for ggplot2 `+`
+#'
+#' @param shape A `TiffShape` object.
+#' @param color Text color.
+#' @param size Text size.
+#' @param anchor Anchor point used to place labels.
+#' @param hjust Horizontal justification passed to `geom_text`.
+#' @param vjust Vertical justification passed to `geom_text`.
+#' @param nudge_x Horizontal label offset.
+#' @param nudge_y Vertical label offset.
+#' @param ... Additional arguments passed to `geom_text`.
+#' @return A `TiffShapeNameLayer` object usable with `ggplot +`.
+#' @export
+shape_name_layer <- function(shape,
+                             color = "black",
+                             size = 3,
+                             anchor = "center",
+                             hjust = 0.5,
+                             vjust = 0.5,
+                             nudge_x = 0,
+                             nudge_y = 0,
+                             ...) {
+  if (!is(shape, "TiffShape")) {
+    stop("shape must be a TiffShape")
+  }
+
+  structure(
+    list(
+      shape = shape,
+      params = c(
+        list(
+          color = color,
+          size = size,
+          anchor = anchor,
+          hjust = hjust,
+          vjust = vjust,
+          nudge_x = nudge_x,
+          nudge_y = nudge_y
+        ),
+        list(...)
+      )
+    ),
+    class = "TiffShapeNameLayer"
+  )
+}
+
+
+#' Add a `TiffShapeNameLayer` to a ggplot using `+`
+#'
+#' @param object A `TiffShapeNameLayer` object created by `shape_name_layer()`.
+#' @param plot A ggplot object.
+#' @param object_name Unused; required by `ggplot_add`.
+#' @return ggplot object with shape names added.
+#' @exportS3Method ggplot2::ggplot_add
+ggplot_add.TiffShapeNameLayer <- function(object, plot, object_name) {
+  do.call(
+    shape_name_annotate,
     c(list(p = plot, shape = object$shape), object$params)
   )
 }
