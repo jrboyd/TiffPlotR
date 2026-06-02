@@ -85,31 +85,26 @@ fetchTiffData = function(tiff_path, rect = NULL, resolution = NULL, max_pixels =
     )
 }
 
+.to_rgba_hex <- function(val) {
+    if (val < 0) {
+        val <- val + 2^32
+    }
+
+    a <- floor(val / 256^3) %% 256
+    r <- floor(val / 256^2) %% 256
+    g <- floor(val / 256) %% 256
+    b <- val %% 256
+
+    sprintf("%02X%02X%02X%02X", r, g, b, a)
+}
+to_rgba_hex = function(int_cols){
+    sapply(int_cols, .to_rgba_hex)
+}
+
 
 .ome_fill_color_to_hex <- function(fill_color) {
-    fill_color <- as.character(fill_color)
-    out <- rep(NA_character_, length(fill_color))
-
-    has_hash <- grepl("^#", fill_color)
-    out[has_hash] <- fill_color[has_hash]
-
-    non_hash_idx <- which(!has_hash & !is.na(fill_color) & nzchar(fill_color))
-    if (length(non_hash_idx) == 0) {
-        return(out)
-    }
-
-    vals <- suppressWarnings(as.numeric(fill_color[non_hash_idx]))
-    valid <- !is.na(vals)
-    if (!any(valid)) {
-        return(out)
-    }
-
-    vals <- vals[valid]
-    vals[vals < 0] <- vals[vals < 0] + 2^32
-    hex8 <- toupper(sprintf("%08X", as.numeric(vals)))
-    out_idx <- non_hash_idx[valid]
-    out[out_idx] <- paste0("#", substr(hex8, 3, 8))
-    out
+    hex_vals = to_rgba_hex(as.numeric(fill_color))
+    paste0("#", hex_vals)
 }
 
 
@@ -168,15 +163,17 @@ fetchTiffData = function(tiff_path, rect = NULL, resolution = NULL, max_pixels =
 #' head(masked@mask_color_mappings)
 #' }
 fetchTiffDataMasked <- function(tiff_path,
-                                 rect = NULL,
-                                 resolution = NULL,
-                                 max_pixels = 800,
-                                 precalc_max = NULL,
-                                 show_raw = FALSE,
-                                 quantile_norm = .999,
-                                 channel_names = NULL,
-                                 selected_channels = NULL,
-                                 bit_order = c("msb", "lsb")) {
+                                rect = NULL,
+                                resolution = NULL,
+                                max_pixels = 800,
+                                precalc_max = NULL,
+                                show_raw = FALSE,
+                                quantile_norm = .999,
+                                channel_names = NULL,
+                                selected_channels = NULL,
+                                mask_points = NULL,
+                                retain_unmasked = FALSE,
+                                bit_order = c("msb", "lsb")) {
     bit_order <- match.arg(bit_order)
     rect <- .rect_null_check(rect, tiff_path)
 
@@ -192,41 +189,71 @@ fetchTiffDataMasked <- function(tiff_path,
         selected_channels = selected_channels
     )
 
-    ann <- fetchTiffAnnotations(
-        tiff_path = tiff_path,
-        decode_masks = TRUE,
-        bit_order = bit_order,
-        include_summary = FALSE
-    )
-    mask_points <- ann$mask_points
+    if(is.null(mask_points)){
+        ann <- fetchTiffAnnotations(
+            tiff_path = tiff_path,
+            decode_masks = TRUE,
+            bit_order = bit_order,
+            include_summary = FALSE
+        )
+        mask_points <- ann$mask_points
+    }else{
+        message("Using supplied mask_points.")
+    }
+
     if (nrow(mask_points) == 0) {
         stop("No mask points found in OME annotations for this TIFF.")
     }
 
-    required_mask_cols <- c("x", "y")
+    required_mask_cols <- c("i", "j")
     if (!all(required_mask_cols %in% colnames(mask_points))) {
-        stop("Decoded mask points must contain x and y columns.")
+        stop("Decoded mask points must contain i and j columns.")
     }
 
-    in_rect <- (mask_points$x >= rect@coords$xmin) & (mask_points$x <= rect@coords$xmax) &
-               (mask_points$y >= rect@coords$ymin) & (mask_points$y <= rect@coords$ymax)
+    in_rect <- (mask_points$i >= rect@coords$xmin) & (mask_points$i <= rect@coords$xmax) &
+        (mask_points$j >= rect@coords$ymin) & (mask_points$j <= rect@coords$ymax)
     mask_points <- mask_points[in_rect, , drop = FALSE]
     if (nrow(mask_points) == 0) {
-        stop("No decoded mask points overlap the requested rect.")
+        warning("No decoded mask points overlap the requested rect.")
     }
 
     signal_df <- base_obj@data
-    signal_df$i_key <- round(signal_df$i, 6)
-    signal_df$j_key <- round(signal_df$j, 6)
 
-    mask_points$i_key <- round(mask_points$x, 6)
-    mask_points$j_key <- round(mask_points$y, 6)
+    # for lower resolutions, many mask points can match a single pixel
+    # need to convert mask points to pixel resolution
+    delta_i = signal_df$i %>% unique %>% sort %>% diff %>% table %>% sort %>% rev %>% head(n=1) %>% names %>% as.numeric
+    delta_j = signal_df$j %>% unique %>% sort %>% diff %>% table %>% sort %>% rev %>% head(n=1) %>% names %>% as.numeric
 
-    join_cols <- c("i_key", "j_key")
-    meta_cols <- setdiff(colnames(mask_points), c("x", "y"))
-    mask_join <- unique(mask_points[, c(join_cols, meta_cols), drop = FALSE])
+    remain_i = signal_df$i %% delta_i %>% table %>% sort %>% rev %>% head(n = 1) %>% names %>% as.numeric
+    remain_j = signal_df$j %% delta_j %>% table %>% sort %>% rev %>% head(n = 1) %>% names %>% as.numeric
 
-    masked_df <- merge(signal_df, mask_join, by = join_cols)
+    # join will be done on i_bin and j_bin
+    signal_df = signal_df %>%
+        dplyr::mutate(i_bin = round((i-remain_i) / delta_i)) %>%
+        dplyr::mutate(j_bin = round((j-remain_j) / delta_j))
+
+    # join will be done on i_bin and j_bin
+    mask_points = mask_points %>%
+        dplyr::mutate(i_bin = round((i-remain_i) / delta_i)) %>%
+        dplyr::mutate(j_bin = round((j-remain_j) / delta_j))
+
+    # select most common mask assignment per ROI_ID in pixel
+    mask_pixels = mask_points %>%
+        dplyr::group_by(Text, ROI_ID, i_bin, j_bin) %>%
+        dplyr::summarise(N = length(Text)) %>%
+        dplyr::group_by(ROI_ID, i_bin, j_bin) %>%
+        dplyr::mutate(fraction = N / sum(N)) %>%
+        dplyr::filter(fraction > .5)
+
+    mask_pixels = mask_pixels %>%
+        dplyr::mutate(i = i_bin*delta_i+remain_i, j = j_bin*delta_j+remain_j)
+
+    mask_merge = mask_pixels %>%
+        dplyr::ungroup() %>%
+        dplyr::select(Text, ROI_ID, i, j)
+
+    masked_df = merge(signal_df, mask_merge, by = c("i", "j"), all.x = retain_unmasked)
+
     if (nrow(masked_df) == 0) {
         stop(
             paste(
@@ -236,15 +263,13 @@ fetchTiffDataMasked <- function(tiff_path,
         )
     }
 
-    masked_df <- masked_df[, setdiff(colnames(masked_df), c("i_key", "j_key")), drop = FALSE]
-
     fill_var <- if (isTRUE(show_raw)) "value" else "norm_value"
-    p <- ggplot(masked_df, aes(x = i, y = j, fill = .data[[fill_var]])) +
-        facet_wrap(~channel) +
+    p <- ggplot(masked_df, aes(x = i, y = j, fill = !!ensym(fill_var))) +
+        facet_wrap(channel~Text) +
         scale_y_reverse() +
-        geom_point(shape = 15, size = 0.5, alpha = 0.9) +
+        geom_raster() +
         scale_fill_viridis_c(option = "magma") +
-        theme(panel.background = element_rect(fill = "gray20"), panel.grid = element_blank())
+        theme(panel.background = element_rect(fill = "gray100"), panel.grid = element_blank())
 
     p <- .apply_coord_rect(p, rect, ggplot2::coord_fixed)
     plots_list <- list(masked = p)

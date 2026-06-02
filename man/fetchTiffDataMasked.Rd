@@ -14,6 +14,8 @@ fetchTiffDataMasked(
   quantile_norm = 0.999,
   channel_names = NULL,
   selected_channels = NULL,
+  mask_points = NULL,
+  retain_unmasked = FALSE,
   bit_order = c("msb", "lsb")
 )
 }

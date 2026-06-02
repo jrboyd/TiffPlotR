@@ -25,10 +25,15 @@ ann <- fetchTiffAnnotations(
   include_summary = TRUE
 )
 
-ann$masks
-ann$mask_points
-dir()
+ann$summary %>% filter(n < 40)
 
+ome_doc <- TiffPlotR:::.read_tiff_ome_xml(tf)
+ome_chans = TiffPlotR:::.fetch_ome_nodes(ome_doc, "Channel")
+df = TiffPlotR:::.fetch_ome_nodes(ome_doc, "Channel", output = "data.frame")
+View(df)
+xml2::xml_structure(ome_chans)
+
+ann$summary
 ann$summary %>% filter(n > 0) %>% select(node_type, n) %>% print(n = Inf)
 
 # ----------------------------------------------------------------------------
@@ -91,9 +96,138 @@ if (nrow(ellipse_tbl) > 0) {
 # ----------------------------------------------------------------------------
 # Build a base image plot using package TIFF reader
 # ----------------------------------------------------------------------------
-img <- fetchTiffData(tf)
-img$
+# img <- fetchTiffData(tf)
+view_rect = readRDS("tmp_view_rect.Rds")
+img <- fetchTiffData(tf, rect = view_rect)
 base_plot <- img@plots[[img@activePlot]] + coord_fixed()
+
+
+undebug(fetchTiffDataMasked)
+msk = fetchTiffDataMasked(tf, mask_points = ann$mask_points)
+
+debug(TiffPlotR:::.ome_fill_color_to_hex)
+msk2 = fetchTiffDataMasked(tf, mask_points = ann$mask_points, rect = view_rect)
+
+
+
+# signal_df = readRDS("tmp_signal_df.Rds")
+signal_df = img@data
+mask_points = readRDS("tmp_mask_points.Rds")
+mask_points = mask_points %>% rename(i = x, j = y)
+
+mask_points %>% head
+view_rect$xmin
+view_rect$ymin
+view_rect$xmax
+
+mask_points = mask_points  %>% filter(i > view_rect$xmin & i < view_rect$xmax & j > view_rect$ymin & j < view_rect$ymax)
+
+signal_df %>% head
+p_img = ggplot(signal_df, aes(x = i, y = j, fill = norm_value)) +
+    geom_raster() +
+    facet_wrap(~channel) +
+    scale_fill_gradientn(colours = c("black", "white"))
+
+mask_points %>% head
+mask_p = mask_points %>% group_by(Text, ROI_ID) %>% summarise(x = mean(i), y = mean(j))
+mask_p$norm_value = 0
+
+
+
+p_raw_mask = p_img + geom_point(data = mask_p, aes(x = x, y = y, color = Text))
+
+p_raw_mask
+
+
+# for lower resolutions, many mask points can match a single pixel
+# need to convert mask points to pixel resolution
+delta_i = signal_df$i %>% unique %>% sort %>% diff %>% table %>% sort %>% rev %>% head(n=1) %>% names %>% as.numeric
+delta_j = signal_df$j %>% unique %>% sort %>% diff %>% table %>% sort %>% rev %>% head(n=1) %>% names %>% as.numeric
+
+remain_i = signal_df$i %% delta_i %>% table %>% sort %>% rev %>% head(n = 1) %>% names %>% as.numeric
+remain_j = signal_df$j %% delta_j %>% table %>% sort %>% rev %>% head(n = 1) %>% names %>% as.numeric
+
+# join will be done on i_bin and j_bin
+signal_df = signal_df %>%
+    mutate(i_bin = round((i-remain_i) / delta_i)) %>%
+    mutate(j_bin = round((j-remain_j) / delta_j))
+
+
+
+
+# join will be done on i_bin and j_bin
+mask_points = mask_points %>%
+    mutate(i_bin = round((i-remain_i) / delta_i)) %>%
+    mutate(j_bin = round((j-remain_j) / delta_j))
+
+# select most common mask assignment per ROI_ID in pixel
+mask_pixels = mask_points %>% group_by(Text, ROI_ID, i_bin, j_bin) %>% summarise(N = length(Text)) %>% group_by(ROI_ID, i_bin, j_bin) %>% mutate(fraction = N / sum(N)) %>% filter(fraction > .5)
+mask_pixels = mask_pixels %>% mutate(i = i_bin*delta_i+remain_i, j = j_bin*delta_j+remain_j)
+
+mask_pixels$norm_value = 0
+
+
+sel_points = mask_points %>% filter(ROI_ID == "ROI:0")
+
+xrng = sel_points$i %>% range
+xrng = xrng + c(-200, 200)
+yrng = sel_points$j %>% range
+yrng = yrng + c(-200, 200)
+
+mask_points$norm_value = 0
+sel_points = mask_points %>% filter(i > min(xrng) & i < max(xrng) & j > min(yrng) & j < max(yrng))
+
+# view_rect = TiffRect(min(xrng), max(xrng), min(yrng), max(yrng))
+# saveRDS(view_rect, "tmp_view_rect.Rds")
+
+
+p_img + geom_point(data = sel_points, aes(x = i, y = j, color = Text), size = .1, alpha = .2) +
+    coord_cartesian(xlim = xrng, ylim = yrng)
+
+p_img
+p_img + geom_point(data = mask_pixels, aes(x = i, y = j, color = Text), size = .1) +
+    coord_cartesian(xlim = xrng, ylim = yrng)
+
+
+
+signal_df
+mask_merge = mask_pixels %>% ungroup %>% select(Text, ROI_ID, i, j)
+signal_df$i %>% class
+mask_merge$i %>% class
+signal_df$i %>% unique %>% sort
+mask_merge$i %>% unique %>% sort
+
+signal_df.masked = merge(signal_df, mask_merge, by = c("i", "j"))
+signal_df.masked %>% head
+ggplot(signal_df.masked, aes(x = i, y = j, fill = norm_value)) +
+    geom_raster() +
+    facet_grid(channel~Text) +
+    scale_fill_viridis_c()
+
+theme_set(theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)))
+
+ggplot(signal_df.masked, aes(x = Text, y = value)) +
+           geom_boxplot() +
+           facet_wrap(~channel, scales = "free_y")
+
+
+signal_df.masked %>% head
+xy_df = signal_df.masked %>% select(-norm_value) %>% pivot_wider(names_from = "channel", values_from = "value")
+ggplot(xy_df, aes(x = `3`, y = `4`)) +
+    geom_point() +
+    facet_wrap(~Text)
+
+
+ggplot(signal_df.masked, aes(x = Text, y = value)) +
+    geom_violin() +
+    facet_wrap(~channel, scales = "free_y")
+
+
+
+mask_points
+signal_df$j %>% diff %>% unique
+mask_points
+
 
 # ----------------------------------------------------------------------------
 # Add annotations using shape_layer (ggplot2 '+' workflow)

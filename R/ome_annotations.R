@@ -281,7 +281,7 @@ decode_ome_masks <- function(mask_df,
     }
 
     data.frame(
-        x = as.numeric(mask_row$X[[1]]) + on_idx[, "col"] - 1,
-        y = as.numeric(mask_row$Y[[1]]) + on_idx[, "row"] - 1
+        i = as.numeric(mask_row$X[[1]]) + on_idx[, "col"] - 1,
+        j = as.numeric(mask_row$Y[[1]]) + on_idx[, "row"] - 1
     )
 }
