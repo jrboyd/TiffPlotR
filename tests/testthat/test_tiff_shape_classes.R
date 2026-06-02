@@ -74,8 +74,8 @@ test_that("shape_center_points works for all shape classes", {
   expect_equal(rc$y, 10)
   expect_equal(ec$x, 5)
   expect_equal(ec$y, 9)
-  expect_equal(pc$x, mean(c(0, 2, 2)))
-  expect_equal(pc$y, mean(c(0, 0, 4)))
+  expect_equal(pc$x, mean(c(0, 2)))
+  expect_equal(pc$y, mean(c(0, 4)))
 })
 
 test_that("shape_resize_abs and shape_resize_mult work for each shape", {
