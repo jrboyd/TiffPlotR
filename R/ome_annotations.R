@@ -1,8 +1,7 @@
 #' Fetch OME ROI annotations from a TIFF
 #'
 #' Reads OME-XML metadata and extracts ROI-linked shape annotations
-#' (labels, polygons, ellipses, and masks). This is a package-safe version
-#' of the exploratory workflow in `dev_polygons.R`.
+#' (labels, polygons, ellipses, and masks).
 #'
 #' @param tiff_path Path to the TIFF image file. Required when `ome_doc` is NULL.
 #' @param ome_doc Optional xml2 document (as returned by \code{xml2::read_xml}).

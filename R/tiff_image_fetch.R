@@ -86,6 +86,186 @@ fetchTiffData = function(tiff_path, rect = NULL, resolution = NULL, max_pixels =
 }
 
 
+.ome_fill_color_to_hex <- function(fill_color) {
+    fill_color <- as.character(fill_color)
+    out <- rep(NA_character_, length(fill_color))
+
+    has_hash <- grepl("^#", fill_color)
+    out[has_hash] <- fill_color[has_hash]
+
+    non_hash_idx <- which(!has_hash & !is.na(fill_color) & nzchar(fill_color))
+    if (length(non_hash_idx) == 0) {
+        return(out)
+    }
+
+    vals <- suppressWarnings(as.numeric(fill_color[non_hash_idx]))
+    valid <- !is.na(vals)
+    if (!any(valid)) {
+        return(out)
+    }
+
+    vals <- vals[valid]
+    vals[vals < 0] <- vals[vals < 0] + 2^32
+    hex8 <- toupper(sprintf("%08X", as.numeric(vals)))
+    out_idx <- non_hash_idx[valid]
+    out[out_idx] <- paste0("#", substr(hex8, 3, 8))
+    out
+}
+
+
+.build_mask_color_mappings <- function(mask_points) {
+    if (nrow(mask_points) == 0) {
+        return(data.frame())
+    }
+
+    keep_cols <- intersect(c("ROI_ID", "Text", "FillColor"), colnames(mask_points))
+    if (length(keep_cols) == 0) {
+        return(data.frame())
+    }
+
+    out <- unique(mask_points[, keep_cols, drop = FALSE])
+    if ("FillColor" %in% colnames(out)) {
+        out$mask_color <- .ome_fill_color_to_hex(out$FillColor)
+    }
+    out
+}
+
+
+#' Fetch TIFF signal from mask-covered pixels across all channels
+#'
+#' Reads TIFF data similarly to \code{fetchTiffData()}, then filters the signal
+#' to pixels that overlap decoded OME \code{Mask} annotations. Mask metadata,
+#' including \code{ROI_ID}, \code{Text}, and \code{FillColor}, are preserved.
+#'
+#' @param tiff_path Path to the TIFF image file.
+#' @param rect A \linkS4class{TiffRect} object defining the requested region.
+#'   If NULL, the full image extent at maximum resolution is used.
+#' @param resolution Resolution level to read. If NULL, a resolution is selected
+#'   automatically to keep dimensions under \code{max_pixels}.
+#' @param max_pixels Maximum pixel dimension used when \code{resolution = NULL}.
+#' @param precalc_max Optional data frame with \code{channel}, \code{min_value},
+#'   and \code{max_value} for normalization.
+#' @param show_raw If TRUE, plot raw values. If FALSE (default), plot normalized values.
+#' @param quantile_norm Quantile used to estimate per-channel max values when
+#'   \code{precalc_max} is NULL.
+#' @param channel_names Optional character vector used to rename channels.
+#' @param selected_channels Optional subset of channels to keep, as channel indices
+#'   or names.
+#' @param bit_order Bit order to use when decoding OME mask payloads.
+#'
+#' @returns A \linkS4class{TiffPlotDataMasked} object with:
+#' \itemize{
+#'   \item \code{@data}: mask-filtered signal values for all selected channels
+#'   \item \code{@mask_points}: decoded mask points with metadata
+#'   \item \code{@mask_color_mappings}: per-mask color mapping (defaulting to XML FillColor)
+#' }
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' masked <- fetchTiffDataMasked(exampleTiff())
+#' head(masked@data)
+#' head(masked@mask_color_mappings)
+#' }
+fetchTiffDataMasked <- function(tiff_path,
+                                 rect = NULL,
+                                 resolution = NULL,
+                                 max_pixels = 800,
+                                 precalc_max = NULL,
+                                 show_raw = FALSE,
+                                 quantile_norm = .999,
+                                 channel_names = NULL,
+                                 selected_channels = NULL,
+                                 bit_order = c("msb", "lsb")) {
+    bit_order <- match.arg(bit_order)
+    rect <- .rect_null_check(rect, tiff_path)
+
+    base_obj <- .fetch_tiff_data(
+        tiff_path = tiff_path,
+        rect = rect,
+        resolution = resolution,
+        max_pixels = max_pixels,
+        precalc_max = precalc_max,
+        show_raw = show_raw,
+        quantile_norm = quantile_norm,
+        channel_names = channel_names,
+        selected_channels = selected_channels
+    )
+
+    ann <- fetchTiffAnnotations(
+        tiff_path = tiff_path,
+        decode_masks = TRUE,
+        bit_order = bit_order,
+        include_summary = FALSE
+    )
+    mask_points <- ann$mask_points
+    if (nrow(mask_points) == 0) {
+        stop("No mask points found in OME annotations for this TIFF.")
+    }
+
+    required_mask_cols <- c("x", "y")
+    if (!all(required_mask_cols %in% colnames(mask_points))) {
+        stop("Decoded mask points must contain x and y columns.")
+    }
+
+    in_rect <- (mask_points$x >= rect@coords$xmin) & (mask_points$x <= rect@coords$xmax) &
+               (mask_points$y >= rect@coords$ymin) & (mask_points$y <= rect@coords$ymax)
+    mask_points <- mask_points[in_rect, , drop = FALSE]
+    if (nrow(mask_points) == 0) {
+        stop("No decoded mask points overlap the requested rect.")
+    }
+
+    signal_df <- base_obj@data
+    signal_df$i_key <- round(signal_df$i, 6)
+    signal_df$j_key <- round(signal_df$j, 6)
+
+    mask_points$i_key <- round(mask_points$x, 6)
+    mask_points$j_key <- round(mask_points$y, 6)
+
+    join_cols <- c("i_key", "j_key")
+    meta_cols <- setdiff(colnames(mask_points), c("x", "y"))
+    mask_join <- unique(mask_points[, c(join_cols, meta_cols), drop = FALSE])
+
+    masked_df <- merge(signal_df, mask_join, by = join_cols)
+    if (nrow(masked_df) == 0) {
+        stop(
+            paste(
+                "No overlap was found between sampled TIFF pixels and decoded mask points at this resolution.",
+                "Try a higher resolution (smaller resolutionLevel value) or a broader rect."
+            )
+        )
+    }
+
+    masked_df <- masked_df[, setdiff(colnames(masked_df), c("i_key", "j_key")), drop = FALSE]
+
+    fill_var <- if (isTRUE(show_raw)) "value" else "norm_value"
+    p <- ggplot(masked_df, aes(x = i, y = j, fill = .data[[fill_var]])) +
+        facet_wrap(~channel) +
+        scale_y_reverse() +
+        geom_point(shape = 15, size = 0.5, alpha = 0.9) +
+        scale_fill_viridis_c(option = "magma") +
+        theme(panel.background = element_rect(fill = "gray20"), panel.grid = element_blank())
+
+    p <- .apply_coord_rect(p, rect, ggplot2::coord_fixed)
+    plots_list <- list(masked = p)
+
+    mask_color_mappings <- .build_mask_color_mappings(mask_points)
+
+    TiffPlotDataMasked(
+        data = masked_df,
+        plots = plots_list,
+        activePlot = names(plots_list)[1],
+        tiff_path = tiff_path,
+        resolution = base_obj@resolution,
+        precalc_max = base_obj@precalc_max,
+        rect = rect,
+        img_info = base_obj@img_info,
+        mask_points = mask_points,
+        mask_color_mappings = mask_color_mappings
+    )
+}
+
+
 #' Convert a TIFF image array to a tidy data frame
 #'
 #' Melts a multi-channel image array into a long-format data frame with columns

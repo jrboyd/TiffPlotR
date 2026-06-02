@@ -9,21 +9,23 @@
 \alias{shape_center_points,TiffRect-method}
 \title{Return shape center points}
 \usage{
-shape_center_points(shape)
+shape_center_points(shape, anchor = "center")
 
-\S4method{shape_center_points}{TiffEllipse}(shape)
+\S4method{shape_center_points}{TiffEllipse}(shape, anchor = "center")
 
-\S4method{shape_center_points}{TiffPolygon}(shape)
+\S4method{shape_center_points}{TiffPolygon}(shape, anchor = "center")
 
-\S4method{shape_center_points}{ANY}(shape)
+\S4method{shape_center_points}{ANY}(shape, anchor = "center")
 
-\S4method{shape_center_points}{TiffRect}(shape)
+\S4method{shape_center_points}{TiffRect}(shape, anchor = "center")
 }
 \arguments{
 \item{shape}{A `TiffShape` object.}
+
+\item{anchor}{Anchor point to return for each shape row.}
 }
 \value{
-data.frame with columns `x` and `y`.
+data.frame with columns `x`, `y`, `name`, and `anchor`.
 }
 \description{
 Computes one representative center point per shape row.

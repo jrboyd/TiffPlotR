@@ -1,7 +1,7 @@
 Package: TiffPlotR
 Type: Package
 Title: Efficient ggplot2 plots from TIFF image file.
-Version: 0.1.5
+Version: 0.1.6
 Authors@R: c(
     person(
       "Joseph", "Boyd",
@@ -28,6 +28,7 @@ Collate:
   'class_TiffPolygon.R'
   'shape_helpers_methods.R'
   'class_TiffPlotData.R'
+  'class_TiffPlotDataMasked.R'
   'class_TiffRect.R'
   'ome_annotations.R'
   'tiff_image_fetch.R'

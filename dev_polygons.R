@@ -22,9 +22,12 @@ tf <- tiff_files[["31'24.ome.tiff"]]
 ann <- fetchTiffAnnotations(
   tiff_path = tf,
   decode_masks = TRUE,
-  bit_order = "msb",
   include_summary = TRUE
 )
+
+ann$masks
+ann$mask_points
+dir()
 
 ann$summary %>% filter(n > 0) %>% select(node_type, n) %>% print(n = Inf)
 
@@ -89,6 +92,7 @@ if (nrow(ellipse_tbl) > 0) {
 # Build a base image plot using package TIFF reader
 # ----------------------------------------------------------------------------
 img <- fetchTiffData(tf)
+img$
 base_plot <- img@plots[[img@activePlot]] + coord_fixed()
 
 # ----------------------------------------------------------------------------

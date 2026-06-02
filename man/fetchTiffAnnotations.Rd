@@ -38,8 +38,7 @@ A named list with elements:
 }
 \description{
 Reads OME-XML metadata and extracts ROI-linked shape annotations
-(labels, polygons, ellipses, and masks). This is a package-safe version
-of the exploratory workflow in `dev_polygons.R`.
+(labels, polygons, ellipses, and masks).
 }
 \examples{
 \dontrun{
