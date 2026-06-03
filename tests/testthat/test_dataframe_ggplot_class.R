@@ -15,7 +15,9 @@ test_that("TiffPlotData class can be instantiated with metadata slots", {
                resolution = 2,
                precalc_max = data.frame(channel=1, min_value=0, max_value=1),
                rect = r,
-               img_info = img_info)
+               img_info = img_info,
+               pixels_per_unit = 0.5,
+               unit_name = "um")
 
     expect_s4_class(obj, "TiffPlotData")
     expect_identical(obj@data, df)
@@ -26,6 +28,8 @@ test_that("TiffPlotData class can be instantiated with metadata slots", {
     expect_equal(obj@precalc_max$channel, 1)
     expect_s4_class(obj@rect, "TiffRect")
     expect_equal(obj@img_info$sizeX, 100)
+    expect_equal(obj@pixels_per_unit, 0.5)
+    expect_equal(obj@unit_name, "um")
 })
 
 test_that("TiffPlotData accepts multi-row TiffRect metadata", {
@@ -63,6 +67,8 @@ test_that("TiffPlotData() helper wraps new() and provides defaults", {
     expect_true(is.data.frame(obj@precalc_max) && nrow(obj@precalc_max)==0)
     expect_s4_class(obj@rect, "TiffRect")
     expect_true(is.data.frame(obj@img_info) && nrow(obj@img_info)==0)
+    expect_true(is.na(obj@pixels_per_unit))
+    expect_true(is.na(obj@unit_name))
 
     # default activePlot uses first plot name
     obj2 <- TiffPlotData(df, list(foo = p, bar = p))
@@ -159,6 +165,8 @@ test_that("$ operator accesses slots", {
     expect_equal(obj$resolution, 1)
     expect_s4_class(obj$rect, "TiffRect")
     expect_true(is.data.frame(obj$img_info))
+    expect_true(is.na(obj$pixels_per_unit))
+    expect_true(is.na(obj$unit_name))
 })
 
 test_that("$ operator accesses data.frame columns", {
@@ -218,6 +226,10 @@ test_that("$<- operator sets slots", {
     new_info <- data.frame(sizeX=10,sizeY=10,sizeC=1,resolutionLevel=1)
     obj$img_info <- new_info
     expect_equal(obj$img_info$sizeY, 10)
+    obj$pixels_per_unit <- 0.25
+    expect_equal(obj$pixels_per_unit, 0.25)
+    obj$unit_name <- "um"
+    expect_equal(obj$unit_name, "um")
 })
 
 test_that("$<- operator sets data.frame columns", {

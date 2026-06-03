@@ -10,6 +10,10 @@
 #' @slot precalc_max A data.frame of precalculated min/max values used for normalization
 #' @slot rect A \linkS4class{TiffRect} object describing the rectangular region that was plotted
 #' @slot img_info A data.frame containing TIFF metadata returned by \code{read_tiff_meta_data} (may be empty)
+#' @slot unit_per_pixel Numeric scalar from OME metadata (for example microns per pixel in X/Y),
+#'   or NA when unavailable.
+#' @slot unit_name Character scalar naming the physical unit for \code{unit_per_pixel}
+#'   (for example \code{"um"}), or NA when unavailable.
 #'
 #' @importFrom methods setClass setMethod
 #' @import ggplot2
@@ -38,7 +42,13 @@ setClass("TiffPlotData",
            resolution = "numeric",
            precalc_max = "data.frame",
            rect = "ANY",
-           img_info = "data.frame"
+           img_info = "data.frame",
+           unit_per_pixel = "numeric",
+           unit_name = "character"
+         ),
+         prototype = list(
+           unit_per_pixel = NA_real_,
+           unit_name = NA_character_
          ),
          validity = function(object) {
            if (length(object@activePlot) != 1) {
@@ -52,6 +62,12 @@ setClass("TiffPlotData",
            }
            if (length(object@resolution) != 1) {
              return("Slot 'resolution' must be a single numeric value")
+           }
+           if (length(object@unit_per_pixel) != 1) {
+             return("Slot 'unit_per_pixel' must be a single numeric value")
+           }
+           if (length(object@unit_name) != 1) {
+             return("Slot 'unit_name' must be a single character string")
            }
            TRUE
          }
@@ -70,6 +86,8 @@ setMethod("show", "TiffPlotData",
             cat("Active plot:", object@activePlot, "\n")
             cat("TIFF path:", object@tiff_path, "\n")
             cat("Resolution:", object@resolution, "\n")
+            cat("Pixels per unit:", object@unit_per_pixel, "\n")
+            cat("Unit name:", object@unit_name, "\n")
             cat("Precalc max rows:", nrow(object@precalc_max), "\n")
             cat("Rect:")
             show(object@rect)
@@ -115,6 +133,10 @@ setMethod("plot", "TiffPlotData",
 #'   zero-sized rectangle)
 #' @param img_info Data frame returned by \code{read_tiff_meta_data}
 #'   (default empty)
+#' @param unit_per_pixel Numeric scalar physical scale from OME metadata
+#'   (default \code{NA_real_}).
+#' @param unit_name Character scalar physical unit name from OME metadata
+#'   (default \code{NA_character_}).
 #' @return A \linkS4class{TiffPlotData} object
 #' @export
 TiffPlotData <- function(data,
@@ -124,7 +146,9 @@ TiffPlotData <- function(data,
                          resolution = NA_real_,
                          precalc_max = data.frame(),
                          rect = TiffRect(0,1,0,1),
-                         img_info = data.frame()) {
+                         img_info = data.frame(),
+                         unit_per_pixel = NA_real_,
+                         unit_name = NA_character_) {
   if (is.null(activePlot)) {
     activePlot <- names(plots)[1]
   }
@@ -136,13 +160,15 @@ TiffPlotData <- function(data,
       resolution = resolution,
       precalc_max = precalc_max,
       rect = rect,
-      img_info = img_info)
+      img_info = img_info,
+      unit_per_pixel = unit_per_pixel,
+      unit_name = unit_name)
 }
 
 #' @export
 setMethod("names", "TiffPlotData",
           function(x) {
-            name_vals = c("data", "plots", "activePlot", "tiff_path", "resolution", "precalc_max", "rect", "img_info")
+            name_vals = c("data", "plots", "activePlot", "tiff_path", "resolution", "precalc_max", "rect", "img_info", "unit_per_pixel", "unit_name")
             return(name_vals)
           }
 )
@@ -170,6 +196,10 @@ setMethod("$", "TiffPlotData",
               return(x@rect)
             } else if (name == "img_info") {
               return(x@img_info)
+            } else if (name == "unit_per_pixel") {
+              return(x@unit_per_pixel)
+            } else if (name == "unit_name") {
+              return(x@unit_name)
             } else if (name %in% names(x@data)) {
               # Allow direct access to data.frame columns
               return(x@data[[name]])
@@ -203,6 +233,10 @@ setMethod("$<-", "TiffPlotData",
               x@rect <- value
             } else if (name == "img_info") {
               x@img_info <- value
+            } else if (name == "unit_per_pixel") {
+              x@unit_per_pixel <- value
+            } else if (name == "unit_name") {
+              x@unit_name <- value
             } else {
               # Set as a column in the data.frame
               x@data[[name]] <- value

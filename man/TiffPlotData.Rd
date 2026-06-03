@@ -19,7 +19,9 @@ TiffPlotData(
   resolution = NA_real_,
   precalc_max = data.frame(),
   rect = TiffRect(0, 1, 0, 1),
-  img_info = data.frame()
+  img_info = data.frame(),
+  unit_per_pixel = NA_real_,
+  unit_name = NA_character_
 )
 }
 \arguments{
@@ -42,6 +44,12 @@ zero-sized rectangle)}
 
 \item{img_info}{Data frame returned by \code{read_tiff_meta_data}
 (default empty)}
+
+\item{unit_per_pixel}{Numeric scalar physical scale from OME metadata
+(default \code{NA_real_}).}
+
+\item{unit_name}{Character scalar physical unit name from OME metadata
+(default \code{NA_character_}).}
 }
 \value{
 A \linkS4class{TiffPlotData} object

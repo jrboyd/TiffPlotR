@@ -28,6 +28,7 @@ Collate:
   'class_TiffPolygon.R'
   'shape_helpers_methods.R'
   'class_TiffPlotData.R'
+  'scale_bar_um.R'
   'class_TiffPlotDataMasked.R'
   'class_TiffRect.R'
   'ome_annotations.R'

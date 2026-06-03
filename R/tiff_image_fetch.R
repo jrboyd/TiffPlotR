@@ -85,7 +85,40 @@ fetchTiffData = function(tiff_path, rect = NULL, resolution = NULL, max_pixels =
     )
 }
 
+.fetch_ome_pixel_scale <- function(tiff_path) {
+    defaults <- list(unit_per_pixel = NA_real_, unit_name = NA_character_)
+
+    tryCatch({
+        ome_doc <- .read_tiff_ome_xml(tiff_path)
+        pixel_info <- .fetch_ome_nodes(ome_doc, "Pixels", output = "data.frame")
+
+        if (nrow(pixel_info) < 1) {
+            return(defaults)
+        }
+
+        px <- suppressWarnings(as.numeric(pixel_info$PhysicalSizeX[[1]]))
+        py <- suppressWarnings(as.numeric(pixel_info$PhysicalSizeY[[1]]))
+        unit <- pixel_info$PhysicalSizeXUnit[[1]]
+
+        if (!is.finite(px)) {
+            return(defaults)
+        }
+
+        if (is.finite(py) && !isTRUE(all.equal(px, py))) {
+            warning("PhysicalSizeX and PhysicalSizeY differ; using PhysicalSizeX for unit_per_pixel.")
+        }
+
+        list(
+            unit_per_pixel = px,
+            unit_name = ifelse(is.null(unit) || !nzchar(as.character(unit)), NA_character_, as.character(unit))
+        )
+    }, error = function(e) {
+        defaults
+    })
+}
+
 .to_rgba_hex <- function(val) {
+    val = as.numeric(val)
     if (val < 0) {
         val <- val + 2^32
     }
@@ -95,7 +128,8 @@ fetchTiffData = function(tiff_path, rect = NULL, resolution = NULL, max_pixels =
     g <- floor(val / 256) %% 256
     b <- val %% 256
 
-    sprintf("%02X%02X%02X%02X", r, g, b, a)
+    paste0("#", sprintf("%02X%02X%02X%02X", r, g, b, a))
+
 }
 to_rgba_hex = function(int_cols){
     sapply(int_cols, .to_rgba_hex)
@@ -276,7 +310,7 @@ fetchTiffDataMasked <- function(tiff_path,
 
     mask_color_mappings <- .build_mask_color_mappings(mask_points)
 
-    TiffPlotDataMasked(
+    out_obj <- TiffPlotDataMasked(
         data = masked_df,
         plots = plots_list,
         activePlot = names(plots_list)[1],
@@ -288,6 +322,10 @@ fetchTiffDataMasked <- function(tiff_path,
         mask_points = mask_points,
         mask_color_mappings = mask_color_mappings
     )
+
+    out_obj@unit_per_pixel <- base_obj@unit_per_pixel
+    out_obj@unit_name <- base_obj@unit_name
+    out_obj
 }
 
 
@@ -553,6 +591,7 @@ fetchTiffArray = function(tiff_path, rect = NULL,
     plots_list = list()
     plots_list[[ifelse(show_raw, "raw", "normalized")]] = p
     data_df <- as.data.frame(tidy_img)
+    pixel_scale <- .fetch_ome_pixel_scale(tiff_path)
     # record rectangle corresponding to requested region
     new("TiffPlotData",
         data = data_df,
@@ -562,7 +601,9 @@ fetchTiffArray = function(tiff_path, rect = NULL,
         resolution = resolution,
         precalc_max = if(is.null(precalc_max)) data.frame() else precalc_max,
         rect = rect,
-        img_info = read_tiff_meta_data(tiff_path))
+        img_info = read_tiff_meta_data(tiff_path),
+        unit_per_pixel = pixel_scale$unit_per_pixel,
+        unit_name = pixel_scale$unit_name)
 }
 
 #' Plot a rectangular region of a TIFF image as RGB
@@ -754,7 +795,9 @@ apply_coord_cartesian = function(img_data){
         resolution = img_obj@resolution,
         precalc_max = img_obj@precalc_max,
         rect = img_obj@rect,
-        img_info = img_obj@img_info)
+        img_info = img_obj@img_info,
+        unit_per_pixel = img_obj@unit_per_pixel,
+        unit_name = img_obj@unit_name)
 }
 
 #' Read TIFF image metadata

@@ -13,6 +13,8 @@ TiffPlotDataMasked(
   precalc_max = data.frame(),
   rect = TiffRect(0, 1, 0, 1),
   img_info = data.frame(),
+  unit_per_pixel = NA_real_,
+  unit_name = NA_character_,
   mask_points = data.frame(),
   mask_color_mappings = data.frame()
 )
@@ -33,6 +35,10 @@ TiffPlotDataMasked(
 \item{rect}{A \linkS4class{TiffRect} region.}
 
 \item{img_info}{TIFF metadata data.frame.}
+
+\item{unit_per_pixel}{Numeric scalar physical scale from OME metadata.}
+
+\item{unit_name}{Character scalar physical unit name from OME metadata.}
 
 \item{mask_points}{Decoded mask points and metadata.}
 

@@ -35,6 +35,8 @@ setClass(
 #' @param precalc_max Data frame of min/max normalization values per channel.
 #' @param rect A \linkS4class{TiffRect} region.
 #' @param img_info TIFF metadata data.frame.
+#' @param unit_per_pixel Numeric scalar physical scale from OME metadata.
+#' @param unit_name Character scalar physical unit name from OME metadata.
 #' @param mask_points Decoded mask points and metadata.
 #' @param mask_color_mappings Mask ID/text to color mapping table.
 #' @return A \linkS4class{TiffPlotDataMasked} object.
@@ -47,6 +49,8 @@ TiffPlotDataMasked <- function(data,
                                precalc_max = data.frame(),
                                rect = TiffRect(0, 1, 0, 1),
                                img_info = data.frame(),
+                               unit_per_pixel = NA_real_,
+                               unit_name = NA_character_,
                                mask_points = data.frame(),
                                mask_color_mappings = data.frame()) {
   if (is.null(activePlot)) {
@@ -63,6 +67,8 @@ TiffPlotDataMasked <- function(data,
     precalc_max = precalc_max,
     rect = rect,
     img_info = img_info,
+    unit_per_pixel = unit_per_pixel,
+    unit_name = unit_name,
     mask_points = mask_points,
     mask_color_mappings = mask_color_mappings
   )

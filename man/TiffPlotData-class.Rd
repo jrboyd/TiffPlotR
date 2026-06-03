@@ -25,6 +25,12 @@ This class combines a data frame with a list of associated ggplot objects
 \item{\code{rect}}{A \linkS4class{TiffRect} object describing the rectangular region that was plotted}
 
 \item{\code{img_info}}{A data.frame containing TIFF metadata returned by \code{read_tiff_meta_data} (may be empty)}
+
+\item{\code{unit_per_pixel}}{Numeric scalar from OME metadata (for example microns per pixel in X/Y),
+or NA when unavailable.}
+
+\item{\code{unit_name}}{Character scalar naming the physical unit for \code{unit_per_pixel}
+(for example \code{"um"}), or NA when unavailable.}
 }}
 
 \examples{
