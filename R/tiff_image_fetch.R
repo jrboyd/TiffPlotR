@@ -876,6 +876,201 @@ calc_qmax = function(tiff_path, resolution){
     data.frame(channel = seq_along(qmaxes), max_value = qmaxes, min_value = qmins, resolution = resolution)
 }
 
+#' Collect channel quantiles across all TIFF resolutions
+#'
+#' Reads every available resolution level once and computes the requested
+#' quantiles for each channel, returning a long-format table that can be
+#' inspected before choosing normalization cutoffs.
+#'
+#' @param tiff_path Path to the TIFF image file.
+#' @param probs Numeric vector of quantiles to compute. Defaults to:
+#'   \code{sort(c(seq(0, 100) / 100, 0.99 + seq(1, 9) / 1000))}.
+#'
+#' @returns A data.frame with columns \code{channel}, \code{resolution},
+#'   \code{prob}, and \code{value}.
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' qtab <- collect_channel_quantiles_all_resolutions(exampleTiff())
+#' subset(qtab, channel == 1)
+#' }
+collect_channel_quantiles_all_resolutions <- function(
+        tiff_path,
+        probs = sort(c(seq(0, 100) / 100, 0.99 + seq(1, 9) / 1000))
+) {
+    if (!is.numeric(probs) || length(probs) < 1L || any(!is.finite(probs)) || any(probs < 0) || any(probs > 1)) {
+        stop("probs must be a numeric vector with values in [0, 1]")
+    }
+    probs <- sort(unique(as.numeric(probs)))
+
+    img_info <- read_tiff_meta_data(tiff_path)
+    resolutions <- sort(unique(img_info$resolutionLevel))
+
+    quantile_rows <- lapply(resolutions, function(resolution) {
+        message("collecting quantiles for resolution ", resolution)
+        img_data <- RBioFormats::read.image(
+            tiff_path,
+            normalize = FALSE,
+            series = 1,
+            resolution = resolution
+        )
+
+        qres <- apply(
+            img_data,
+            MARGIN = 3,
+            FUN = quantile,
+            probs = probs,
+            na.rm = TRUE,
+            names = FALSE
+        )
+
+        if (is.null(dim(qres))) {
+            qres <- matrix(qres, nrow = length(probs), ncol = 1)
+        }
+
+        do.call(rbind, lapply(seq_len(ncol(qres)), function(channel_idx) {
+            data.frame(
+                channel = channel_idx,
+                resolution = resolution,
+                prob = probs,
+                value = qres[, channel_idx],
+                row.names = NULL
+            )
+        }))
+    })
+
+    do.call(rbind, quantile_rows)
+}
+
+
+.resolve_precalc_agg <- function(fun, label) {
+    if (is.function(fun)) {
+        return(fun)
+    }
+    if (!is.character(fun) || length(fun) != 1L) {
+        stop(label, " must be a function or one of: min, median, mean, max")
+    }
+    switch(
+        fun,
+        min = function(x) min(x, na.rm = TRUE),
+        median = function(x) stats::median(x, na.rm = TRUE),
+        mean = function(x) mean(x, na.rm = TRUE),
+        max = function(x) max(x, na.rm = TRUE),
+        stop(label, " must be one of: min, median, mean, max")
+    )
+}
+
+
+#' Convert collected quantiles into a reusable precalc_max table
+#'
+#' Reduces the long-format output from
+#' \code{collect_channel_quantiles_all_resolutions()} into the
+#' \code{precalc_max} structure expected by \code{fetchTiffData()}.
+#'
+#' @param quantile_df Data frame produced by
+#'   \code{collect_channel_quantiles_all_resolutions()}.
+#' @param min_prob Quantile to use for \code{min_value}.
+#' @param max_prob Quantile to use for \code{max_value}.
+#' @param min_agg Aggregation function for per-resolution minima.
+#' @param max_agg Aggregation function for per-resolution maxima.
+#'
+#' @returns A data.frame with columns \code{channel}, \code{min_value},
+#'   \code{max_value}.
+#' @export
+quantiles_to_precalc_max <- function(quantile_df,
+                                     min_prob = 0.90,
+                                     max_prob = 0.998,
+                                     min_agg = "min",
+                                     max_agg = "max") {
+    required_cols <- c("channel", "resolution", "prob", "value")
+    if (!is.data.frame(quantile_df) || !all(required_cols %in% colnames(quantile_df))) {
+        stop("quantile_df must be a data.frame with columns: channel, resolution, prob, value")
+    }
+    if (!is.numeric(min_prob) || length(min_prob) != 1L || !is.finite(min_prob) || min_prob < 0 || min_prob > 1) {
+        stop("min_prob must be a single numeric value in [0, 1]")
+    }
+    if (!is.numeric(max_prob) || length(max_prob) != 1L || !is.finite(max_prob) || max_prob < 0 || max_prob > 1) {
+        stop("max_prob must be a single numeric value in [0, 1]")
+    }
+    if (min_prob >= max_prob) {
+        stop("min_prob must be smaller than max_prob")
+    }
+
+    if (!any(quantile_df$prob == min_prob)) {
+        stop("min_prob is not present in quantile_df$prob")
+    }
+    if (!any(quantile_df$prob == max_prob)) {
+        stop("max_prob is not present in quantile_df$prob")
+    }
+
+    min_agg_fun <- .resolve_precalc_agg(min_agg, "min_agg")
+    max_agg_fun <- .resolve_precalc_agg(max_agg, "max_agg")
+
+    min_df <- subset(quantile_df, prob == min_prob, select = c("channel", "resolution", "value"))
+    max_df <- subset(quantile_df, prob == max_prob, select = c("channel", "resolution", "value"))
+    names(min_df)[names(min_df) == "value"] <- "min_value"
+    names(max_df)[names(max_df) == "value"] <- "max_value"
+
+    merged_df <- merge(min_df, max_df, by = c("channel", "resolution"), all = FALSE)
+
+    merged_df %>%
+        dplyr::group_by(channel) %>%
+        dplyr::summarise(
+            min_value = min_agg_fun(min_value),
+            max_value = max_agg_fun(max_value)
+        ) %>%
+        as.data.frame()
+}
+
+
+#' Precompute normalization ranges across all TIFF resolutions
+#'
+#' Convenience wrapper around \code{collect_channel_quantiles_all_resolutions()}
+#' and \code{quantiles_to_precalc_max()}.
+#'
+#' @param tiff_path Path to the TIFF image file.
+#' @param min_prob Quantile used for \code{min_value} (default \code{0.90}).
+#' @param max_prob Quantile used for \code{max_value} (default \code{0.998}).
+#' @param min_agg Aggregation function for per-resolution minima.
+#' @param max_agg Aggregation function for per-resolution maxima.
+#' @param probs Numeric vector of quantiles to compute up front. Must include
+#'   \code{min_prob} and \code{max_prob}.
+#' @param return_by_resolution If TRUE, return collected quantiles alongside
+#'   aggregated output.
+#'
+#' @returns By default, a data.frame with columns \code{channel},
+#'   \code{min_value}, \code{max_value}. If \code{return_by_resolution = TRUE},
+#'   returns a list with elements \code{precalc_max} and \code{quantiles}.
+#' @export
+precalc_max_all_resolutions <- function(
+        tiff_path,
+        min_prob = 0.90,
+        max_prob = 0.998,
+        min_agg = "min",
+        max_agg = "max",
+        probs = sort(unique(c(seq(0, 100) / 100, 0.99 + seq(1, 9) / 1000, min_prob, max_prob))),
+        return_by_resolution = FALSE
+) {
+    quantile_df <- collect_channel_quantiles_all_resolutions(
+        tiff_path = tiff_path,
+        probs = probs
+    )
+
+    precalc_max <- quantiles_to_precalc_max(
+        quantile_df = quantile_df,
+        min_prob = min_prob,
+        max_prob = max_prob,
+        min_agg = min_agg,
+        max_agg = max_agg
+    )
+
+    if (isTRUE(return_by_resolution)) {
+        return(list(precalc_max = precalc_max, quantiles = quantile_df))
+    }
+    precalc_max
+}
+
 #' Find high-intensity regions in a TIFF image
 #'
 #' Identifies regions in an image where pixel intensities exceed the 99.8th percentile.
