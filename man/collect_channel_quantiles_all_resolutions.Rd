@@ -6,7 +6,15 @@
 \usage{
 collect_channel_quantiles_all_resolutions(
   tiff_path,
-  probs = sort(c(seq(0, 100)/100, 0.99 + seq(1, 9)/1000))
+  probs = sort(c(seq(0, 100)/100, 0.99 + seq(1, 9)/1000)),
+  max_full_fetch = 5e+06,
+  n_each = 10,
+  sample_rect_width = NULL,
+  sample_rect_height = NULL,
+  scout_resolution = NULL,
+  sample_summary_fun = c("mean", "median", "max"),
+  sample_channel = NULL,
+  sample_seed = NULL
 )
 }
 \arguments{
@@ -14,10 +22,37 @@ collect_channel_quantiles_all_resolutions(
 
 \item{probs}{Numeric vector of quantiles to compute. Defaults to:
 \code{sort(c(seq(0, 100) / 100, 0.99 + seq(1, 9) / 1000))}.}
+
+\item{max_full_fetch}{Maximum number of pixels to read as a full image for a
+given resolution. Resolutions above this threshold are sampled using
+informative regions.}
+
+\item{n_each}{Number of sampled regions per intensity band (low/mid/high)
+when sampling is used.}
+
+\item{sample_rect_width}{Optional sampled region width in full-resolution
+pixels. If NULL, selected automatically from \code{max_full_fetch} and
+\code{n_each}.}
+
+\item{sample_rect_height}{Optional sampled region height in full-resolution
+pixels. If NULL, selected automatically from \code{max_full_fetch} and
+\code{n_each}.}
+
+\item{scout_resolution}{Optional resolution level used to choose informative
+regions.}
+
+\item{sample_summary_fun}{Summary statistic used to score candidate regions:
+one of \code{"mean"}, \code{"median"}, \code{"max"}.}
+
+\item{sample_channel}{Optional channel index used for region scoring.}
+
+\item{sample_seed}{Optional seed for reproducible sampled region selection.}
 }
 \value{
 A data.frame with columns \code{channel}, \code{resolution},
-  \code{prob}, and \code{value}.
+  \code{prob}, and \code{value}. Additional columns
+  \code{source_mode} (\code{"full"} or \code{"sampled"}) and
+  \code{pixels_used} report how each resolution was processed.
 }
 \description{
 Reads every available resolution level once and computes the requested

@@ -11,6 +11,14 @@ precalc_max_all_resolutions(
   min_agg = "min",
   max_agg = "max",
   probs = sort(unique(c(seq(0, 100)/100, 0.99 + seq(1, 9)/1000, min_prob, max_prob))),
+  max_full_fetch = 5e+06,
+  n_each = 10,
+  sample_rect_width = NULL,
+  sample_rect_height = NULL,
+  scout_resolution = NULL,
+  sample_summary_fun = c("mean", "median", "max"),
+  sample_channel = NULL,
+  sample_seed = NULL,
   return_by_resolution = FALSE
 )
 }
@@ -27,6 +35,26 @@ precalc_max_all_resolutions(
 
 \item{probs}{Numeric vector of quantiles to compute up front. Must include
 \code{min_prob} and \code{max_prob}.}
+
+\item{max_full_fetch}{Maximum number of pixels to read fully per resolution.}
+
+\item{n_each}{Number of sampled regions per intensity band when sampling.}
+
+\item{sample_rect_width}{Optional sampled region width in full-resolution
+pixels.}
+
+\item{sample_rect_height}{Optional sampled region height in full-resolution
+pixels.}
+
+\item{scout_resolution}{Optional resolution level used to choose informative
+regions.}
+
+\item{sample_summary_fun}{Summary statistic used to score candidate regions:
+one of \code{"mean"}, \code{"median"}, \code{"max"}.}
+
+\item{sample_channel}{Optional channel index used for region scoring.}
+
+\item{sample_seed}{Optional seed for reproducible sampled region selection.}
 
 \item{return_by_resolution}{If TRUE, return collected quantiles alongside
 aggregated output.}

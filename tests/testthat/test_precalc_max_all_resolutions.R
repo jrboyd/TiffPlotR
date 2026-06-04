@@ -5,9 +5,24 @@ test_that("collect_channel_quantiles_all_resolutions returns inspectable quantil
   qtab <- collect_channel_quantiles_all_resolutions(tiff_path, probs = c(0, 0.5, 0.9, 0.998))
 
   expect_true(is.data.frame(qtab))
-  expect_true(all(c("channel", "resolution", "prob", "value") %in% colnames(qtab)))
+  expect_true(all(c("channel", "resolution", "prob", "value", "source_mode", "pixels_used") %in% colnames(qtab)))
   expect_true(nrow(qtab) > 0)
   expect_true(all(sort(unique(qtab$prob)) == c(0, 0.5, 0.9, 0.998)))
+})
+
+test_that("collect_channel_quantiles_all_resolutions switches to sampled mode above threshold", {
+  tiff_path <- exampleTiff()
+  qtab <- collect_channel_quantiles_all_resolutions(
+    tiff_path,
+    probs = c(0.9, 0.998),
+    max_full_fetch = 1,
+    n_each = 1,
+    sample_rect_width = 128,
+    sample_rect_height = 128,
+    sample_seed = 1
+  )
+
+  expect_true(all(qtab$source_mode == "sampled"))
 })
 
 test_that("quantiles_to_precalc_max reduces quantile table to fetch-compatible output", {
