@@ -36,8 +36,8 @@ test_that("fetchTiffAnnotations optionally decodes masks", {
   ann <- fetchTiffAnnotations(ome_doc = sample_ome_xml(), decode_masks = TRUE)
   expect_true(is.data.frame(ann$mask_points))
   expect_equal(nrow(ann$mask_points), 1)
-  expect_equal(ann$mask_points$x[[1]], 10)
-  expect_equal(ann$mask_points$y[[1]], 20)
+  expect_equal(ann$mask_points$i[[1]], 10)
+  expect_equal(ann$mask_points$j[[1]], 20)
 })
 
 test_that("decode_ome_masks returns matrix and points outputs", {

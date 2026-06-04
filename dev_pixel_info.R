@@ -20,7 +20,7 @@ xml2::xml_structure(ome_doc)
 pixel_info = TiffPlotR:::.fetch_ome_nodes(ome_doc, "Pixels", output = "data.frame")
 
 stopifnot(pixel_info$PhysicalSizeX == pixel_info$PhysicalSizeY)
-pixels_per_unit = pixel_info$PhysicalSizeX %>% as.numeric
+unit_per_pixel = pixel_info$PhysicalSizeX %>% as.numeric
 unit_name = pixel_info$PhysicalSizeXUnit
 
 

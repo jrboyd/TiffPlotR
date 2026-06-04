@@ -36,7 +36,7 @@ test_that("add_um_scale_bar infers scale from TiffPlotData slots", {
     plots = list(raw = p),
     activePlot = "raw",
     rect = TiffRect(1, 10, 1, 10),
-    pixels_per_unit = 0.5,
+    unit_per_pixel = 0.5,
     unit_name = "um"
   )
 
@@ -48,7 +48,7 @@ test_that("add_um_scale_bar infers scale from TiffPlotData slots", {
 test_that("add_um_scale_bar validates bad inputs", {
   p <- ggplot(data.frame(i = 1:5, j = 1:5), aes(i, j)) + geom_point()
 
-  expect_error(add_um_scale_bar(p, um_per_pixel = 0), "positive")
-  expect_error(add_um_scale_bar(p, um_per_pixel = 0.5, bar_fraction = 1), "bar_fraction")
-  expect_error(add_um_scale_bar(p, um_per_pixel = 0.5, pad_fraction = 0.6), "pad_fraction")
+  expect_error(add_um_scale_bar(p, unit_per_pixel = 0), "positive")
+  expect_error(add_um_scale_bar(p, unit_per_pixel = 0.5, bar_fraction = 1), "bar_fraction")
+  expect_error(add_um_scale_bar(p, unit_per_pixel = 0.5, pad_fraction = 0.6), "pad_fraction")
 })
