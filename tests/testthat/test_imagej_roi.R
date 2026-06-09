@@ -135,3 +135,19 @@ test_that("readImageJRois reports unsupported ROI types", {
   expect_false(res$roi_info$supported[[1]])
   expect_match(res$unsupported$reason[[1]], "not currently supported")
 })
+
+test_that("readImageJRois accepts a vector of ROI file paths", {
+  rect_path <- tempfile(fileext = ".roi")
+  oval_path <- tempfile(fileext = ".roi")
+
+  .write_roi_file(rect_path, .make_imagej_roi_raw(type_code = 1, top = 5, left = 7, bottom = 25, right = 30))
+  .write_roi_file(oval_path, .make_imagej_roi_raw(type_code = 2, top = 40, left = 10, bottom = 80, right = 50))
+
+  res <- readImageJRois(c(rect_path, oval_path))
+
+  expect_equal(nrow(res$roi_info), 2)
+  expect_s4_class(res$rects, "TiffRect")
+  expect_s4_class(res$ellipses, "TiffEllipse")
+  expect_equal(res$rects@coords$xmin[[1]], 7)
+  expect_equal(res$ellipses@coords$x0[[1]], 30)
+})

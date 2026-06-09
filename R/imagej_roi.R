@@ -22,11 +22,13 @@
 #' @export
 #'
 #' @examples
-#' \dontrun{
-#' rois <- readImageJRois("Annotations.zip")
+#' roi_files = dir(system.file(package = "TiffPlotR", "extdata"), pattern = "roi$", full.names = TRUE)
+#' roi <- readImageJRois(roi_files)
+#'
+#' roi_zip_file = system.file(package = "TiffPlotR", "extdata/TomatoRed_CD45_PanCK_3124_TMA_rects.zip", mustWork = TRUE)
+#' rois <- readImageJRois(roi_zip_file)
 #' rois$rects
 #' rois$polygons
-#' }
 readImageJRois <- function(path) {
     if (!is.character(path) || length(path) != 1 || !nzchar(path)) {
         stop("path must be a single .roi or .zip file path.", call. = FALSE)
@@ -35,7 +37,12 @@ readImageJRois <- function(path) {
         stop("path does not exist: ", path, call. = FALSE)
     }
 
-    roi_sources <- .collect_imagej_roi_sources(path)
+    source_info <- .collect_imagej_roi_sources(path)
+    roi_sources <- source_info$roi_sources
+    if (!is.null(source_info$cleanup_dir)) {
+        on.exit(unlink(source_info$cleanup_dir, recursive = TRUE, force = TRUE), add = TRUE)
+    }
+
     parsed <- lapply(seq_len(nrow(roi_sources)), function(i) {
         .read_imagej_roi_file(roi_sources$file_path[[i]], roi_sources$source_name[[i]])
     })
@@ -73,10 +80,13 @@ readImageJRois <- function(path) {
     ext <- tolower(tools::file_ext(path))
 
     if (identical(ext, "roi")) {
-        return(data.frame(
-            file_path = path,
-            source_name = basename(path),
-            stringsAsFactors = FALSE
+        return(list(
+            roi_sources = data.frame(
+                file_path = path,
+                source_name = basename(path),
+                stringsAsFactors = FALSE
+            ),
+            cleanup_dir = NULL
         ))
     }
 
@@ -92,15 +102,17 @@ readImageJRois <- function(path) {
 
     exdir <- tempfile("imagej-roi-")
     dir.create(exdir)
-    on.exit(unlink(exdir, recursive = TRUE, force = TRUE), add = TRUE)
 
     target_names <- zip_listing$Name[keep]
     utils::unzip(path, files = target_names, exdir = exdir)
 
-    data.frame(
-        file_path = file.path(exdir, target_names),
-        source_name = target_names,
-        stringsAsFactors = FALSE
+    list(
+        roi_sources = data.frame(
+            file_path = file.path(exdir, target_names),
+            source_name = target_names,
+            stringsAsFactors = FALSE
+        ),
+        cleanup_dir = exdir
     )
 }
 

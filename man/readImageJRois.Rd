@@ -7,8 +7,8 @@
 readImageJRois(path)
 }
 \arguments{
-\item{path}{Path to a single `.roi` file or a `.zip` archive exported from
-ImageJ/FIJI.}
+\item{path}{Path(s) to one or more `.roi` files and/or `.zip` archives
+exported from ImageJ/FIJI.}
 }
 \value{
 A named list with elements:
