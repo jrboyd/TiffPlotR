@@ -31,6 +31,20 @@
 #' @return A ggplot object, or a \linkS4class{TiffPlotData} object if
 #'   \code{p} is \code{TiffPlotData}.
 #' @export
+#'
+#' @examples
+#' library(ggplot2)
+#' theme_set(theme(panel.background = element_blank(), panel.grid = element_blank()))
+#' tiff_path = exampleTiff()
+#' imgd = fetchTiffData(tiff_path, selected_channels = c(1, 5))
+#' zoom_rect = TiffRect(2500, 3000, 4000, 4500)
+#' imgd = add_um_scale_bar(imgd)
+#' imgd = shape_annotate(imgd, zoom_rect)
+#' imgd
+#'
+#' imgd.z = fetchTiffData(tiff_path, selected_channels = c(1, 5), rect = zoom_rect)
+#' imgd.z = add_um_scale_bar(imgd.z, label_offset_fraction = .02)
+#' imgd.z
 add_um_scale_bar <- function(p,
                              unit_per_pixel = NULL,
                              unit_name = NULL,

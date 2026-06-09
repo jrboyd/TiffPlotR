@@ -303,7 +303,7 @@ fetchTiffDataMasked <- function(tiff_path,
         scale_y_reverse() +
         geom_raster() +
         scale_fill_viridis_c(option = "magma") +
-        theme(panel.background = element_rect(fill = "gray100"), panel.grid = element_blank()) +
+        # theme(panel.background = element_rect(fill = "gray100"), panel.grid = element_blank()) +
         labs(x = "pixels") +
         labs(y = "pixels")
 
@@ -426,10 +426,10 @@ fetchTiffArray = function(tiff_path, rect = NULL,
                           resolution = NULL, max_pixels = 800){
     rect = .rect_null_check(rect, tiff_path)
     img_info = read_tiff_meta_data(tiff_path)
-    max_info = subset(img_info, resolutionLevel == 1)
+    max_info = dplyr::filter(img_info, resolutionLevel == 1)
 
     resolution = .resolution_null_check(resolution = resolution, tiff_path = tiff_path, rect = rect, max_pixels = max_pixels)
-    res_info = subset(img_info, resolutionLevel == resolution)
+    res_info = dplyr::filter(img_info, resolutionLevel == resolution)
 
     x_ratio = res_info$sizeX / max_info$sizeX
     y_ratio = res_info$sizeY / max_info$sizeY
@@ -585,8 +585,8 @@ fetchTiffArray = function(tiff_path, rect = NULL,
         facet_wrap(~channel) +
         scale_y_reverse() +
         geom_raster() +
-        scale_fill_viridis_c(option = "magma") +
-        theme(panel.background = element_rect(fill = "gray20"), panel.grid = element_blank())
+        scale_fill_viridis_c(option = "magma") #+
+        # theme(panel.background = element_rect(fill = "gray20"), panel.grid = element_blank())
 
     p = .apply_coord_rect(p, rect, ggplot2::coord_fixed)
 
@@ -781,8 +781,8 @@ apply_coord_cartesian = function(img_data){
             guides(color = guide_legend(override.aes = list(size = 12, shape = 16, alpha = 1),
                                         theme = theme(legend.background = element_blank(), legend.key = element_blank()))) +
             scale_y_reverse() +
-            theme(panel.spacing = unit(0, "npc"), panel.background = element_blank(), axis.text = element_text(size = 6)) +
-            theme(legend.position = "bottom") +
+            theme(panel.spacing = unit(0, "npc")) + #, panel.background = element_blank(), axis.text = element_text(size = 6)) +
+            # theme(legend.position = "bottom") +
             scale_fill_identity() +
             labs(x= "pixel", y = "pixel")
     })
@@ -1250,7 +1250,6 @@ find_qmax_regions = function(tiff_path, resolution = 5){
     img_qmaxes = img_data %>% group_by(channel) %>% summarise(qmax = quantile(value, .998))
     qmaxes_todo = split(img_qmaxes$qmax, img_qmaxes$channel)
 
-    browser()
     img_data = as.data.table(img_data)
     region_data = list()
     for(i_chan in as.integer(img_qmaxes$channel)){
