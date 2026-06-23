@@ -8,7 +8,7 @@
 \alias{[,TiffPolygon-method}
 \title{Construct a TiffPolygon}
 \usage{
-TiffPolygon(x, y, name = "polygon")
+TiffPolygon(x, y, name = NULL)
 
 \S4method{show}{TiffPolygon}(object)
 

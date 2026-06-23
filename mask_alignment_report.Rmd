@@ -1,0 +1,58 @@
+---
+title: "mask_alignment_report"
+author: "Joe Boyd"
+date: "2026-06-11"
+output:
+  html_document: default
+header-includes:
+  - |
+    <style>
+    .main-container {
+      width: min(96vw, 2400px);
+      max-width: none;
+    }
+    </style>
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+```
+
+```{r}
+library(tidyverse)
+mask_files = dir("alignment_assessment_plots/", pattern = "mask", full.names = TRUE)
+wide_files = dir("alignment_assessment_plots/", pattern = "wide", full.names = TRUE)
+
+mask_df = data.frame(mask_file = mask_files)
+mask_df = mask_df %>% mutate(id = basename(mask_file) %>% sub(".+_images_", "", .) %>% sub(".png", "", .))
+
+wide_df = data.frame(wide_file = wide_files)
+wide_df = wide_df %>% mutate(id = basename(wide_file) %>% sub(".+_images_", "", .) %>% sub(".png", "", .))
+stopifnot(setequal(wide_df$id, mask_df$id))
+
+png_df = merge(mask_df, wide_df, by = "id")
+```
+
+```{r pressure, echo=FALSE}
+n_to_show = 25
+set.seed(0)
+random_i = sample(seq(nrow(png_df))) 
+selected_i = head(random_i, n = n_to_show)
+```
+
+```{r, fig.keep="all", fig.show="hold", out.width="49%", message=FALSE}
+img_paths = unlist(lapply(selected_i, function(i){
+  png_wide = png_df$wide_file[i]
+  png_mask = png_df$mask_file[i]
+
+  png_wide = gsub("^\"|\"$", "", png_wide)
+  png_mask = gsub("^\"|\"$", "", png_mask)
+
+  png_wide = gsub("\\\\", "/", png_wide)
+  png_mask = gsub("\\\\", "/", png_mask)
+
+  c(normalizePath(png_wide), normalizePath(png_mask))
+}), use.names = FALSE)
+
+knitr::include_graphics(img_paths)
+```

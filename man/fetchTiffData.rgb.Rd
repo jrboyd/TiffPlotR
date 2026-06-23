@@ -13,7 +13,9 @@ fetchTiffData.rgb(
   green_channel = 3,
   blue_channel = 1,
   channel_names = NULL,
-  value_var = "norm_value"
+  value_var = "norm_value",
+  precalc_max = NULL,
+  quantile_norm = 0.999
 )
 }
 \arguments{

@@ -465,8 +465,10 @@ fetchTiffArray = function(tiff_path, rect = NULL,
 #' @importFrom RBioFormats read.image
 #'
 .fetch_tiff_data = function(tiff_path, rect,
-                            resolution = NULL, max_pixels = 800,
-                            precalc_max = NULL, show_raw = FALSE,
+                            resolution = NULL,
+                            max_pixels = 800,
+                            precalc_max = NULL,
+                            show_raw = FALSE,
                             quantile_norm = .999,
                             channel_names = NULL,
                             selected_channels = NULL){
@@ -586,7 +588,7 @@ fetchTiffArray = function(tiff_path, rect = NULL,
         scale_y_reverse() +
         geom_raster() +
         scale_fill_viridis_c(option = "magma") #+
-        # theme(panel.background = element_rect(fill = "gray20"), panel.grid = element_blank())
+    # theme(panel.background = element_rect(fill = "gray20"), panel.grid = element_blank())
 
     p = .apply_coord_rect(p, rect, ggplot2::coord_fixed)
 
@@ -643,7 +645,10 @@ fetchTiffData.rgb = function(tiff_path,
                              green_channel = 3,
                              blue_channel = 1,
                              channel_names = NULL,
-                             value_var = "norm_value"){
+                             value_var = "norm_value",
+                             precalc_max = NULL,
+                             quantile_norm = .999
+){
     rect = .rect_null_check(rect, tiff_path)
     if(nrow(rect@coords) != 1) stop("fetchTiffData.rgb requires a TiffRect with exactly one row")
     .fetch_tiff_data.rgb(tiff_path,
@@ -654,7 +659,9 @@ fetchTiffData.rgb = function(tiff_path,
                          green_channel = green_channel,
                          blue_channel = blue_channel,
                          channel_names = channel_names,
-                         value_var = value_var
+                         value_var = value_var,
+                         precalc_max = precalc_max,
+                         quantile_norm = quantile_norm
     )
 }
 
@@ -747,13 +754,17 @@ apply_coord_cartesian = function(img_data){
         green_channel = 1,
         blue_channel = 5,
         channel_names = NULL,
-        value_var = "norm_value"
+        value_var = "norm_value",
+        precalc_max = NULL,
+        quantile_norm = .999
 ){
     img_obj = .fetch_tiff_data(
         tiff_path = tiff_path,
         rect = rect,
         resolution = resolution,
         max_pixels = max_pixels,
+        precalc_max = precalc_max,
+        quantile_norm = quantile_norm
     )
     img_df = img_obj@data
     rgb_df = convertTidyToRGB(img_df, red_channel = red_channel, green_channel = green_channel, blue_channel = blue_channel, value_var = value_var)
@@ -880,6 +891,40 @@ calc_qmax = function(tiff_path, resolution){
     data.frame(channel = seq_along(qmaxes), max_value = qmaxes, min_value = qmins, resolution = resolution)
 }
 
+.sampled_quantiles <- function(rect_obj, resolution) {
+    n_rect <- nrow(rect_obj@coords)
+    sampled_arrays <- lapply(seq_len(n_rect), function(i) {
+        fetchTiffArray(
+            tiff_path = tiff_path,
+            rect = rect_obj[i],
+            resolution = resolution
+        )
+    })
+
+    first_dim <- dim(sampled_arrays[[1]])
+    n_channels <- if (length(first_dim) >= 3) first_dim[[3]] else 1
+    ch_vals <- replicate(n_channels, numeric(0), simplify = FALSE)
+    pixels_used <- 0
+
+    for (arr in sampled_arrays) {
+        arr_dim <- dim(arr)
+        pixels_used <- pixels_used + as.numeric(arr_dim[[1]] * arr_dim[[2]])
+        if (length(arr_dim) >= 3) {
+            for (ch in seq_len(n_channels)) {
+                ch_vals[[ch]] <- c(ch_vals[[ch]], as.numeric(arr[, , ch]))
+            }
+        } else {
+            ch_vals[[1]] <- c(ch_vals[[1]], as.numeric(arr))
+        }
+    }
+
+    qres <- do.call(cbind, lapply(seq_len(n_channels), function(ch) {
+        stats::quantile(ch_vals[[ch]], probs = probs, na.rm = TRUE, names = FALSE)
+    }))
+
+    list(qres = qres, pixels_used = pixels_used)
+}
+
 #' Collect channel quantiles across all TIFF resolutions
 #'
 #' Reads every available resolution level once and computes the requested
@@ -952,40 +997,6 @@ collect_channel_quantiles_all_resolutions <- function(
     full_h <- as.numeric(max_info$sizeY[[1]])
 
     sampled_rect <- NULL
-
-    .sampled_quantiles <- function(rect_obj, resolution) {
-        n_rect <- nrow(rect_obj@coords)
-        sampled_arrays <- lapply(seq_len(n_rect), function(i) {
-            fetchTiffArray(
-                tiff_path = tiff_path,
-                rect = rect_obj[i],
-                resolution = resolution
-            )
-        })
-
-        first_dim <- dim(sampled_arrays[[1]])
-        n_channels <- if (length(first_dim) >= 3) first_dim[[3]] else 1
-        ch_vals <- replicate(n_channels, numeric(0), simplify = FALSE)
-        pixels_used <- 0
-
-        for (arr in sampled_arrays) {
-            arr_dim <- dim(arr)
-            pixels_used <- pixels_used + as.numeric(arr_dim[[1]] * arr_dim[[2]])
-            if (length(arr_dim) >= 3) {
-                for (ch in seq_len(n_channels)) {
-                    ch_vals[[ch]] <- c(ch_vals[[ch]], as.numeric(arr[, , ch]))
-                }
-            } else {
-                ch_vals[[1]] <- c(ch_vals[[1]], as.numeric(arr))
-            }
-        }
-
-        qres <- do.call(cbind, lapply(seq_len(n_channels), function(ch) {
-            stats::quantile(ch_vals[[ch]], probs = probs, na.rm = TRUE, names = FALSE)
-        }))
-
-        list(qres = qres, pixels_used = pixels_used)
-    }
 
     quantile_rows <- lapply(resolutions, function(resolution) {
         res_info <- subset(img_info, resolutionLevel == resolution)

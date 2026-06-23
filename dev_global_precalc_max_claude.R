@@ -1,5 +1,5 @@
 tiff_path = "inst/extdata/301_CellPellet_NegCTL_Scan1_PC3Guise.ome.tiff"
-tiff_path = "c://Users/boydj/project_data/EBV_image_files/RNAScopeRound1/D-EB-13.ome.tiff"
+# tiff_path = "c://Users/boydj/project_data/EBV_image_files/RNAScopeRound1/D-EB-13.ome.tiff"
 
 time = system.time({
     qtile_df = collect_channel_quantiles_all_resolutions(tiff_path)

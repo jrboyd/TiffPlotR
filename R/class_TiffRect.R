@@ -201,6 +201,29 @@ setMethod("shape_center_points", signature(shape = "TiffRect"),
             )
           })
 
+#' @rdname shape_contained_points
+#' @export
+setMethod("shape_contained_points", signature(shape = "TiffRect"),
+          function(shape, resolution = 1) {
+            resolution <- .validate_shape_resolution(resolution)
+            parts <- lapply(seq_len(nrow(shape@coords)), function(i) {
+              x_vals <- .shape_axis_values(shape@coords$xmin[[i]], shape@coords$xmax[[i]], resolution)
+              y_vals <- .shape_axis_values(shape@coords$ymin[[i]], shape@coords$ymax[[i]], resolution)
+              if (length(x_vals) == 0L || length(y_vals) == 0L) {
+                return(NULL)
+              }
+
+              grid <- expand.grid(x = x_vals, y = y_vals, KEEP.OUT.ATTRS = FALSE, stringsAsFactors = FALSE)
+              grid$name <- shape@coords$name[[i]]
+              grid
+            })
+            parts <- Filter(Negate(is.null), parts)
+            if (length(parts) == 0L) {
+              return(data.frame(x = numeric(0), y = numeric(0), name = character(0), stringsAsFactors = FALSE))
+            }
+            do.call(rbind, parts)
+          })
+
 #' @rdname shape_shift
 #' @export
 setMethod("shape_shift", signature(shape = "TiffRect"),
@@ -566,11 +589,11 @@ rect_test_contains <- function(rect, other, subset = FALSE){
 #' @return ggplot object with rectangle layer added
 #' @export
 #' @importFrom ggplot2 geom_rect aes ggplot
-methods::setGeneric("rect_annotate", function(p, rect, color = "green", fill = NA, alpha = 0.2, annotate_center = FALSE, ...){
+methods::setGeneric("rect_annotate", function(p, rect, color = NULL, fill = NULL, alpha = 0.2, annotate_center = FALSE, ...){
   standardGeneric("rect_annotate")
 })
 
-.annotate_ggplot = function(p, rect, color = "green", fill = NA, alpha = 0.2, annotate_center = FALSE, ...){
+.annotate_ggplot = function(p, rect, color, fill, alpha = 0.2, annotate_center = FALSE, ...){
     if(length(annotate_center) != 1L || !is.logical(annotate_center)){
       stop("annotate_center must be TRUE or FALSE")
     }
@@ -585,27 +608,43 @@ methods::setGeneric("rect_annotate", function(p, rect, color = "green", fill = N
                             ...)
     } else {
       rect_df <- rect@coords
-      p + ggplot2::geom_rect(data = rect_df,
-                             mapping = ggplot2::aes(xmin = xmin, xmax = xmax,
-                                                    ymin = ymin, ymax = ymax),
-                             inherit.aes = FALSE,
-                             color = color, fill = fill, alpha = alpha, ...)
+      if (length(unique(color)) == 1L &&
+          length(unique(fill[!is.na(fill)])) <= 1L) {
+        p + ggplot2::geom_rect(data = rect_df,
+                               mapping = ggplot2::aes(xmin = xmin, xmax = xmax,
+                                                      ymin = ymin, ymax = ymax),
+                               inherit.aes = FALSE,
+                               color = color[[1L]], fill = fill[[1L]],
+                               alpha = alpha, ...)
+      } else {
+        rect_df$shape_color <- color
+        rect_df$shape_fill  <- fill
+        p + ggplot2::geom_rect(data = rect_df,
+                               mapping = ggplot2::aes(xmin = xmin, xmax = xmax,
+                                                      ymin = ymin, ymax = ymax,
+                                                      color = I(shape_color),
+                                                      fill  = I(shape_fill)),
+                               inherit.aes = FALSE,
+                               alpha = alpha, ...)
+      }
     }
 }
 
 #' @rdname shape_annotate
 #' @export
 setMethod("shape_annotate", signature(p = "ANY", shape = "TiffRect"),
-          function(p, shape, color = "green", fill = NA, alpha = 0.2, annotate_center = FALSE, n = 120L, ...){
+          function(p, shape, color = NULL, fill = NULL, alpha = 0.2, annotate_center = FALSE, n = 120L, ...){
             if (!inherits(p, "ggplot")) stop("p must be a ggplot or TiffPlotData object")
-            .annotate_ggplot(p, shape, color = color, fill = fill, alpha = alpha, annotate_center = annotate_center, ...)
+            colors <- .resolve_shape_param(shape, color, "color", "green")
+            fills  <- .resolve_shape_param(shape, fill,  "fill",  NA)
+            .annotate_ggplot(p, shape, color = colors, fill = fills, alpha = alpha, annotate_center = annotate_center, ...)
           })
 
 #' @rdname shape_annotate
 #' @return for `p` as `TiffPlotData`, returns a `TiffPlotData` with the active plot annotated
 #' @export
 setMethod("shape_annotate", signature(p = "TiffPlotData", shape = "TiffShape"),
-          function(p, shape, color = "green", fill = NA, alpha = 0.2, annotate_center = FALSE, n = 120L, ...){
+          function(p, shape, color = NULL, fill = NULL, alpha = 0.2, annotate_center = FALSE, n = 120L, ...){
             active_name <- p@activePlot
             if(!grepl("annotated", active_name)){
                 anno_name = paste0(active_name, ".annotated")
@@ -639,7 +678,7 @@ setMethod("shape_annotate", signature(p = "TiffPlotData", shape = "TiffShape"),
 #' @rdname rect_annotate
 #' @export
 setMethod("rect_annotate", signature(p = "ANY", rect = "ANY"),
-      function(p, rect, color = "green", fill = NA, alpha = 0.2, annotate_center = FALSE, ...){
+      function(p, rect, color = NULL, fill = NULL, alpha = 0.2, annotate_center = FALSE, ...){
         if (interactive()) .Deprecated("shape_annotate")
               if (!inherits(p, "ggplot")) stop("p must be a ggplot or TiffPlotData object")
               if (!inherits(rect, "TiffRect")) stop("rect must be a TiffRect")
@@ -649,7 +688,7 @@ setMethod("rect_annotate", signature(p = "ANY", rect = "ANY"),
 #' @rdname rect_annotate
 #' @export
 setMethod("rect_annotate", signature(p = "ANY", rect = "TiffRect"),
-          function(p, rect, color = "green", fill = NA, alpha = 0.2, annotate_center = FALSE, ...){
+          function(p, rect, color = NULL, fill = NULL, alpha = 0.2, annotate_center = FALSE, ...){
             if (interactive()) .Deprecated("shape_annotate")
             shape_annotate(p, rect, color = color, fill = fill, alpha = alpha, annotate_center = annotate_center, ...)
           })
@@ -658,7 +697,7 @@ setMethod("rect_annotate", signature(p = "ANY", rect = "TiffRect"),
 #' @return for `p` as `TiffPlotData`, returns a `TiffPlotData` with the active plot annotated
 #' @export
 setMethod("rect_annotate", signature(p = "TiffPlotData", rect = "TiffRect"),
-          function(p, rect, color = "green", fill = NA, alpha = 0.2, annotate_center = FALSE, ...){
+          function(p, rect, color = NULL, fill = NULL, alpha = 0.2, annotate_center = FALSE, ...){
             if (interactive()) .Deprecated("shape_annotate")
             shape_annotate(p, rect, color = color, fill = fill, alpha = alpha, annotate_center = annotate_center, ...)
           })
@@ -691,7 +730,13 @@ ggplot_add.TiffRect <- function(object, plot, object_name){
 #' r[c(TRUE, FALSE, TRUE, FALSE)]  # logical index
 setMethod("[", signature(x = "TiffRect"),
           function(x, i, j, ..., drop = FALSE){
-            new("TiffRect", coords = x@coords[i, , drop = FALSE])
+            new_coords <- x@coords[i, , drop = FALSE]
+            new_meta   <- if (nrow(x@meta) > 0L) {
+              x@meta[x@meta$name %in% new_coords$name, , drop = FALSE]
+            } else {
+              x@meta
+            }
+            new("TiffRect", coords = new_coords, meta = new_meta)
           })
 
 #' Combine \code{\link{TiffRect}} objects
@@ -714,6 +759,11 @@ setMethod("c", signature(x = "TiffRect"),
             }
             combined <- do.call(rbind, lapply(parts, function(r) r@coords))
             rownames(combined) <- NULL
-            combined$name <- .unique_shape_names(combined$name)
-            new("TiffRect", coords = combined)
+            old_names <- combined$name
+            combined$name <- .unique_shape_names(old_names)
+            combined_meta <- .combine_shape_meta(parts, old_names, combined$name)
+            new("TiffRect", coords = combined, meta = combined_meta)
           })
+
+
+

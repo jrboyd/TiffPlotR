@@ -95,6 +95,40 @@ test_that("shape_resize_abs and shape_resize_mult work for each shape", {
   expect_equal(round(max(poly2$y[[1]]) - min(poly2$y[[1]]), 6), 8)
 })
 
+test_that("shape_contained_points enumerates integer-grid points for each shape", {
+  rect <- TiffRect(0, 2, 0, 2, name = "rect")
+  rect_pts <- shape_contained_points(rect)
+  expect_equal(nrow(rect_pts), 9)
+  expect_true(all(c("x", "y", "name") %in% colnames(rect_pts)))
+  expect_true(all(rect_pts$name == "rect"))
+
+  ell <- TiffEllipse(x0 = 0, y0 = 0, radius_x = 1, radius_y = 1, name = "ell")
+  ell_pts <- shape_contained_points(ell)
+  expected_ell <- data.frame(
+    x = c(-1, 0, 0, 0, 1),
+    y = c(0, -1, 0, 1, 0)
+  )
+  got_ell <- unique(ell_pts[, c("x", "y")])
+  got_ell <- got_ell[order(got_ell$x, got_ell$y), , drop = FALSE]
+  expected_ell <- expected_ell[order(expected_ell$x, expected_ell$y), , drop = FALSE]
+  expect_equal(got_ell, expected_ell)
+  expect_true(all(ell_pts$name == "ell"))
+
+  poly <- TiffPolygon(x = c(0, 2, 0), y = c(0, 0, 2), name = "poly")
+  poly_pts <- shape_contained_points(poly)
+  expect_true(all(poly_pts$x >= 0 & poly_pts$y >= 0 & (poly_pts$x + poly_pts$y) <= 2))
+  expect_true(any(poly_pts$x == 0 & poly_pts$y == 0))
+  expect_true(any(poly_pts$x == 1 & poly_pts$y == 1))
+  expect_true(any(poly_pts$x == 2 & poly_pts$y == 0))
+  expect_true(all(poly_pts$name == "poly"))
+})
+
+test_that("shape_contained_points validates resolution", {
+  rect <- TiffRect(0, 1, 0, 1)
+  expect_error(shape_contained_points(rect, resolution = 0), "resolution must be a single positive numeric value")
+  expect_error(shape_contained_points(rect, resolution = c(1, 2)), "resolution must be a single positive numeric value")
+})
+
 test_that("shape_annotate works for rect, ellipse, and polygon", {
   p <- ggplot2::ggplot()
   rect <- TiffRect(0, 5, 0, 5)

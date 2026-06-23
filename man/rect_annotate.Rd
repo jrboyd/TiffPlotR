@@ -10,8 +10,8 @@
 rect_annotate(
   p,
   rect,
-  color = "green",
-  fill = NA,
+  color = NULL,
+  fill = NULL,
   alpha = 0.2,
   annotate_center = FALSE,
   ...
@@ -20,8 +20,8 @@ rect_annotate(
 \S4method{rect_annotate}{ANY,ANY}(
   p,
   rect,
-  color = "green",
-  fill = NA,
+  color = NULL,
+  fill = NULL,
   alpha = 0.2,
   annotate_center = FALSE,
   ...
@@ -30,8 +30,8 @@ rect_annotate(
 \S4method{rect_annotate}{ANY,TiffRect}(
   p,
   rect,
-  color = "green",
-  fill = NA,
+  color = NULL,
+  fill = NULL,
   alpha = 0.2,
   annotate_center = FALSE,
   ...
@@ -40,8 +40,8 @@ rect_annotate(
 \S4method{rect_annotate}{TiffPlotData,TiffRect}(
   p,
   rect,
-  color = "green",
-  fill = NA,
+  color = NULL,
+  fill = NULL,
   alpha = 0.2,
   annotate_center = FALSE,
   ...

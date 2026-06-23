@@ -1,3 +1,47 @@
+# Resolve a per-shape display parameter: use meta column when param_value is
+# NULL, otherwise use the explicit value.  Returns a length-n vector.
+.resolve_shape_param <- function(shape, param_value, meta_col, default_value) {
+    n <- nrow(shape@coords)
+    if (!is.null(param_value)) {
+        if (length(param_value) == 1L) return(rep(param_value, n))
+        if (length(param_value) == n)  return(param_value)
+        stop(meta_col, " must be length 1 or match number of shapes (", n, ")",
+             call. = FALSE)
+    }
+    if (nrow(shape@meta) > 0L && meta_col %in% colnames(shape@meta)) {
+        vals <- shape@meta[[meta_col]][match(shape@coords$name, shape@meta$name)]
+        out  <- rep(default_value, n)
+        not_na <- !is.na(vals)
+        out[not_na] <- vals[not_na]
+        return(out)
+    }
+    rep(default_value, n)
+}
+
+
+# Merge meta data.frames from multiple parts after their coords are combined.
+# old_names / new_names are the pre- and post-uniquification name vectors of
+# the combined coords (positional, one entry per combined row).
+.combine_shape_meta <- function(parts, old_names, new_names) {
+    all_empty <- all(vapply(parts, function(r) nrow(r@meta) == 0L, logical(1)))
+    if (all_empty) return(data.frame())
+    meta_list <- lapply(seq_along(parts), function(i) {
+        m <- parts[[i]]@meta
+        if (nrow(m) == 0L || !"name" %in% colnames(m)) return(NULL)
+        offset   <- if (i == 1L) 0L else
+            sum(vapply(parts[seq_len(i - 1L)], function(p) nrow(p@coords), integer(1)))
+        part_old <- old_names[offset + seq_len(nrow(parts[[i]]@coords))]
+        part_new <- new_names[offset + seq_len(nrow(parts[[i]]@coords))]
+        name_map <- setNames(part_new, part_old)
+        m$name   <- name_map[m$name]
+        m
+    })
+    meta_list <- Filter(Negate(is.null), meta_list)
+    if (length(meta_list) == 0L) return(data.frame())
+    dplyr::bind_rows(meta_list)
+}
+
+
 .shape_bbox <- function(shape) {
   if (is(shape, "TiffEllipse")) {
     return(data.frame(
@@ -142,6 +186,57 @@
 }
 
 
+.validate_shape_resolution <- function(resolution) {
+  resolution <- as.numeric(resolution)
+  if (length(resolution) != 1L || is.na(resolution) || !is.finite(resolution) || resolution <= 0) {
+    stop("resolution must be a single positive numeric value", call. = FALSE)
+  }
+  resolution
+}
+
+
+.shape_axis_values <- function(min_val, max_val, resolution) {
+  lo <- ceiling((min_val - 1e-12) / resolution) * resolution
+  hi <- floor((max_val + 1e-12) / resolution) * resolution
+  if (hi < lo) {
+    return(numeric(0))
+  }
+  seq(lo, hi, by = resolution)
+}
+
+
+.points_on_segment <- function(px, py, x1, y1, x2, y2, tol = 1e-9) {
+  cross <- abs((px - x1) * (y2 - y1) - (py - y1) * (x2 - x1))
+  within_x <- (px >= pmin(x1, x2) - tol) & (px <= pmax(x1, x2) + tol)
+  within_y <- (py >= pmin(y1, y2) - tol) & (py <= pmax(y1, y2) + tol)
+  cross <= tol & within_x & within_y
+}
+
+
+.point_in_polygon <- function(px, py, vx, vy) {
+  n <- length(vx)
+  inside <- rep(FALSE, length(px))
+  on_edge <- rep(FALSE, length(px))
+  j <- n
+
+  for (i in seq_len(n)) {
+    x1 <- vx[[i]]
+    y1 <- vy[[i]]
+    x2 <- vx[[j]]
+    y2 <- vy[[j]]
+
+    on_edge <- on_edge | .points_on_segment(px, py, x1, y1, x2, y2)
+
+    denom <- (y2 - y1)
+    intersects <- ((y1 > py) != (y2 > py)) & (px < ((x2 - x1) * (py - y1) / denom + x1))
+    inside <- xor(inside, intersects)
+    j <- i
+  }
+
+  inside | on_edge
+}
+
+
 #' @rdname shape_shift
 #' @export
 setMethod("shape_shift", signature(shape = "TiffEllipse"),
@@ -267,6 +362,91 @@ setMethod("shape_center_points", signature(shape = "ANY"),
           })
 
 
+#' @rdname shape_contained_points
+#' @export
+setMethod("shape_contained_points", signature(shape = "TiffEllipse"),
+          function(shape, resolution = 1) {
+            resolution <- .validate_shape_resolution(resolution)
+            parts <- lapply(seq_len(nrow(shape@coords)), function(i) {
+              x_vals <- .shape_axis_values(
+                shape@coords$x0[[i]] - shape@coords$radius_x[[i]],
+                shape@coords$x0[[i]] + shape@coords$radius_x[[i]],
+                resolution
+              )
+              y_vals <- .shape_axis_values(
+                shape@coords$y0[[i]] - shape@coords$radius_y[[i]],
+                shape@coords$y0[[i]] + shape@coords$radius_y[[i]],
+                resolution
+              )
+              if (length(x_vals) == 0L || length(y_vals) == 0L) {
+                return(NULL)
+              }
+
+              grid <- expand.grid(x = x_vals, y = y_vals, KEEP.OUT.ATTRS = FALSE, stringsAsFactors = FALSE)
+              inside <- ((grid$x - shape@coords$x0[[i]]) / shape@coords$radius_x[[i]])^2 +
+                ((grid$y - shape@coords$y0[[i]]) / shape@coords$radius_y[[i]])^2 <= (1 + 1e-9)
+              if (!any(inside)) {
+                return(NULL)
+              }
+
+              data.frame(
+                x = grid$x[inside],
+                y = grid$y[inside],
+                name = rep(shape@coords$name[[i]], sum(inside)),
+                stringsAsFactors = FALSE
+              )
+            })
+            parts <- Filter(Negate(is.null), parts)
+            if (length(parts) == 0L) {
+              return(data.frame(x = numeric(0), y = numeric(0), name = character(0), stringsAsFactors = FALSE))
+            }
+            do.call(rbind, parts)
+          })
+
+
+#' @rdname shape_contained_points
+#' @export
+setMethod("shape_contained_points", signature(shape = "TiffPolygon"),
+          function(shape, resolution = 1) {
+            resolution <- .validate_shape_resolution(resolution)
+            parts <- lapply(seq_len(nrow(shape@coords)), function(i) {
+              vx <- shape@coords$x[[i]]
+              vy <- shape@coords$y[[i]]
+              x_vals <- .shape_axis_values(min(vx), max(vx), resolution)
+              y_vals <- .shape_axis_values(min(vy), max(vy), resolution)
+              if (length(x_vals) == 0L || length(y_vals) == 0L) {
+                return(NULL)
+              }
+
+              grid <- expand.grid(x = x_vals, y = y_vals, KEEP.OUT.ATTRS = FALSE, stringsAsFactors = FALSE)
+              inside <- .point_in_polygon(grid$x, grid$y, vx, vy)
+              if (!any(inside)) {
+                return(NULL)
+              }
+
+              data.frame(
+                x = grid$x[inside],
+                y = grid$y[inside],
+                name = rep(shape@coords$name[[i]], sum(inside)),
+                stringsAsFactors = FALSE
+              )
+            })
+            parts <- Filter(Negate(is.null), parts)
+            if (length(parts) == 0L) {
+              return(data.frame(x = numeric(0), y = numeric(0), name = character(0), stringsAsFactors = FALSE))
+            }
+            do.call(rbind, parts)
+          })
+
+
+#' @rdname shape_contained_points
+#' @export
+setMethod("shape_contained_points", signature(shape = "ANY"),
+          function(shape, resolution = 1) {
+            stop("shape must be a TiffShape")
+          })
+
+
 #' @rdname shape_annotate
 #' @export
 setMethod("shape_annotate", signature(p = "ANY", shape = "ANY"),
@@ -279,53 +459,85 @@ setMethod("shape_annotate", signature(p = "ANY", shape = "ANY"),
 #' @rdname shape_annotate
 #' @export
 setMethod("shape_annotate", signature(p = "ANY", shape = "TiffEllipse"),
-          function(p, shape, color = "green", fill = NA, alpha = 0.2, annotate_center = FALSE, n = 120L, ...) {
+          function(p, shape, color = NULL, fill = NULL, alpha = 0.2, annotate_center = FALSE, n = 120L, ...) {
             if (!inherits(p, "ggplot")) stop("p must be a ggplot or TiffPlotData object")
+
+            colors <- .resolve_shape_param(shape, color, "color", "green")
+            fills  <- .resolve_shape_param(shape, fill,  "fill",  NA)
 
             if (isTRUE(annotate_center)) {
               center_df <- shape_center_points(shape)
               return(
                 p + ggplot2::annotate("point", x = center_df$x, y = center_df$y,
-                                      color = color, alpha = alpha, ...)
+                                      color = colors, alpha = alpha, ...)
               )
             }
 
             ell_df <- .ellipse_path_df(shape, n = n)
-            p + ggplot2::geom_polygon(
-              data = ell_df,
-              mapping = ggplot2::aes(x = x, y = y, group = shape_name),
-              inherit.aes = FALSE,
-              color = color,
-              fill = fill,
-              alpha = alpha,
-              ...
-            )
+            if (length(unique(colors)) == 1L &&
+                length(unique(fills[!is.na(fills)])) <= 1L) {
+              p + ggplot2::geom_polygon(
+                data = ell_df,
+                mapping = ggplot2::aes(x = x, y = y, group = shape_name),
+                inherit.aes = FALSE,
+                color = colors[[1L]], fill = fills[[1L]],
+                alpha = alpha, ...
+              )
+            } else {
+              color_map <- setNames(colors, shape@coords$name)
+              fill_map  <- setNames(fills,  shape@coords$name)
+              ell_df$shape_color <- color_map[ell_df$shape_name]
+              ell_df$shape_fill  <- fill_map[ell_df$shape_name]
+              p + ggplot2::geom_polygon(
+                data = ell_df,
+                mapping = ggplot2::aes(x = x, y = y, group = shape_name,
+                                       color = I(shape_color), fill = I(shape_fill)),
+                inherit.aes = FALSE,
+                alpha = alpha, ...
+              )
+            }
           })
 
 #' @rdname shape_annotate
 #' @export
 setMethod("shape_annotate", signature(p = "ANY", shape = "TiffPolygon"),
-          function(p, shape, color = "green", fill = NA, alpha = 0.2, annotate_center = FALSE, n = 120L, ...) {
+          function(p, shape, color = NULL, fill = NULL, alpha = 0.2, annotate_center = FALSE, n = 120L, ...) {
             if (!inherits(p, "ggplot")) stop("p must be a ggplot or TiffPlotData object")
+
+            colors <- .resolve_shape_param(shape, color, "color", "green")
+            fills  <- .resolve_shape_param(shape, fill,  "fill",  NA)
 
             if (isTRUE(annotate_center)) {
               center_df <- shape_center_points(shape)
               return(
                 p + ggplot2::annotate("point", x = center_df$x, y = center_df$y,
-                                      color = color, alpha = alpha, ...)
+                                      color = colors, alpha = alpha, ...)
               )
             }
 
             poly_df <- .polygon_path_df(shape)
-            p + ggplot2::geom_polygon(
-              data = poly_df,
-              mapping = ggplot2::aes(x = x, y = y, group = shape_name),
-              inherit.aes = FALSE,
-              color = color,
-              fill = fill,
-              alpha = alpha,
-              ...
-            )
+            if (length(unique(colors)) == 1L &&
+                length(unique(fills[!is.na(fills)])) <= 1L) {
+              p + ggplot2::geom_polygon(
+                data = poly_df,
+                mapping = ggplot2::aes(x = x, y = y, group = shape_name),
+                inherit.aes = FALSE,
+                color = colors[[1L]], fill = fills[[1L]],
+                alpha = alpha, ...
+              )
+            } else {
+              color_map <- setNames(colors, shape@coords$name)
+              fill_map  <- setNames(fills,  shape@coords$name)
+              poly_df$shape_color <- color_map[poly_df$shape_name]
+              poly_df$shape_fill  <- fill_map[poly_df$shape_name]
+              p + ggplot2::geom_polygon(
+                data = poly_df,
+                mapping = ggplot2::aes(x = x, y = y, group = shape_name,
+                                       color = I(shape_color), fill = I(shape_fill)),
+                inherit.aes = FALSE,
+                alpha = alpha, ...
+              )
+            }
           })
 
 

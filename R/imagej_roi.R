@@ -8,8 +8,8 @@
 #' (`polygon`, `freehand`, and `traced`). Unsupported ROI types are reported
 #' in the returned `unsupported` table.
 #'
-#' @param path Path to a single `.roi` file or a `.zip` archive exported from
-#'   ImageJ/FIJI.
+#' @param path Path(s) to one or more `.roi` files and/or `.zip` archives
+#'   exported from ImageJ/FIJI.
 #'
 #' @returns A named list with elements:
 #' \itemize{
@@ -26,21 +26,24 @@
 #' roi <- readImageJRois(roi_files)
 #'
 #' roi_zip_file = system.file(package = "TiffPlotR", "extdata/TomatoRed_CD45_PanCK_3124_TMA_rects.zip", mustWork = TRUE)
-#' rois <- readImageJRois(roi_zip_file)
-#' rois$rects
-#' rois$polygons
+#' all_roi <- readImageJRois(roi_zip_file)
 readImageJRois <- function(path) {
-    if (!is.character(path) || length(path) != 1 || !nzchar(path)) {
-        stop("path must be a single .roi or .zip file path.", call. = FALSE)
+    if (!is.character(path) || length(path) < 1 || anyNA(path) || any(!nzchar(path))) {
+        stop("path must be a non-empty character vector of .roi and/or .zip file paths.", call. = FALSE)
     }
-    if (!file.exists(path)) {
-        stop("path does not exist: ", path, call. = FALSE)
+
+    missing_paths <- path[!file.exists(path)]
+    if (length(missing_paths) > 0) {
+        stop("path does not exist: ", paste(missing_paths, collapse = ", "), call. = FALSE)
     }
 
     source_info <- .collect_imagej_roi_sources(path)
     roi_sources <- source_info$roi_sources
-    if (!is.null(source_info$cleanup_dir)) {
-        on.exit(unlink(source_info$cleanup_dir, recursive = TRUE, force = TRUE), add = TRUE)
+
+    cleanup_dirs <- unique(source_info$cleanup_dirs)
+    cleanup_dirs <- cleanup_dirs[nzchar(cleanup_dirs)]
+    if (length(cleanup_dirs) > 0) {
+        on.exit(lapply(cleanup_dirs, unlink, recursive = TRUE, force = TRUE), add = TRUE)
     }
 
     parsed <- lapply(seq_len(nrow(roi_sources)), function(i) {
@@ -77,42 +80,48 @@ readImageJRois <- function(path) {
 
 
 .collect_imagej_roi_sources <- function(path) {
-    ext <- tolower(tools::file_ext(path))
+    source_rows <- list()
+    cleanup_dirs <- character()
 
-    if (identical(ext, "roi")) {
-        return(list(
-            roi_sources = data.frame(
-                file_path = path,
-                source_name = basename(path),
+    for (p in path) {
+        ext <- tolower(tools::file_ext(p))
+
+        if (identical(ext, "roi")) {
+            source_rows[[length(source_rows) + 1]] <- data.frame(
+                file_path = p,
+                source_name = basename(p),
                 stringsAsFactors = FALSE
-            ),
-            cleanup_dir = NULL
-        ))
-    }
+            )
+            next
+        }
 
-    if (!identical(ext, "zip")) {
-        stop("path must end in .roi or .zip.", call. = FALSE)
-    }
+        if (!identical(ext, "zip")) {
+            stop("All paths must end in .roi or .zip. Invalid path: ", p, call. = FALSE)
+        }
 
-    zip_listing <- utils::unzip(path, list = TRUE)
-    keep <- grepl("\\.roi$", zip_listing$Name, ignore.case = TRUE)
-    if (!any(keep)) {
-        stop("No .roi files found inside zip archive.", call. = FALSE)
-    }
+        zip_listing <- utils::unzip(p, list = TRUE)
+        keep <- grepl("\\.roi$", zip_listing$Name, ignore.case = TRUE)
+        if (!any(keep)) {
+            stop("No .roi files found inside zip archive: ", p, call. = FALSE)
+        }
 
-    exdir <- tempfile("imagej-roi-")
-    dir.create(exdir)
+        exdir <- tempfile("imagej-roi-")
+        dir.create(exdir)
 
-    target_names <- zip_listing$Name[keep]
-    utils::unzip(path, files = target_names, exdir = exdir)
+        target_names <- zip_listing$Name[keep]
+        utils::unzip(p, files = target_names, exdir = exdir)
 
-    list(
-        roi_sources = data.frame(
+        source_rows[[length(source_rows) + 1]] <- data.frame(
             file_path = file.path(exdir, target_names),
             source_name = target_names,
             stringsAsFactors = FALSE
-        ),
-        cleanup_dir = exdir
+        )
+        cleanup_dirs <- c(cleanup_dirs, exdir)
+    }
+
+    list(
+        roi_sources = dplyr::bind_rows(source_rows),
+        cleanup_dirs = cleanup_dirs
     )
 }
 

@@ -31,9 +31,9 @@ Supported ROI types are rectangles, ovals, and polygon-like ROIs
 in the returned `unsupported` table.
 }
 \examples{
-\dontrun{
-rois <- readImageJRois("Annotations.zip")
-rois$rects
-rois$polygons
-}
+roi_files = dir(system.file(package = "TiffPlotR", "extdata"), pattern = "roi$", full.names = TRUE)
+roi <- readImageJRois(roi_files)
+
+roi_zip_file = system.file(package = "TiffPlotR", "extdata/TomatoRed_CD45_PanCK_3124_TMA_rects.zip", mustWork = TRUE)
+all_roi <- readImageJRois(roi_zip_file)
 }

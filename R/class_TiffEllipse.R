@@ -92,7 +92,13 @@ setMethod("$", "TiffEllipse", function(x, name) {
 #' @export
 setMethod("[", signature(x = "TiffEllipse"),
           function(x, i, j, ..., drop = FALSE) {
-            new("TiffEllipse", coords = x@coords[i, , drop = FALSE])
+            new_coords <- x@coords[i, , drop = FALSE]
+            new_meta   <- if (nrow(x@meta) > 0L) {
+              x@meta[x@meta$name %in% new_coords$name, , drop = FALSE]
+            } else {
+              x@meta
+            }
+            new("TiffEllipse", coords = new_coords, meta = new_meta)
           })
 
 #' Combine `TiffEllipse` objects
@@ -108,6 +114,8 @@ setMethod("c", signature(x = "TiffEllipse"),
             }
             combined <- do.call(rbind, lapply(parts, function(r) r@coords))
             rownames(combined) <- NULL
-            combined$name <- .unique_shape_names(combined$name)
-            new("TiffEllipse", coords = combined)
+            old_names <- combined$name
+            combined$name <- .unique_shape_names(old_names)
+            combined_meta <- .combine_shape_meta(parts, old_names, combined$name)
+            new("TiffEllipse", coords = combined, meta = combined_meta)
           })

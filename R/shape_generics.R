@@ -45,6 +45,21 @@ methods::setGeneric("shape_center_points", function(shape, anchor = "center") {
   standardGeneric("shape_center_points")
 })
 
+#' Return grid points contained within shapes
+#'
+#' Enumerates all points that fall inside each shape at a specified grid
+#' resolution. By default, points are sampled on whole-number coordinates
+#' (`resolution = 1`).
+#'
+#' @param shape A `TiffShape` object.
+#' @param resolution Grid spacing between sampled points. Must be a single
+#'   positive numeric value.
+#' @return data.frame with columns `x`, `y`, and `name`.
+#' @export
+methods::setGeneric("shape_contained_points", function(shape, resolution = 1) {
+  standardGeneric("shape_contained_points")
+})
+
 #' Annotate ggplot objects with shape geometry
 #'
 #' @param p ggplot object.
@@ -57,6 +72,6 @@ methods::setGeneric("shape_center_points", function(shape, anchor = "center") {
 #' @param ... Additional arguments passed to ggplot layer calls.
 #' @return A ggplot object with added shape annotation layer.
 #' @export
-methods::setGeneric("shape_annotate", function(p, shape, color = "green", fill = NA, alpha = 0.2, annotate_center = FALSE, n = 120L, ...) {
+methods::setGeneric("shape_annotate", function(p, shape, color = NULL, fill = NULL, alpha = 0.2, annotate_center = FALSE, n = 120L, ...) {
   standardGeneric("shape_annotate")
 })
