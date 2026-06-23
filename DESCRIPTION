@@ -34,4 +34,5 @@ Collate:
   'ome_annotations.R'
   'imagej_roi.R'
   'tiff_image_fetch.R'
+  'global_precalc.R
 Config/roxygen2/version: 8.0.0
