@@ -1,4 +1,3 @@
-
 .rect_null_check = function(rect, tiff_path){
     if(is.null(rect)){
         img_info = read_tiff_meta_data(tiff_path)
@@ -1290,4 +1289,3 @@ find_qmax_regions = function(tiff_path, resolution = 5){
 exampleTiff = function(){
     system.file("extdata/301_CellPellet_NegCTL_Scan1_PC3Guise.ome.tiff", package = "TiffPlotR", mustWork = TRUE)
 }
-
