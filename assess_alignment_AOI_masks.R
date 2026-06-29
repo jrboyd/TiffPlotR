@@ -97,11 +97,19 @@ geomx_chan_names = c(
     "TdTomato"
 )
 
+# old wrong order
+# rscope_chan_names = c(
+#     "Syto13",
+#     "PanCK",
+#     "GLRX",
+#     "TomatoRed"
+# )
+
 rscope_chan_names = c(
     "Syto13",
     "PanCK",
-    "GLRX",
-    "TomatoRed"
+    "TomatoRed",
+    "GLRX"
 )
 
 theme_set(theme(panel.grid = element_blank(), panel.background = element_rect()))

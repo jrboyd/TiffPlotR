@@ -40,11 +40,19 @@ geomx_chan_names = c(
     "TdTomato"
 )
 
+#old bad order
+# rscope_chan_names = c(
+#     "Syto13",
+#     "PanCK",
+#     "GLRX",
+#     "TomatoRed"
+# )
+
 rscope_chan_names = c(
     "Syto13",
     "PanCK",
-    "GLRX",
-    "TomatoRed"
+    "TomatoRed",
+    "GLRX"
 )
 
 ann = list()

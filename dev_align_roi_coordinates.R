@@ -399,7 +399,11 @@ all_mask_points %>% head
 
 
 # target_data = fetchTiffData(tiff_files$`Slide411_GLRX_31-24`, rect = TiffRect(15e3, 25e3, 3e3, 13e3), channel_names = rscope_chan_names)
-rscope_chan_names = c("Syto13", "PanCK", "GLRX", "TomatoRed")
+
+# old bad order
+# rscope_chan_names = c("Syto13", "PanCK", "GLRX", "TomatoRed")
+
+rscope_chan_names = c("Syto13", "PanCK", "TomatoRed", "GLRX")
 view_rect = TiffRect(18e3, 25e3, 7.5e3, 14e3)
 qmax = .985
 p_mask_global = target_plot %>% shape_annotate(view_rect, color = "red") %>% plot

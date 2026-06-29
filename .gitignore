@@ -5,3 +5,7 @@ tests/testthat/Rplots.pdf
 inst/extdata/*tiff
 .positai
 tmp*
+*Rds
+alignment*plots*
+progress.txt
+*.html

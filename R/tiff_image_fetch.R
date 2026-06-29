@@ -207,6 +207,7 @@ fetchTiffDataMasked <- function(tiff_path,
                                 selected_channels = NULL,
                                 mask_points = NULL,
                                 retain_unmasked = FALSE,
+                                segment_var = "Text",
                                 bit_order = c("msb", "lsb")) {
     bit_order <- match.arg(bit_order)
     rect <- .rect_null_check(rect, tiff_path)
