@@ -16,6 +16,7 @@ fetchTiffDataMasked(
   selected_channels = NULL,
   mask_points = NULL,
   retain_unmasked = FALSE,
+  segment_var = "Text",
   bit_order = c("msb", "lsb")
 )
 }
