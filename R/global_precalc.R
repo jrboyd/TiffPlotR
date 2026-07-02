@@ -43,6 +43,16 @@
 
 
 
+#' Title
+#'
+#' @param tf
+#' @param max_full_fetch
+#' @param query_probs
+#'
+#' @returns
+#' @export
+#'
+#' @examples
 gather_channel_quantiles = function(tf, max_full_fetch = 100e6, query_probs = .query_probs()){
     #### step 0 prep ####
     img_meta_df = read_tiff_meta_data(tf)
@@ -184,7 +194,7 @@ gather_channel_quantiles = function(tf, max_full_fetch = 100e6, query_probs = .q
                     }
 
                     # select best rect
-                    sample_ranges = bind_rows(sample_ranges_list)
+                    sample_ranges = dplyr::bind_rows(sample_ranges_list)
                     q99_per_range = unlist(q99_per_range_list)
 
                     q99_per_range.mat = matrix(unlist(q99_per_range), ncol = dim(arr)[3], byrow = TRUE)
@@ -206,7 +216,7 @@ gather_channel_quantiles = function(tf, max_full_fetch = 100e6, query_probs = .q
                     # representative_ranges.by_channel = lapply(ranges_per_channel, function(x){sample_ranges[x,]})
                 }
                 quant_res = do.call(cbind, quant_res)
-                representative_ranges.by_channel = lapply(representative_ranges.by_channel, bind_rows)
+                representative_ranges.by_channel = lapply(representative_ranges.by_channel, dplyr::bind_rows)
             })
         rep_ranges[[res_i]] = representative_ranges.by_channel
         all_quantiles[[res_i]] = quant_res

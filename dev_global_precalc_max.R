@@ -178,12 +178,12 @@ all_quantiles = list()
 res_i = 4
 for(res_i in seq(max_res, 1)){
 
-    meta_i = img_meta_df %>% dplyr::filter(resolutionLevel == res_i)
+    meta_i = dplyr::filter(img_meta_df, resolutionLevel == res_i)
     res_ratio = meta_max$sizeX / meta_i$sizeX
 
     if(res_i > 1){
         res_next = res_i - 1
-        meta_next = img_meta_df %>% dplyr::filter(resolutionLevel == res_next)
+        meta_next =  dplyr::filter(img_meta_df, resolutionLevel == res_next)
 
         if(is.null(meta_next)){
             next_pixels = Inf

@@ -1,3 +1,4 @@
+library(TiffPlotR)
 
 align_dir = "/mnt/c/project_data/UVMMIC-RA-13113/alignment/"
 if(!dir.exists(align_dir)){
