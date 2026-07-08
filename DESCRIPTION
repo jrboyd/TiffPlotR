@@ -1,7 +1,7 @@
 Package: TiffPlotR
 Type: Package
 Title: Efficient ggplot2 plots from TIFF image file.
-Version: 0.1.10
+Version: 0.1.11
 Authors@R: c(
     person(
       "Joseph", "Boyd",
@@ -36,4 +36,5 @@ Collate:
   'tiff_image_fetch.R'
   'global_precalc.R'
   'utils-pipe.R'
+  'detect_cores.R'
 Config/roxygen2/version: 8.0.0

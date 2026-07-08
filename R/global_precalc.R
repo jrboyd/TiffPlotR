@@ -42,7 +42,6 @@
 }
 
 
-
 #' Title
 #'
 #' @param tf
@@ -53,8 +52,12 @@
 #' @export
 #'
 #' @examples
-gather_channel_quantiles = function(tf, max_full_fetch = 100e6, query_probs = .query_probs()){
+gather_channel_quantiles = function(tf, max_full_fetch = 100e6, query_probs = .query_probs(), workers = "auto"){
+
     #### step 0 prep ####
+    if(workers == "auto"){
+        workers = .detect_cores()
+    }
     img_meta_df = read_tiff_meta_data(tf)
     meta_max = dplyr::filter(img_meta_df, sizeX == max(sizeX))
     #select max (lowest pixel) res
@@ -138,16 +141,142 @@ gather_channel_quantiles = function(tf, max_full_fetch = 100e6, query_probs = .q
                 prev_ranges = rep_ranges[[res_i+1]]
                 quant_res = list()
                 representative_ranges.by_channel = list()
+                browser()
 
+                seq_along(prev_ranges)
+                seq(nrow(to_fetch))
+                # prime location for parallelization
+                chan_i = 1
+                future_globals = c("to_fetch", ".as.TiffRect", ".mult_TiffRect",
+                                   "res_ratio", "tf", "res_i", "chan_i",
+                                   ".gather_quantiles_full_res", "prev_ranges")
+
+                # prepare channels and gather info
+                prev_fetch_counts = numeric()
+                for(chan_i in seq_along(prev_ranges)){
+                    representative_ranges.by_channel[[chan_i]] = list()
+                    prev_fetch_counts[chan_i] = nrow(prev_ranges[[chan_i]])
+                }
+                rep(seq_along(prev_ranges), each = prev_fetch_counts)
+                future_todo = data.frame(chan_i = seq_along(prev_ranges), range_count = prev_fetch_counts)
+                future_todo = future_todo %>% group_by(chan_i) %>%
+                    dplyr::reframe(fetch_i = seq(range_count))
+
+                .run_todo_i = function(todo_i){
+                    chan_i = future_todo$chan_i[todo_i]
+                    fetch_i = future_todo$fetch_i[todo_i]
+                    message(paste(chan_i, fetch_i))
+                    to_fetch = prev_ranges[[chan_i]]
+
+                    prev_res_fetch_rect = .as.TiffRect(to_fetch[fetch_i,])
+                    curr_res_fetch_rect = .mult_TiffRect(prev_res_fetch_rect, 2)
+                    full_res_fetch_rect = .mult_TiffRect(curr_res_fetch_rect, res_ratio)
+
+                    tryCatch({
+                        arr = fetchTiffArray(tf, resolution = res_i, max_pixels = Inf, rect = full_res_fetch_rect)
+                    }, error = function(e){
+                        browser()
+                    })
+
+                    arr = arr@.Data[,,chan_i, drop = FALSE]
+
+                    # locate representative rect here
+                    sample_ranges = .divide_space(nrow(arr)+1, ncol(arr), trim1 = FALSE)
+                    sample_ranges$ymax[sample_ranges$ymax > ncol(arr)] = ncol(arr)
+                    sample_ranges$xmax[sample_ranges$xmax > nrow(arr)] = nrow(arr)
+                    q99_per_range = lapply(seq(nrow(sample_ranges)), function(i){
+                        xs = seq(sample_ranges[i, "xmin"], sample_ranges[i, "xmax"])
+                        ys = seq(sample_ranges[i, "ymin"], sample_ranges[i, "ymax"])
+                        if(length(dim(arr)) == 3){
+                            apply(arr[xs, ys,,drop = FALSE], 3, .gather_quantiles_full_res, probs = .99)
+                        }else{
+                            stop()
+                            .gather_quantiles_full_res(arr[xs, ys], probs = .99)
+                        }
+                    })
+
+                    #array index ranges need to convert to local resolution pixels, not max pixels
+                    sample_ranges.at_res = .as.TiffRect(sample_ranges)
+                    sample_ranges.at_res = shape_shift(sample_ranges.at_res, curr_res_fetch_rect$xmin, curr_res_fetch_rect$ymin)
+                    sample_ranges.at_res = shape_resize_mult(sample_ranges.at_res, 2, anchor = "topleft")
+
+                    return(
+                        list(
+                            sample_ranges = sample_ranges.at_res@coords,
+                            q99_per_range = q99_per_range,
+                            fetch_content = as.numeric(arr)
+                        )
+                    )
+                }
+
+                n_todo = nrow(future_todo)
+                time_seq = system.time({
+                    todo_result.par = lapply(seq(n_todo), .run_todo_i)
+                })
+                future::plan(future::sequential)
+                future::plan(future::multisession, workers = 20)
+                time_par = system.time({
+                    todo_result = future.apply::future_lapply(seq(n_todo), .run_todo_i, future.globals = future_globals)
+                })
+                time_seq
+                time_par
+
+
+
+                for(todo_i in seq(nrow(future_todo))){
+                    chan_i = future_todo$chan_i[todo_i]
+                    fetch_i = future_todo$fetch_i[todo_i]
+                    message(paste(chan_i, fetch_i))
+                    to_fetch = prev_ranges[[chan_i]]
+
+                    tryCatch({
+                        arr = fetchTiffArray(tf, resolution = res_i, max_pixels = Inf, rect = full_res_fetch_rect)
+                    }, error = function(e){
+                        browser()
+                    })
+
+                    arr = arr@.Data[,,chan_i, drop = FALSE]
+
+                    # locate representative rect here
+                    sample_ranges = .divide_space(nrow(arr)+1, ncol(arr), trim1 = FALSE)
+                    sample_ranges$ymax[sample_ranges$ymax > ncol(arr)] = ncol(arr)
+                    sample_ranges$xmax[sample_ranges$xmax > nrow(arr)] = nrow(arr)
+                    q99_per_range = lapply(seq(nrow(sample_ranges)), function(i){
+                        xs = seq(sample_ranges[i, "xmin"], sample_ranges[i, "xmax"])
+                        ys = seq(sample_ranges[i, "ymin"], sample_ranges[i, "ymax"])
+                        if(length(dim(arr)) == 3){
+                            apply(arr[xs, ys,,drop = FALSE], 3, .gather_quantiles_full_res, probs = .99)
+                        }else{
+                            stop()
+                            .gather_quantiles_full_res(arr[xs, ys], probs = .99)
+                        }
+                    })
+
+                    #array index ranges need to convert to local resolution pixels, not max pixels
+                    sample_ranges.at_res = .as.TiffRect(sample_ranges)
+                    sample_ranges.at_res = shape_shift(sample_ranges.at_res, curr_res_fetch_rect$xmin, curr_res_fetch_rect$ymin)
+                    sample_ranges.at_res = shape_resize_mult(sample_ranges.at_res, 2, anchor = "topleft")
+
+                    return(
+                        list(
+                            sample_ranges = sample_ranges.at_res@coords,
+                            q99_per_range = q99_per_range,
+                            fetch_content = as.numeric(arr)
+                        )
+                    )
+                }
 
                 for(chan_i in seq_along(prev_ranges)){
                     representative_ranges.by_channel[[chan_i]] = list()
                     to_fetch = prev_ranges[[chan_i]]
-                    fetch_contents = numeric()
-                    fetch_contents = list()
+                    prev_res_fetch_rect = .as.TiffRect(to_fetch[fetch_i,])
+                    curr_res_fetch_rect = .mult_TiffRect(prev_res_fetch_rect, 2)
+                    full_res_fetch_rect = .mult_TiffRect(curr_res_fetch_rect, res_ratio)
+                    # fetch_contents = list()
+                    # sample_ranges_list = list()
+                    # q99_per_range_list = list()
 
-                    sample_ranges_list = list()
-                    q99_per_range_list = list()
+
 
                     for(fetch_i in seq(nrow(to_fetch))){
                         #multiple by 2 for current resolution pixels
@@ -185,11 +314,17 @@ gather_channel_quantiles = function(tf, max_full_fetch = 100e6, query_probs = .q
                         sample_ranges.at_res = shape_shift(sample_ranges.at_res, curr_res_fetch_rect$xmin, curr_res_fetch_rect$ymin)
                         sample_ranges.at_res = shape_resize_mult(sample_ranges.at_res, 2, anchor = "topleft")
 
-                        sample_ranges_list = c(sample_ranges_list, list(sample_ranges.at_res@coords))
-                        q99_per_range_list = c(q99_per_range_list, list(q99_per_range))
+                        # sample_ranges_list = c(sample_ranges_list, list(sample_ranges.at_res@coords))
+                        # q99_per_range_list = c(q99_per_range_list, list(q99_per_range))
+                        # fetch_contents = c(fetch_contents, list(as.numeric(arr)))
 
-
-                        fetch_contents = c(fetch_contents, list(as.numeric(arr)))
+                        return(
+                            list(
+                                sample_ranges = sample_ranges.at_res@coords,
+                                q99_per_range = q99_per_range,
+                                fetch_content = as.numeric(arr)
+                            )
+                        )
                         # fetch_contents = c(fetch_contents, as.numeric(arr))
                     }
 
