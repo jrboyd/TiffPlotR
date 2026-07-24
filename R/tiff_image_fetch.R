@@ -33,6 +33,27 @@
     resolution
 }
 
+.handle_precalc_max = function(precalc_max, tidy_img){
+  if(is.null(precalc_max)){
+    precalc_max = tidy_img  %>% group_by(channel) %>% summarise(min_value = 0, max_value = quantile(value, quantile_norm))
+  }else{
+    stopifnot(c("channel", "min_value", "max_value") %in% colnames(precalc_max))
+    if(any(precalc_max %>% dplyr::pull(channel) %>% duplicated)){
+      #now resolution must be present and fetch resolution must be present
+      stopifnot("resolution" %in% colnames(precalc_max))
+      stopifnot(resolution %in% precalc_max$resolution)
+      precalc_max = precalc_max[precalc_max$resolution == resolution,]
+      #error if channel is still defined multiple times
+      if(any(precalc_max %>% dplyr::pull(channel) %>% duplicated)){
+        stop("Multiple values for each channel after resolution selection. Is this precalc_max for a signle tiff file?")
+      }
+    }
+    precalc_max = precalc_max %>% ungroup %>% select(channel, min_value, max_value)
+  }
+  stopifnot(c("channel", "min_value", "max_value") %in% colnames(precalc_max))
+  precalc_max
+}
+
 #' Fetch TIFF image data for a rectangular region
 #'
 #' Reads a rectangular subset of a multi-resolution TIFF and returns a
@@ -661,10 +682,7 @@ fetchTiffArray = function(tiff_path, rect = NULL,
     tidy_img$i = (tidy_img$i + rect$xmin*x_ratio)/x_ratio
     tidy_img$j = (tidy_img$j + rect$ymin*y_ratio)/y_ratio
 
-    if(is.null(precalc_max)){
-        precalc_max = tidy_img  %>% group_by(channel) %>% summarise(min_value = 0, max_value = quantile(value, quantile_norm))
-    }
-    stopifnot(c("channel", "min_value", "max_value") %in% colnames(precalc_max))
+    precalc_max = .handle_precalc_max(precalc_max, tidy_img)
 
     tidy_img = merge(tidy_img, precalc_max %>% select(channel, min_value, max_value), all.x = TRUE)
     tidy_img = tidy_img %>% mutate(norm_value = (value - min_value) / (max_value - min_value))

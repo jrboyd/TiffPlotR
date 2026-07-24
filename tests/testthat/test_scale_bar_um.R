@@ -5,7 +5,7 @@ test_that("add_um_scale_bar adds segment and text to ggplot", {
   p <- ggplot(data.frame(i = 1:10, j = 1:10), aes(i, j)) +
     geom_point()
 
-  p2 <- add_um_scale_bar(p, um_per_pixel = 0.5, bar_um = 2, xlim = c(1, 10), ylim = c(1, 10))
+  p2 <- add_um_scale_bar(p, unit_per_pixel = 0.5, bar_um = 2, xlim = c(1, 10), ylim = c(1, 10))
 
   expect_s3_class(p2, "ggplot")
   expect_equal(length(p2$layers), length(p$layers) + 2)
@@ -21,7 +21,7 @@ test_that("add_um_scale_bar works on TiffPlotData active plot", {
     rect = TiffRect(1, 10, 1, 10)
   )
 
-  out <- add_um_scale_bar(obj, um_per_pixel = 0.5, bar_um = 2)
+  out <- add_um_scale_bar(obj, unit_per_pixel = 0.5, bar_um = 2)
 
   expect_s4_class(out, "TiffPlotData")
   expect_equal(out@activePlot, "raw")
