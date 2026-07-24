@@ -33,7 +33,7 @@
     resolution
 }
 
-.handle_precalc_max = function(precalc_max, tidy_img){
+.handle_precalc_max = function(precalc_max, tidy_img, resolution){
   if(is.null(precalc_max)){
     precalc_max = tidy_img  %>% group_by(channel) %>% summarise(min_value = 0, max_value = quantile(value, quantile_norm))
   }else{
@@ -682,7 +682,7 @@ fetchTiffArray = function(tiff_path, rect = NULL,
     tidy_img$i = (tidy_img$i + rect$xmin*x_ratio)/x_ratio
     tidy_img$j = (tidy_img$j + rect$ymin*y_ratio)/y_ratio
 
-    precalc_max = .handle_precalc_max(precalc_max, tidy_img)
+    precalc_max = .handle_precalc_max(precalc_max, tidy_img, resolution)
 
     tidy_img = merge(tidy_img, precalc_max %>% select(channel, min_value, max_value), all.x = TRUE)
     tidy_img = tidy_img %>% mutate(norm_value = (value - min_value) / (max_value - min_value))
