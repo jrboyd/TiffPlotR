@@ -832,6 +832,18 @@ fetchTiffData.rgb = function(tiff_path,
 #' @returns A TiffPlotData object containing the colorized data and a named ggplot object.
 #' @export
 #' @import ggplot2
+#' library(TiffPlotR)
+#' tf = exampleTiff()
+#' fetchTiffData(tf, rect = TiffRect(2500, 3000, 2500, 3000))
+#' fetchTiffData.colorized(tf,
+#'   channel_colors = list("blue", NULL, NULL, NULL, "purple", "cyan"),
+#'   rect = TiffRect(2500, 3000, 2500, 3000)
+#' )
+#' fetchTiffData.colorized(tf,
+#'   channel_colors = list("A" = "blue", E = "purple", F = "cyan"),
+#'   rect = TiffRect(2500, 3000, 2500, 3000),
+#'   channel_names = LETTERS[1:6]
+#' )
 fetchTiffData.colorized = function(tiff_path,
                                    rect = NULL,
                                    resolution = NULL,
@@ -843,7 +855,7 @@ fetchTiffData.colorized = function(tiff_path,
                                    quantile_norm = .999){
     rect = .rect_null_check(rect, tiff_path)
     if(nrow(rect@coords) != 1) stop("fetchTiffData.colorized requires a TiffRect with exactly one row")
-
+    if(!is.list(channel_colors)) stop("channel_colors must be a list.")
     .fetch_tiff_data.colorized(
         tiff_path = tiff_path,
         rect = rect,
