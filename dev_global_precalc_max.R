@@ -284,9 +284,8 @@ for(res_i in seq(max_res, 1)){
             for(chan_i in seq_along(prev_ranges)){
                 representative_ranges.by_channel[[chan_i]] = list()
                 to_fetch = prev_ranges[[chan_i]]
-                fetch_contents = numeric()
-                fetch_contents = list()
 
+                fetch_contents = list()
                 sample_ranges_list = list()
                 q99_per_range_list = list()
 

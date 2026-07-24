@@ -6,7 +6,7 @@
 #' @param mem_per_core memory required per core in MB
 #' @param reserve_user_cores leave at least this many cores for user running interactively
 #' @importFrom parallel detectCores
-.detect_cores = function(mem_per_core = 2000, reserve_user_cores = 1){
+.detect_cores = function(mem_per_core = 3000, reserve_user_cores = 1){
     available_cores = .detect_available_cores()
     available_cores = max(1, available_cores - reserve_user_cores)
 

@@ -400,6 +400,153 @@ convertTidyToRGB = function(img_df, red_channel = 1, green_channel = 2, blue_cha
     rgb_df
 }
 
+.resolve_channel_color_map = function(channel_colors, channel_names = NULL, available_channels){
+    if(is.null(channel_colors)){
+        stop("channel_colors cannot be NULL.")
+    }
+    if(length(available_channels) == 0){
+        stop("No available channels found in image data.")
+    }
+
+    color_values = if(is.list(channel_colors)) channel_colors else as.list(channel_colors)
+    raw_names = names(channel_colors)
+    has_nonempty_name = !is.null(raw_names) && any(nzchar(raw_names))
+
+    if(has_nonempty_name){
+        if(is.null(channel_names)){
+            stop("Named channel_colors requires channel_names.")
+        }
+        if(anyDuplicated(channel_names)){
+            dup = unique(channel_names[duplicated(channel_names)])
+            stop("channel_names must be unique for named channel_colors. Duplicates: ",
+                 paste(dup, collapse = ", "))
+        }
+
+        entry_names = names(color_values)
+        if(any(!nzchar(entry_names))){
+            stop("Named channel_colors must have a non-empty name for every entry.")
+        }
+
+        missing_names = unique(setdiff(entry_names, channel_names))
+        if(length(missing_names) > 0){
+            stop("Named channel_colors entries were not found in channel_names (exact match required): ",
+                 paste(missing_names, collapse = ", "))
+        }
+        channel_idx = match(entry_names, channel_names)
+    }else{
+        channel_idx = seq_along(color_values)
+    }
+
+    out_channels = integer(0)
+    out_colors = character(0)
+    for(i in seq_along(color_values)){
+        clr = color_values[[i]]
+        if(is.null(clr) || (length(clr) == 1 && is.na(clr))){
+            next
+        }
+        if(!(is.character(clr) && length(clr) == 1)){
+            stop("Each channel_colors entry must be a single character color string, NULL, or NA.")
+        }
+
+        ch = channel_idx[i]
+        if(!(ch %in% available_channels)){
+            stop("Mapped channel index ", ch, " is not available in this image. Available channels: ",
+                 paste(sort(unique(available_channels)), collapse = ", "))
+        }
+
+        out_channels = c(out_channels, ch)
+        out_colors = c(out_colors, clr)
+    }
+
+    if(length(out_channels) == 0){
+        stop("No valid channel mappings found in channel_colors after removing NULL/NA entries.")
+    }
+    if(anyDuplicated(out_channels)){
+        dup = unique(out_channels[duplicated(out_channels)])
+        stop("Each channel can only be assigned one color. Duplicate channels: ",
+             paste(dup, collapse = ", "))
+    }
+
+    # Validate all colors up front to provide clear errors.
+    tryCatch(
+        grDevices::col2rgb(out_colors),
+        error = function(e) {
+            stop("Invalid color in channel_colors: ", e$message)
+        }
+    )
+
+    if(is.null(channel_names)){
+        out_labels = as.character(out_channels)
+    }else{
+        if(max(out_channels) > length(channel_names)){
+            stop("channel_names does not include all mapped channels. Largest mapped channel index is ",
+                 max(out_channels), " but channel_names has length ", length(channel_names), ".")
+        }
+        out_labels = channel_names[out_channels]
+        if(any(is.na(out_labels) | !nzchar(out_labels))){
+            stop("Mapped channels resolved to missing/empty labels in channel_names.")
+        }
+    }
+
+    data.frame(
+        channel = as.integer(out_channels),
+        channel_name = as.character(out_labels),
+        color = as.character(out_colors),
+        stringsAsFactors = FALSE
+    )
+}
+
+.convert_tidy_to_colorized = function(img_df, channel_map, value_var = "norm_value"){
+    stopifnot(is.character(value_var))
+    stopifnot(length(value_var) == 1)
+    stopifnot(value_var %in% colnames(img_df))
+
+    sel_channels = channel_map$channel
+    wide_df = subset(img_df, channel %in% sel_channels) %>%
+        tidyr::pivot_wider(id_cols = c("i", "j"), names_from = "channel", values_from = dplyr::all_of(value_var))
+
+    n = nrow(wide_df)
+    out_red = rep(0, n)
+    out_green = rep(0, n)
+    out_blue = rep(0, n)
+
+    for(i in seq_len(nrow(channel_map))){
+        ch = as.character(channel_map$channel[i])
+        clr = channel_map$color[i]
+
+        vals = wide_df[[ch]]
+        if(is.null(vals)){
+            vals = rep(0, n)
+        }
+        vals[is.na(vals)] = 0
+
+        ch_max = max(vals, na.rm = TRUE)
+        if(is.finite(ch_max) && ch_max > 0){
+            vals = vals / ch_max
+        }else{
+            vals = rep(0, n)
+        }
+
+        clr_rgb = as.numeric(grDevices::col2rgb(clr)) / 255
+        out_red = out_red + vals * clr_rgb[1]
+        out_green = out_green + vals * clr_rgb[2]
+        out_blue = out_blue + vals * clr_rgb[3]
+    }
+
+    out_red = pmin(1, pmax(0, out_red))
+    out_green = pmin(1, pmax(0, out_green))
+    out_blue = pmin(1, pmax(0, out_blue))
+
+    data.frame(
+        i = wide_df$i,
+        j = wide_df$j,
+        red = out_red,
+        green = out_green,
+        blue = out_blue,
+        chex = grDevices::rgb(out_red, out_green, out_blue)
+    )
+}
+
 
 #' Read a TIFF region as an array
 #'
@@ -665,6 +812,51 @@ fetchTiffData.rgb = function(tiff_path,
     )
 }
 
+#' Plot a rectangular region of a TIFF image with multi-channel color mapping
+#'
+#' Creates a colorized composite visualization from a rectangular TIFF region.
+#' Supports mapping any number of channels to named colors, then blends channel
+#' contributions with additive clamping to RGB.
+#'
+#' @param tiff_path Path to the TIFF image file
+#' @param rect A \linkS4class{TiffRect} object defining the rectangle region
+#' @param resolution Resolution level to read from the TIFF file. If NULL, automatically selects resolution
+#' @param max_pixels Maximum dimension in pixels for the plotted image
+#' @param channel_colors Channel-to-color mapping. Use an unnamed positional list/vector (index = channel number),
+#'   where NULL/NA entries are ignored, or a named list/vector with names that exactly match `channel_names`.
+#' @param channel_names Optional character vector of channel names. Required for named `channel_colors` mapping.
+#' @param value_var Variable to use for channel intensities, either "norm_value" or "value" (default "norm_value")
+#' @param precalc_max Optional data frame with precalculated min/max values per channel for normalization
+#' @param quantile_norm Quantile for normalization (default 0.999)
+#'
+#' @returns A TiffPlotData object containing the colorized data and a named ggplot object.
+#' @export
+#' @import ggplot2
+fetchTiffData.colorized = function(tiff_path,
+                                   rect = NULL,
+                                   resolution = NULL,
+                                   max_pixels = 800,
+                                   channel_colors,
+                                   channel_names = NULL,
+                                   value_var = "norm_value",
+                                   precalc_max = NULL,
+                                   quantile_norm = .999){
+    rect = .rect_null_check(rect, tiff_path)
+    if(nrow(rect@coords) != 1) stop("fetchTiffData.colorized requires a TiffRect with exactly one row")
+
+    .fetch_tiff_data.colorized(
+        tiff_path = tiff_path,
+        rect = rect,
+        resolution = resolution,
+        max_pixels = max_pixels,
+        channel_colors = channel_colors,
+        channel_names = channel_names,
+        value_var = value_var,
+        precalc_max = precalc_max,
+        quantile_norm = quantile_norm
+    )
+}
+
 .apply_coord_rect = function(p, r, coord_FUN){
     p + coord_FUN(xlim = c(r@coords$xmin, r@coords$xmax), ylim = c(r@coords$ymin, r@coords$ymax))
 }
@@ -800,6 +992,74 @@ apply_coord_cartesian = function(img_data){
     p_rgb = .apply_coord_rect(p_rgb, rect, ggplot2::coord_fixed)
     plots_list <- list(rgb = p_rgb)
     # data_df <- as.data.frame(rgb_df)
+    new("TiffPlotData",
+        data = img_obj@data,
+        plots = plots_list,
+        activePlot = names(plots_list)[1],
+        tiff_path = tiff_path,
+        resolution = img_obj@resolution,
+        precalc_max = img_obj@precalc_max,
+        rect = img_obj@rect,
+        img_info = img_obj@img_info,
+        unit_per_pixel = img_obj@unit_per_pixel,
+        unit_name = img_obj@unit_name)
+}
+
+.fetch_tiff_data.colorized = function(
+        tiff_path,
+        rect = NULL,
+        resolution = NULL,
+        max_pixels = 800,
+        channel_colors,
+        channel_names = NULL,
+        value_var = "norm_value",
+        precalc_max = NULL,
+        quantile_norm = .999
+){
+    img_obj = .fetch_tiff_data(
+        tiff_path = tiff_path,
+        rect = rect,
+        resolution = resolution,
+        max_pixels = max_pixels,
+        precalc_max = precalc_max,
+        quantile_norm = quantile_norm
+    )
+
+    img_df = img_obj@data
+    available_channels = sort(unique(img_df$channel))
+    channel_map = .resolve_channel_color_map(
+        channel_colors = channel_colors,
+        channel_names = channel_names,
+        available_channels = available_channels
+    )
+
+    rgb_df = .convert_tidy_to_colorized(
+        img_df = img_df,
+        channel_map = channel_map,
+        value_var = value_var
+    )
+
+    leg_df = channel_map
+    leg_df$channel_name = factor(leg_df$channel_name, levels = leg_df$channel_name)
+    leg_cols = leg_df$color
+    names(leg_cols) = as.character(leg_df$channel_name)
+
+    suppressWarnings({
+        p_rgb = ggplot() +
+            geom_raster(data = rgb_df, aes(x = i, y = j, fill = chex)) +
+            geom_point(data = leg_df, aes(color = channel_name), x = NA, y = NA, alpha = 0) +
+            scale_color_manual(values = leg_cols, name = NULL) +
+            guides(color = guide_legend(override.aes = list(size = 12, shape = 16, alpha = 1),
+                                        theme = theme(legend.background = element_blank(), legend.key = element_blank()))) +
+            scale_y_reverse() +
+            theme(panel.spacing = unit(0, "npc")) +
+            scale_fill_identity() +
+            labs(x= "pixel", y = "pixel")
+    })
+
+    p_rgb = .apply_coord_rect(p_rgb, rect, ggplot2::coord_fixed)
+    plots_list <- list(colorized = p_rgb)
+
     new("TiffPlotData",
         data = img_obj@data,
         plots = plots_list,

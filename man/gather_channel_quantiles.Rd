@@ -7,7 +7,8 @@
 gather_channel_quantiles(
   tf,
   max_full_fetch = 1e+08,
-  query_probs = .query_probs()
+  query_probs = .query_probs(),
+  workers = "auto"
 )
 }
 \description{
