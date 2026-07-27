@@ -33,7 +33,7 @@
   resolution
 }
 
-.handle_precalc_max = function(precalc_max, tidy_img, resolution, channel_names){
+.handle_precalc_max = function(precalc_max, tidy_img, resolution, channel_names, quantile_norm){
   if(is.null(precalc_max)){
     precalc_max = tidy_img  %>% group_by(channel) %>% summarise(min_value = 0, max_value = quantile(value, quantile_norm))
   }else{
@@ -55,7 +55,7 @@
   if(!is.numeric(precalc_max$channel)){
     if(!is.null(channel_names)){
       if(!all(precalc_max$channel %in% channel_names)){
-        stop("precalc_max channel identities are not compatible with spupplie channel_names")
+        stop("precalc_max channel identities are not compatible with supplied channel_names")
       }else{
         precalc_max$channel = factor(precalc_max$channel, levels = channel_names)
         precalc_max$channel = as.numeric(precalc_max$channel)
@@ -63,11 +63,8 @@
     }else{
       stop("channel_names is required when prec_calc max specifies character channel identities.")
     }
-    
-    
   }
-}
-precalc_max
+  precalc_max
 }
 
 #' Fetch TIFF image data for a rectangular region
@@ -698,7 +695,7 @@ fetchTiffArray = function(tiff_path, rect = NULL,
   tidy_img$i = (tidy_img$i + rect$xmin*x_ratio)/x_ratio
   tidy_img$j = (tidy_img$j + rect$ymin*y_ratio)/y_ratio
   
-  precalc_max = .handle_precalc_max(precalc_max, tidy_img, resolution, channel_names)
+  precalc_max = .handle_precalc_max(precalc_max, tidy_img, resolution, channel_names, quantile_norm)
   
   tidy_img = merge(tidy_img, precalc_max %>% select(channel, min_value, max_value), all.x = TRUE)
   tidy_img = tidy_img %>% mutate(norm_value = (value - min_value) / (max_value - min_value))
