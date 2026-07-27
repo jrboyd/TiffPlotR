@@ -12,6 +12,15 @@
 #' @return logical vector, or a subset `TiffShape` when `subset = TRUE`
 #'   (`NULL` if nothing overlaps).
 #' @export
+#' @examples
+#' poly <- TiffPolygon(
+#'   x = c(0, 4, 4, 0,  20, 24, 24, 20),
+#'   y = c(0, 0, 4, 4,   0,  0,  4,  4),
+#'   name = c(rep("a", 4), rep("b", 4))
+#' )
+#' win <- TiffRect(-1, 10, -1, 10, name = "window")
+#' shape_overlaps_rect(poly, win)                 # TRUE FALSE
+#' shape_overlaps_rect(poly, win, subset = TRUE)  # TiffPolygon with only "a"
 shape_overlaps_rect <- function(shape, rect, subset = FALSE) {
   if (!is(shape, "TiffShape")) stop("shape must be a TiffShape", call. = FALSE)
   if (!is(rect, "TiffRect")) stop("rect must be a TiffRect", call. = FALSE)

@@ -1,4 +1,4 @@
-#' Colour shapes by a per-shape value (categorical or continuous)
+#' Colour shapes by a per-shape value categorical or continuous
 #'
 #' Maps a value per shape row to a fill colour and writes it (plus the raw
 #' `value`) to the shape's metadata, so `shape_annotate()` uses it directly.
@@ -20,6 +20,19 @@
 #'   The value->colour mapping is attached as `attr(shape@meta, "color_map")`
 #'   (a data.frame) for building legends.
 #' @export
+#' @examples
+#' poly <- TiffPolygon(
+#'   x = c(0, 4, 4, 0,  10, 14, 14, 10,  20, 24, 24, 20),
+#'   y = c(0, 0, 4, 4,   0,  0,  4,  4,   0,  0,  4,  4),
+#'   name = c(rep("a", 4), rep("b", 4), rep("c", 4))
+#' )
+#' # categorical: values named by shape name
+#' by_type <- assign_value_colors(poly, c(a = "Tumor", b = "Immune", c = "Tumor"))
+#' shape_meta(by_type)
+#' attr(shape_meta(by_type), "color_map")
+#' # continuous: numeric values map along a gradient
+#' by_val <- assign_value_colors(poly, c(a = 1, b = 5, c = 9))
+#' shape_meta(by_val)
 assign_value_colors <- function(shape, values, palette = NULL, continuous = NULL,
                                 na_color = "grey80", fill = TRUE, border = FALSE) {
   if (!is(shape, "TiffShape")) stop("shape must be a TiffShape", call. = FALSE)

@@ -44,3 +44,17 @@ Creates a colorized composite visualization from a rectangular TIFF region.
 Supports mapping any number of channels to named colors, then blends channel
 contributions with additive clamping to RGB.
 }
+\examples{
+library(TiffPlotR)
+tf = exampleTiff()
+fetchTiffData(tf, rect = TiffRect(2500, 3000, 2500, 3000))
+fetchTiffData.colorized(tf,
+  channel_colors = list("blue", NULL, NULL, NULL, "purple", "cyan"),
+  rect = TiffRect(2500, 3000, 2500, 3000)
+)
+fetchTiffData.colorized(tf,
+  channel_colors = list("A" = "blue", E = "purple", F = "cyan"),
+  rect = TiffRect(2500, 3000, 2500, 3000),
+  channel_names = LETTERS[1:6]
+)
+}

@@ -15,6 +15,17 @@
 #'   metadata columns.
 #' @return `shape` with its `@meta` populated (`name`, and `fill`/`color`).
 #' @export
+#' @examples
+#' # a 3x3 grid of square cells
+#' g <- expand.grid(cx = c(0, 10, 20), cy = c(0, 10, 20))
+#' verts <- do.call(rbind, lapply(seq_len(nrow(g)), function(i)
+#'   data.frame(x = g$cx[i] + c(0, 8, 8, 0),
+#'              y = g$cy[i] + c(0, 0, 8, 8),
+#'              name = paste0("cell", i))))
+#' poly <- TiffPolygon(x = verts$x, y = verts$y, name = verts$name)
+#' colored <- assign_adjacent_colors(
+#'   poly, palette = c("#e41a1c", "#377eb8", "#4daf4a", "#984ea3"))
+#' shape_meta(colored)
 assign_adjacent_colors <- function(shape, palette = NULL, dist_thresh = NULL,
                                     fill = TRUE, border = FALSE) {
   if (!is(shape, "TiffShape")) stop("shape must be a TiffShape", call. = FALSE)

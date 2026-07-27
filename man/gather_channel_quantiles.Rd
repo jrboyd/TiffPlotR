@@ -11,6 +11,9 @@ gather_channel_quantiles(
   workers = "auto"
 )
 }
+\arguments{
+\item{query_probs}{}
+}
 \description{
 Title
 }

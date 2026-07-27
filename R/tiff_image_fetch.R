@@ -863,6 +863,8 @@ fetchTiffData.rgb = function(tiff_path,
 #' @returns A TiffPlotData object containing the colorized data and a named ggplot object.
 #' @export
 #' @import ggplot2
+#' 
+#' @examples
 #' library(TiffPlotR)
 #' tf = exampleTiff()
 #' fetchTiffData(tf, rect = TiffRect(2500, 3000, 2500, 3000))
