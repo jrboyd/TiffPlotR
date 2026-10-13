@@ -47,6 +47,17 @@ Use `devtools::test()` for the whole suite. Shape-class tests are small and fine
     old fixed 100e6 ran out of memory on AVITI (14 channels, 32 GB); auto gives about 30e6
     there. Check `MaxRSS` on the first real run.
 
+- **dplyr is imported, never attached.** NAMESPACE imports only `group_by`, `mutate`,
+  `select` and `summarise` from it. Any other verb must be written `dplyr::`, or it fails
+  with "could not find function" for every caller who hasn't attached dplyr themselves.
+  - The test suite doesn't attach dplyr, so it catches this, but only on code paths it
+    actually runs (see `test_precalc_max_fetch.R`).
+  - To sweep for these, run
+    `codetools::checkUsageEnv(asNamespace("TiffPlotR"))` and look for "no visible global
+    function".
+  - That check misses bare symbols in a pipe (`x %>% ungroup %>% ...`), so also grep for those.
+  - `sym`, `.data` and `expr` resolve through `import(ggplot2)`, which re-exports them from rlang.
+
 ## Tooling
 
 - Optional dependencies (Suggests) are `ggnewscale` (needed by `add_points()` on plots that

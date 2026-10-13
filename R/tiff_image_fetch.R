@@ -48,7 +48,7 @@
         stop("Multiple values for each channel after resolution selection. Is this precalc_max for a single tiff file?")
       }
     }
-    precalc_max = precalc_max %>% ungroup %>% select(channel, min_value, max_value)
+    precalc_max = precalc_max %>% dplyr::ungroup() %>% select(channel, min_value, max_value)
   }
   stopifnot(c("channel", "min_value", "max_value") %in% colnames(precalc_max))
   #check if channel is specified by name, convert back to number if so
@@ -422,7 +422,7 @@ convertTidyToRGB = function(img_df, red_channel = 1, green_channel = 2, blue_cha
   stopifnot(value_var %in% colnames(img_df))
   
   rgb_df = subset(img_df, channel %in% c(rv, gv, bv)) %>%
-    tidyr::pivot_wider(id_cols = c("i", "j"), names_from = "channel", values_from = all_of(value_var))
+    tidyr::pivot_wider(id_cols = c("i", "j"), names_from = "channel", values_from = tidyr::all_of(value_var))
   rgb_df = rgb_df %>% mutate(i, j, red = !!sym(as.character(rv)), green = !!sym(as.character(gv)), blue = !!sym(as.character(bv)), .keep = "none")
   
   #strip NA values
