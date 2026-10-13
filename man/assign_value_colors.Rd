@@ -54,6 +54,7 @@ by_type <- assign_value_colors(poly, c(a = "Tumor", b = "Immune", c = "Tumor"))
 shape_meta(by_type)
 attr(shape_meta(by_type), "color_map")
 # continuous: numeric values map along a gradient
-by_val <- assign_value_colors(poly, c(a = 1, b = 5, c = 9))
-shape_meta(by_val)
+by_val <- assign_value_colors(poly, c(a = 1, b = 5, c = 9), border = TRUE, fill = TRUE)
+library(ggplot2)
+ggplot() \%>\% shape_annotate(by_val)
 }
