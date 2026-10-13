@@ -35,11 +35,11 @@ setClass(
 #' @export
 TiffPolygon <- function(x, y, name = NULL) {
     reduce_names = FALSE
-    if(length(x) == length(name)){
+    if(!is.list(x) && length(x) == length(name)){
         x = split(x, name)
         reduce_names = TRUE
     }
-    if(length(y) == length(name)){
+    if(!is.list(y) && length(y) == length(name)){
         y = split(y, name)
         reduce_names = TRUE
     }

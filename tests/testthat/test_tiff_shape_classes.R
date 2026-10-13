@@ -30,7 +30,7 @@ test_that("TiffPolygon constructor and accessors work", {
   expect_s4_class(poly, "TiffPolygon")
   expect_true(is(poly, "TiffShape"))
   expect_equal(poly$n_points, c(3, 4))
-  expect_equal(poly@coords$name, c("p_1", "p_2"))
+  expect_equal(poly@coords$name, c("p1", "p2"))
 
   poly2 <- shape_shift(poly, dx = 2, dy = 3)
   expect_equal(poly2$x[[1]], c(2, 3, 2))
@@ -111,6 +111,8 @@ test_that("shape_contained_points enumerates integer-grid points for each shape"
   got_ell <- unique(ell_pts[, c("x", "y")])
   got_ell <- got_ell[order(got_ell$x, got_ell$y), , drop = FALSE]
   expected_ell <- expected_ell[order(expected_ell$x, expected_ell$y), , drop = FALSE]
+  rownames(got_ell) <- NULL
+  rownames(expected_ell) <- NULL
   expect_equal(got_ell, expected_ell)
   expect_true(all(ell_pts$name == "ell"))
 
