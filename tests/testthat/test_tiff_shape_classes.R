@@ -24,7 +24,7 @@ test_that("TiffPolygon constructor and accessors work", {
   poly <- TiffPolygon(
     x = list(c(0, 1, 0), c(10, 12, 11, 10)),
     y = list(c(0, 0, 1), c(10, 10, 12, 13)),
-    name = c("p", "p")
+    name = c("p1", "p2")
   )
 
   expect_s4_class(poly, "TiffPolygon")
