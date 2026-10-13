@@ -2,18 +2,35 @@
 % Please edit documentation in R/global_precalc.R
 \name{gather_channel_quantiles}
 \alias{gather_channel_quantiles}
-\title{Title}
+\title{Gather per-channel signal quantiles at every resolution of a TIFF}
 \usage{
 gather_channel_quantiles(
   tf,
-  max_full_fetch = 1e+08,
+  max_full_fetch = "auto",
   query_probs = .query_probs(),
   workers = "auto"
 )
 }
 \arguments{
-\item{query_probs}{}
+\item{tf}{Path to the TIFF image file.}
+
+\item{max_full_fetch}{Largest resolution (in pixels) read whole. \code{"auto"}
+sizes it from available memory and channel count:
+\code{min(100e6, mem_bytes / (n_channels * 8 * 10))}, where memory is the
+SLURM allocation when set, else free system memory.}
+
+\item{query_probs}{Quantile probabilities to record.}
+
+\item{workers}{Number of parallel workers for LOW mode, or \code{"auto"}
+(\code{.detect_cores()}, which honours the SLURM CPU and memory allocation).}
+}
+\value{
+A list with \code{signal_quantiles} (per resolution, a matrix of
+  quantiles x channels with rows named like \code{"99.8\%"}) and
+  \code{assessed_ranges} (per resolution, the representative regions).
 }
 \description{
-Title
+Coarse resolutions are read whole ("FULL" mode). Once a resolution exceeds
+\code{max_full_fetch} pixels, only representative regions located at the
+previous resolution are read ("LOW" mode), in parallel across \code{workers}.
 }

@@ -1024,7 +1024,7 @@ apply_coord_cartesian = function(img_data){
   suppressWarnings({
     p_rgb = ggplot() +
       geom_raster(data = rgb_df, aes(x = i, y = j, fill = chex)) +
-      geom_point(data = leg_df, aes(color = channel_name), x = NA, y = NA, alpha = 0) +
+      geom_point(data = leg_df, aes(color = channel_name), x = NA, y = NA, alpha = 0, na.rm = TRUE) +
       scale_color_manual(values = leg_cols, name = NULL) +
       guides(color = guide_legend(override.aes = list(size = 12, shape = 16, alpha = 1),
                                   theme = theme(legend.background = element_blank(), legend.key = element_blank()))) +
@@ -1092,7 +1092,7 @@ apply_coord_cartesian = function(img_data){
   suppressWarnings({
     p_rgb = ggplot() +
       geom_raster(data = rgb_df, aes(x = i, y = j, fill = chex)) +
-      geom_point(data = leg_df, aes(color = channel_name), x = NA, y = NA, alpha = 0) +
+      geom_point(data = leg_df, aes(color = channel_name), x = NA, y = NA, alpha = 0, na.rm = TRUE) +
       scale_color_manual(values = leg_cols, name = NULL) +
       guides(color = guide_legend(override.aes = list(size = 12, shape = 16, alpha = 1),
                                   theme = theme(legend.background = element_blank(), legend.key = element_blank()))) +

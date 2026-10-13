@@ -65,10 +65,8 @@ assign_value_colors <- function(shape, values, palette = NULL, continuous = NULL
     ulev <- sort(unique(f[!is.na(f)]))
     k <- length(ulev)
     if (is.null(palette)) {
-      palette <- if (k <= 8L)
-        c("#e41a1c", "#377eb8", "#4daf4a", "#984ea3",
-          "#ff7f00", "#ffff33", "#a65628", "#f781bf")[seq_len(max(k, 1L))]
-      else grDevices::hcl.colors(k, "Dark 3")
+      palette <- unname(.category_palette(ulev))
+      if (k == 0L) palette <- .set1_colors[1]
     }
     if (length(palette) < k) {
       warning("palette has fewer colours than categories; recycling", call. = FALSE)
@@ -100,4 +98,45 @@ assign_value_colors <- function(shape, values, palette = NULL, continuous = NULL
   shape@meta <- meta
   validObject(shape)
   shape
+}
+
+
+#' Colour shapes by a column of a table
+#'
+#' Looks up each shape's name in a key of `table` and colours the shape by
+#' `table[[column]]` via [assign_value_colors()]. Shapes with no matching row
+#' get `na_color`, and a message reports how many there were.
+#'
+#' @param shape A `TiffShape`.
+#' @param table A data.frame (or data.table/tibble) with one row per shape id.
+#' @param column Name of the column of `table` to colour by.
+#' @param key Name of the column of `table` holding shape names. `NULL` uses
+#'   `rownames(table)` (e.g. a Seurat object's `@meta.data`).
+#' @param ... Passed to [assign_value_colors()] (`palette`, `continuous`,
+#'   `na_color`, `fill`, `border`).
+#' @return `shape` with colour metadata, as for [assign_value_colors()].
+#' @export
+#' @examples
+#' poly <- TiffPolygon(
+#'   x = c(0, 4, 4, 0,  10, 14, 14, 10),
+#'   y = c(0, 0, 4, 4,   0,  0,  4,  4),
+#'   name = c(rep("a", 4), rep("b", 4))
+#' )
+#' cells <- data.frame(id = c("a", "b"), type = c("Tumor", "Immune"))
+#' shape_meta(assign_value_colors_by(poly, cells, "type", key = "id"))
+assign_value_colors_by <- function(shape, table, column, key = NULL, ...) {
+  if (!is(shape, "TiffShape")) stop("shape must be a TiffShape", call. = FALSE)
+  table <- as.data.frame(table)
+  if (!column %in% colnames(table)) stop("column '", column, "' not in table", call. = FALSE)
+  if (is.null(key)) {
+    ids <- rownames(table)
+  } else {
+    if (!key %in% colnames(table)) stop("key '", key, "' not in table", call. = FALSE)
+    ids <- as.character(table[[key]])
+  }
+  nm <- shape@coords$name
+  hit <- match(nm, ids)
+  n_na <- sum(is.na(hit))
+  if (n_na) message(n_na, "/", length(nm), " shapes not found in table")
+  assign_value_colors(shape, table[[column]][hit], ...)
 }

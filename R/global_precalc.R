@@ -42,23 +42,36 @@
 }
 
 
-#' Title
+#' Gather per-channel signal quantiles at every resolution of a TIFF
 #'
-#' @param tf
-#' @param max_full_fetch
-#' @param query_probs
+#' Coarse resolutions are read whole ("FULL" mode). Once a resolution exceeds
+#' \code{max_full_fetch} pixels, only representative regions located at the
+#' previous resolution are read ("LOW" mode), in parallel across \code{workers}.
 #'
-#' @returns
+#' @param tf Path to the TIFF image file.
+#' @param max_full_fetch Largest resolution (in pixels) read whole. \code{"auto"}
+#'   sizes it from available memory and channel count:
+#'   \code{min(100e6, mem_bytes / (n_channels * 8 * 10))}, where memory is the
+#'   SLURM allocation when set, else free system memory.
+#' @param query_probs Quantile probabilities to record.
+#' @param workers Number of parallel workers for LOW mode, or \code{"auto"}
+#'   (\code{.detect_cores()}, which honours the SLURM CPU and memory allocation).
+#'
+#' @returns A list with \code{signal_quantiles} (per resolution, a matrix of
+#'   quantiles x channels with rows named like \code{"99.8\%"}) and
+#'   \code{assessed_ranges} (per resolution, the representative regions).
 #' @export
-#'
-#' @examples
-gather_channel_quantiles = function(tf, max_full_fetch = 100e6, query_probs = .query_probs(), workers = "auto"){
+gather_channel_quantiles = function(tf, max_full_fetch = "auto", query_probs = .query_probs(), workers = "auto"){
   
   #### step 0 prep ####
-  if(workers == "auto"){
+  if(identical(workers, "auto")){
     workers = .detect_cores()
   }
   img_meta_df = read_tiff_meta_data(tf)
+  if(identical(max_full_fetch, "auto")){
+    max_full_fetch = .auto_max_full_fetch(n_channels = max(img_meta_df$sizeC))
+    message("max_full_fetch auto: ", format(max_full_fetch, big.mark = ",", scientific = FALSE), " px")
+  }
   meta_max = dplyr::filter(img_meta_df, sizeX == max(sizeX))
   #select max (lowest pixel) res
   max_res = max(img_meta_df$resolutionLevel)
@@ -162,11 +175,7 @@ gather_channel_quantiles = function(tf, max_full_fetch = 100e6, query_probs = .q
           curr_res_fetch_rect = .mult_TiffRect(prev_res_fetch_rect, 2)
           full_res_fetch_rect = .mult_TiffRect(curr_res_fetch_rect, res_ratio)
           
-          tryCatch({
-            arr = fetchTiffArray(tf, resolution = res_i, max_pixels = Inf, rect = full_res_fetch_rect)
-          }, error = function(e){
-            browser()
-          })
+          arr = fetchTiffArray(tf, resolution = res_i, max_pixels = Inf, rect = full_res_fetch_rect)
           
           arr = arr@.Data[,,chan_i, drop = FALSE]
           
@@ -338,4 +347,17 @@ gather_channel_quantiles = function(tf, max_full_fetch = 100e6, query_probs = .q
 
 .query_probs = function(){
   unique(sort(c(seq(0, 100, by = .1), seq(99,100, by = .01), seq(99.9,100, by = .001))))/100
+}
+
+#' Pixel budget for a whole-resolution read in gather_channel_quantiles
+#'
+#' A FULL fetch holds n_channels doubles per pixel, plus copies made while
+#' computing quantiles; 10x is a conservative overhead allowance.
+#'
+#' @param n_channels Number of channels in the image.
+#' @param mem_mb Memory available in MB.
+#' @param cap Upper limit (the historical default).
+.auto_max_full_fetch = function(n_channels, mem_mb = .available_memory_mb(), cap = 100e6){
+  if(!is.finite(mem_mb)) return(cap)
+  min(cap, floor(mem_mb * 1024^2 / (n_channels * 8 * 10)))
 }

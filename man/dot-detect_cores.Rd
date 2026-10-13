@@ -13,5 +13,6 @@
 }
 \description{
 Constrains by (1) CPU availability, honoring a SLURM allocation when present,
-and (2) free system memory divided by per-core memory need.
+and (2) available memory (free system memory, capped by any SLURM memory
+allocation) divided by per-core memory need.
 }

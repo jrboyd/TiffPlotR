@@ -29,9 +29,7 @@
 assign_adjacent_colors <- function(shape, palette = NULL, dist_thresh = NULL,
                                     fill = TRUE, border = FALSE) {
   if (!is(shape, "TiffShape")) stop("shape must be a TiffShape", call. = FALSE)
-  if (is.null(palette))
-    palette <- c("#e41a1c", "#377eb8", "#4daf4a", "#984ea3",
-                 "#ff7f00", "#ffff33", "#a65628", "#f781bf")
+  if (is.null(palette)) palette <- .set1_colors
   P <- length(palette)
   nm <- shape@coords$name
   n  <- length(nm)

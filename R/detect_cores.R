@@ -1,7 +1,8 @@
 #' Detect a safe number of cores for parallel computing
 #'
 #' Constrains by (1) CPU availability, honoring a SLURM allocation when present,
-#' and (2) free system memory divided by per-core memory need.
+#' and (2) available memory (free system memory, capped by any SLURM memory
+#' allocation) divided by per-core memory need.
 #'
 #' @param mem_per_core memory required per core in MB
 #' @param reserve_user_cores leave at least this many cores for user running interactively
@@ -10,7 +11,7 @@
     available_cores = .detect_available_cores()
     available_cores = max(1, available_cores - reserve_user_cores)
 
-    free_mem_mb = .free_system_memory_mb()
+    free_mem_mb = .available_memory_mb()
     max_cores_by_mem = max(1, floor(free_mem_mb / mem_per_core))
 
     final_cores = min(available_cores, max_cores_by_mem)
@@ -33,6 +34,23 @@
     }
     n = parallel::detectCores()
     if (is.na(n) || n < 1) 1L else n
+}
+
+#' Memory available to this process in MB
+#'
+#' The smaller of free system memory and the SLURM memory allocation, so a job
+#' on a big shared node is sized by what it was granted, not by the node.
+.available_memory_mb = function(){
+    min(.free_system_memory_mb(), .slurm_mem_mb(), na.rm = TRUE)
+}
+
+#' SLURM memory allocation in MB, or NA outside SLURM / when unset
+.slurm_mem_mb = function(){
+    per_node = suppressWarnings(as.numeric(Sys.getenv("SLURM_MEM_PER_NODE", unset = NA)))
+    if (!is.na(per_node) && per_node > 0) return(per_node)
+    per_cpu = suppressWarnings(as.numeric(Sys.getenv("SLURM_MEM_PER_CPU", unset = NA)))
+    if (!is.na(per_cpu) && per_cpu > 0) return(per_cpu * .detect_available_cores())
+    NA_real_
 }
 
 #' Free system memory in MB, cross-platform

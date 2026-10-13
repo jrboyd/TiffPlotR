@@ -21,6 +21,10 @@ Imports:
     tidyr,
     xml2,
     base64enc
+Suggests:
+    testthat,
+    ggnewscale,
+    EBImage
 Collate:
   'class_TiffShape.R'
   'shape_generics.R'
@@ -39,6 +43,9 @@ Collate:
   'detect_cores.R'
   'color_adjacent.R'
   'color_by_value.R'
+  'palette.R'
+  'add_points.R'
+  'label_polygons.R'
   'shape_intersect.R'
 Config/roxygen2/version: 8.0.0
 RoxygenNote: 7.3.3
