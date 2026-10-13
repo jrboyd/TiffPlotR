@@ -148,8 +148,10 @@ gather_channel_quantiles = function(tf, max_full_fetch = "auto", query_probs = .
         }
       },
       LOW = {
-        if(!is.list(rep_ranges[[res_i+1]])){
-          stop("first resolution exceeds allowed size")
+        if(length(rep_ranges) < res_i + 1 || !is.list(rep_ranges[[res_i+1]])){
+          stop("the coarsest resolution (", format(res_pixels, big.mark = ",", scientific = FALSE),
+               " px) exceeds max_full_fetch (", format(max_full_fetch, big.mark = ",", scientific = FALSE),
+               " px); raise max_full_fetch")
         }
         prev_ranges = rep_ranges[[res_i+1]]
         quant_res = list()
@@ -360,4 +362,69 @@ gather_channel_quantiles = function(tf, max_full_fetch = "auto", query_probs = .
 .auto_max_full_fetch = function(n_channels, mem_mb = .available_memory_mb(), cap = 100e6){
   if(!is.finite(mem_mb)) return(cap)
   min(cap, floor(mem_mb * 1024^2 / (n_channels * 8 * 10)))
+}
+
+#' Reduce gather_channel_quantiles() output to a precalc_max table
+#'
+#' Picks per-resolution, per-channel normalization limits from the quantiles
+#' collected by \code{gather_channel_quantiles()}, giving the table that
+#' \code{fetchTiffData()} and friends accept as \code{precalc_max}.
+#'
+#' Zero-valued quantiles are dropped first, so sparse channels are not clipped
+#' to black:
+#' \itemize{
+#'   \item \code{max_value} is the non-zero quantile nearest to \code{max_q}.
+#'   \item \code{min_value} is the \code{min_q} quantile if it is non-zero,
+#'     otherwise the smallest non-zero quantile.
+#' }
+#' If that leaves \code{max_value <= min_value}, \code{min_value} becomes 0. A
+#' channel with no non-zero quantile at a resolution gets \code{min_value = 0}
+#' and \code{max_value = 1}.
+#'
+#' @param gq Output of \code{gather_channel_quantiles()}.
+#' @param min_q Quantile probability for \code{min_value}.
+#' @param max_q Quantile probability for \code{max_value}.
+#'
+#' @returns A data.frame with columns \code{resolution}, \code{channel},
+#'   \code{min_value}, \code{max_value}: one row per resolution and channel.
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#'   gq <- gather_channel_quantiles(exampleTiff())
+#'   pm <- precalc_from_quantiles(gq)
+#'   fetchTiffData(exampleTiff(), precalc_max = pm)
+#' }
+precalc_from_quantiles = function(gq, min_q = 0.30, max_q = 0.99){
+  sig_q = gq$signal_quantiles
+  if(!is.list(sig_q) || !length(sig_q)){
+    stop("gq must be the output of gather_channel_quantiles()")
+  }
+  if(!(min_q >= 0 && max_q <= 1 && min_q < max_q)){
+    stop("need 0 <= min_q < max_q <= 1")
+  }
+  rows = lapply(seq_along(sig_q), function(res_i){
+    x = sig_q[[res_i]]
+    q = as.numeric(sub("%", "", rownames(x))) / 100
+    chans = suppressWarnings(as.integer(colnames(x)))
+    if(is.null(chans) || anyNA(chans)) chans = seq_len(ncol(x))
+    do.call(rbind, lapply(seq_len(ncol(x)), function(ch_i){
+      v = x[, ch_i]
+      nz = v > 0
+      if(!any(nz)){
+        return(data.frame(resolution = res_i, channel = chans[ch_i], min_value = 0, max_value = 1))
+      }
+      qn = q[nz]
+      vn = v[nz]
+      at_min = abs(qn - min_q) < 1e-9
+      min_value = if(any(at_min)) vn[at_min][1] else min(vn)
+      max_value = vn[which.min(abs(qn - max_q))]
+      # fetches normalize by (max_value - min_value); never let that be <= 0
+      if(max_value <= min_value) min_value = 0
+      data.frame(resolution = res_i, channel = chans[ch_i], min_value = min_value, max_value = max_value)
+    }))
+  })
+  out = do.call(rbind, rows)
+  rownames(out) = NULL
+  out
 }

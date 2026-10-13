@@ -57,6 +57,19 @@ Use `devtools::test()` for the whole suite. Shape-class tests are small and fine
     function".
   - That check misses bare symbols in a pipe (`x %>% ungroup %>% ...`), so also grep for those.
   - `sym`, `.data` and `expr` resolve through `import(ggplot2)`, which re-exports them from rlang.
+- **The precalc pipeline is `gather_channel_quantiles()` → `precalc_from_quantiles()`.**
+  - The older `collect_channel_quantiles_all_resolutions` / `quantiles_to_precalc_max` /
+    `precalc_max_all_resolutions` pipeline was removed after 0.1.18. Its sampled path called a
+    function that had already been deleted. `dev_global_precalc_max_claude.R` still
+    references it.
+  - `precalc_from_quantiles()` drops zero quantiles *before* picking limits.
+    - `max_value` is the non-zero quantile nearest `max_q`.
+    - `min_value` is `min_q` if that quantile is non-zero, else the smallest non-zero one.
+  - This matches the AVITI and CosMx reductions. Their defaults (0.30 / 0.99) set the
+    contrast of existing figures. On CosMx, the old 0.90 / 0.998 clipped nuclear signal to
+    black.
+  - A full `gather_channel_quantiles(exampleTiff(), max_full_fetch = 1e6, workers = 1)`
+    takes about 35 s, so the tests use synthetic quantile matrices instead.
 
 ## Tooling
 
