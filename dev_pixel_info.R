@@ -1,8 +1,16 @@
+# BiocManager::install("RBioFormats")
+library(RBioFormats)
 library(magrittr)
 library(TiffPlotR)
 
 tf = "inst/extdata/301_CellPellet_NegCTL_Scan1_PC3Guise.ome.tiff"
-fetchTiffAnnotations(tf)
+# tf = "/netfiles/volaric_research/DLBCL/CosMx/download/CosMx_CompositeLymphoma_1_27_04_2026_12_24_01_764/DecodedFiles/IB1/20251218_234107_S1/CellStatsDir/Morphology2D/20251218_234107_S1_C902_P99_N99_F00720.TIF"
+
+
+read_tiff_meta_data(tf)
+arr = fetchTiffArray(tf)
+dim(arr)
+
 ome_doc <- TiffPlotR:::.read_tiff_ome_xml(tf)
 ome_chans = TiffPlotR:::.fetch_ome_nodes(ome_doc, "Channel")
 df = TiffPlotR:::.fetch_ome_nodes(ome_doc, "Channel", output = "data.frame")
