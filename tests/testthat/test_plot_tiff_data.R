@@ -78,7 +78,7 @@ test_that("plotTiffDataMasked needs masked data", {
   m <- suppressMessages(fetchTiffDataMasked(exampleTiff(), rect, resolution = 4, mask_points = mp,
                                             selected_channels = 1:2))
   p <- plotTiffDataMasked(m, selected_channels = 2)
-  expect_equal(levels(droplevels(p$data$channel_name)), "2")
+  expect_equal(levels(droplevels(p$data$channel_name)), "Opal 520")
   expect_equal(names(p$facet$params$cols), "Text")
   expect_equal(ggplot_build(plotTiffDataMasked(m))$data, ggplot_build(m@plots$masked)$data)
 })

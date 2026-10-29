@@ -17,6 +17,8 @@ plotTiffData(
   nrow = NULL,
   um_axes = NULL,
   scale_bar = NULL,
+  scale_bar_style = NULL,
+  plot_theme = NULL,
   return_object = FALSE,
   plot_name = NULL
 )
@@ -29,6 +31,8 @@ plotTiffDataMasked(
   rect = NULL,
   um_axes = NULL,
   scale_bar = NULL,
+  scale_bar_style = NULL,
+  plot_theme = NULL,
   return_object = FALSE,
   plot_name = "masked"
 )
@@ -42,6 +46,8 @@ plotTiffData.rgb(
   rect = NULL,
   um_axes = NULL,
   scale_bar = NULL,
+  scale_bar_style = NULL,
+  plot_theme = NULL,
   return_object = FALSE,
   plot_name = "rgb"
 )
@@ -53,6 +59,8 @@ plotTiffData.colorized(
   rect = NULL,
   um_axes = NULL,
   scale_bar = NULL,
+  scale_bar_style = NULL,
+  plot_theme = NULL,
   return_object = FALSE,
   plot_name = "colorized"
 )
@@ -87,11 +95,21 @@ else the \code{TPR_UM_SCALE_BAR} option, else FALSE. Both need the
 image's physical pixel size (\code{@unit_per_pixel}); without it the plot
 stays in pixels, with a warning.}
 
+\item{scale_bar_style}{A named list of \code{add_um_scale_bar()}
+arguments for the bar, e.g. \code{list(line_color = "black", position =
+"bottomright")}. NULL uses \code{@plot_parameters$scale_bar_style}, else
+the \code{TPR_SCALE_BAR_STYLE} option, else the bar's defaults.}
+
+\item{plot_theme}{A ggplot2 theme added to the plot. NULL uses
+\code{@plot_parameters$plot_theme}, else the \code{TPR_THEME} option,
+else none.}
+
 \item{return_object}{If FALSE (the default), return the ggplot. If TRUE,
 return \code{img_data} with the plot added to \code{@plots} as
-\code{plot_name} and made the active plot. \code{um_axes} and
-\code{scale_bar} are recorded in \code{@plot_parameters}, and for
-gradient plots \code{scale_colors} too.}
+\code{plot_name} and made the active plot. \code{um_axes},
+\code{scale_bar}, \code{scale_bar_style} and \code{plot_theme} are
+recorded in \code{@plot_parameters}, and for gradient plots
+\code{scale_colors} too.}
 
 \item{plot_name}{Name for the plot in \code{@plots} when
 \code{return_object = TRUE}. Defaults to the name the fetch functions use:

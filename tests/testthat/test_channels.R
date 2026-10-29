@@ -20,7 +20,10 @@ test_that(".ome_color_to_hex handles signed values and missing colors", {
 
 test_that(".channel_table validates names", {
   tf <- exampleTiff()
-  expect_equal(.channel_table(tf)$channel_name, as.character(1:6))
+  # "auto" (the default) uses the OME names, which this TIFF has for every channel
+  expect_equal(.channel_table(tf)$channel_name, ome_names)
+  expect_equal(.channel_table(tf, NULL)$channel_name, ome_names)
+  expect_equal(.channel_table(tf, "number")$channel_name, as.character(1:6))
   expect_equal(.channel_table(tf, "ome")$channel_name, ome_names)
   expect_equal(.channel_table(tf, cn)$ome_name, ome_names)
   expect_error(.channel_table(tf, cn[1:5]), "Not enough")
@@ -54,8 +57,12 @@ test_that("fetchTiffData keeps channel numeric and adds channel_name in plot ord
   expect_equal(img$channels, img@channels)
 
   # numeric selection without names, and OME names
-  img2 <- fetchTiffData(exampleTiff(), rect = rect, resolution = 4, selected_channels = c(5, 1))
+  img2 <- fetchTiffData(exampleTiff(), rect = rect, resolution = 4, selected_channels = c(5, 1),
+                        channel_names = "number")
   expect_equal(levels(img2@data$channel_name), c("5", "1"))
+  img2 <- fetchTiffData(exampleTiff(), rect = rect, resolution = 4, selected_channels = c(5, 1))
+  expect_equal(levels(img2@data$channel_name), ome_names[c(5, 1)])
+  expect_equal(img2@plot_parameters$channel_names, "auto")
   img3 <- fetchTiffData(exampleTiff(), rect = rect, resolution = 4, channel_names = "ome",
                         selected_channels = "Opal 570")
   expect_equal(levels(img3@data$channel_name), "Opal 570")
@@ -92,8 +99,8 @@ test_that("colorized channel_colors resolve OME names without channel_names", {
                                  channel_colors = list(DAPI = "blue", "Opal 570" = "yellow"))
   cmap <- img@plots$colorized$meta$tiffplotr_composite$channel_map
   expect_equal(cmap$channel, c(1L, 3L))
-  # labels are the display names, which are numbers when channel_names is NULL
-  expect_equal(cmap$channel_name, c("1", "3"))
+  # labels are the display names: the OME names under the default "auto"
+  expect_equal(cmap$channel_name, c("DAPI", "Opal 570"))
   expect_error(fetchTiffData.colorized(exampleTiff(), rect = rect, resolution = 4,
                                        channel_colors = list(nope = "blue")),
                "Unknown channel_colors names")
@@ -121,4 +128,12 @@ test_that("renormalize works on a hand-built object with default @channels", {
                       precalc_max = data.frame(channel = 1:2, min_value = 0, max_value = 10))
   obj2 <- renormalize(obj, channels = "2", max_value = 20)
   expect_equal(obj2@data$norm_value[obj2@data$channel == 2], c(0.25, 1))
+})
+
+test_that(".auto_channel_names uses unique OME names, else channel N", {
+  expect_equal(.auto_channel_names(c("DAPI", NA, ""), 1:3), c("DAPI", "channel 2", "channel 3"))
+  # duplicated OME names can't identify a channel
+  expect_equal(.auto_channel_names(c("A", "A", "B"), 1:3), c("channel 1", "channel 2", "B"))
+  # an OME name that collides with a fallback name: number everything
+  expect_equal(.auto_channel_names(c("channel 2", NA), 1:2), c("channel 1", "channel 2"))
 })

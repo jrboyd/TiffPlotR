@@ -126,7 +126,8 @@ update_TiffPlotData = function(img_data, channel_names = NULL){
     return(channel_table)
   }
   if(is_number){
-    if(has_tiff) return(.channel_table(tiff_path))
+    # these objects were labelled by number; keep those labels
+    if(has_tiff) return(.channel_table(tiff_path, "number"))
     return(.default_channel_table(data.frame(channel = as.integer(labels))))
   }
   if(has_tiff){

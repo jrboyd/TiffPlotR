@@ -103,11 +103,19 @@
 #'   else the \code{TPR_UM_SCALE_BAR} option, else FALSE. Both need the
 #'   image's physical pixel size (\code{@unit_per_pixel}); without it the plot
 #'   stays in pixels, with a warning.
+#' @param scale_bar_style A named list of \code{add_um_scale_bar()}
+#'   arguments for the bar, e.g. \code{list(line_color = "black", position =
+#'   "bottomright")}. NULL uses \code{@plot_parameters$scale_bar_style}, else
+#'   the \code{TPR_SCALE_BAR_STYLE} option, else the bar's defaults.
+#' @param plot_theme A ggplot2 theme added to the plot. NULL uses
+#'   \code{@plot_parameters$plot_theme}, else the \code{TPR_THEME} option,
+#'   else none.
 #' @param return_object If FALSE (the default), return the ggplot. If TRUE,
 #'   return \code{img_data} with the plot added to \code{@plots} as
-#'   \code{plot_name} and made the active plot. \code{um_axes} and
-#'   \code{scale_bar} are recorded in \code{@plot_parameters}, and for
-#'   gradient plots \code{scale_colors} too.
+#'   \code{plot_name} and made the active plot. \code{um_axes},
+#'   \code{scale_bar}, \code{scale_bar_style} and \code{plot_theme} are
+#'   recorded in \code{@plot_parameters}, and for gradient plots
+#'   \code{scale_colors} too.
 #' @param plot_name Name for the plot in \code{@plots} when
 #'   \code{return_object = TRUE}. Defaults to the name the fetch functions use:
 #'   \code{"normalized"} or \code{"raw"}, \code{"masked"}, \code{"rgb"} or
@@ -137,6 +145,8 @@ plotTiffData = function(img_data,
                         nrow = NULL,
                         um_axes = NULL,
                         scale_bar = NULL,
+                        scale_bar_style = NULL,
+                        plot_theme = NULL,
                         return_object = FALSE,
                         plot_name = NULL){
   img_data = .check_plot_input(img_data)
@@ -147,7 +157,8 @@ plotTiffData = function(img_data,
   p = .plot_channels(df, rect, value_var = value_var, scale_colors = scale_colors,
                      facets = facet_wrap(~channel_name, ncol = ncol, nrow = nrow))
   if(is.null(plot_name)) plot_name = if(value_var == "value") "raw" else "normalized"
-  .plot_return(img_data, p, rect, um_axes, scale_bar, return_object, plot_name, scale_colors)
+  .plot_return(img_data, p, rect, .resolve_plot_options(img_data, um_axes, scale_bar, scale_bar_style, plot_theme),
+               return_object, plot_name, scale_colors)
 }
 
 #' @rdname plotTiffData
@@ -159,6 +170,8 @@ plotTiffDataMasked = function(img_data,
                               rect = NULL,
                               um_axes = NULL,
                               scale_bar = NULL,
+                              scale_bar_style = NULL,
+                              plot_theme = NULL,
                               return_object = FALSE,
                               plot_name = "masked"){
   img_data = .check_plot_input(img_data)
@@ -170,7 +183,8 @@ plotTiffDataMasked = function(img_data,
   df = .plot_select_channels(img_data, selected_channels)
   rect = .plot_rect(img_data, rect)
   p = .plot_masked(df, rect, value_var = value_var, scale_colors = scale_colors)
-  .plot_return(img_data, p, rect, um_axes, scale_bar, return_object, plot_name, scale_colors)
+  .plot_return(img_data, p, rect, .resolve_plot_options(img_data, um_axes, scale_bar, scale_bar_style, plot_theme),
+               return_object, plot_name, scale_colors)
 }
 
 #' @rdname plotTiffData
@@ -185,6 +199,8 @@ plotTiffData.rgb = function(img_data,
                             rect = NULL,
                             um_axes = NULL,
                             scale_bar = NULL,
+                            scale_bar_style = NULL,
+                            plot_theme = NULL,
                             return_object = FALSE,
                             plot_name = "rgb"){
   img_data = .check_plot_input(img_data)
@@ -194,7 +210,8 @@ plotTiffData.rgb = function(img_data,
   .plot_require_channels(img_data, rgb_channels)
   rect = .plot_rect(img_data, rect)
   p = .plot_rgb(img_data@data, img_data@channels, rgb_channels, value_var = value_var, rect = rect)
-  .plot_return(img_data, p, rect, um_axes, scale_bar, return_object, plot_name)
+  .plot_return(img_data, p, rect, .resolve_plot_options(img_data, um_axes, scale_bar, scale_bar_style, plot_theme),
+               return_object, plot_name)
 }
 
 #' @rdname plotTiffData
@@ -208,6 +225,8 @@ plotTiffData.colorized = function(img_data,
                                   rect = NULL,
                                   um_axes = NULL,
                                   scale_bar = NULL,
+                                  scale_bar_style = NULL,
+                                  plot_theme = NULL,
                                   return_object = FALSE,
                                   plot_name = "colorized"){
   img_data = .check_plot_input(img_data)
@@ -217,7 +236,8 @@ plotTiffData.colorized = function(img_data,
   .plot_require_channels(img_data, channel_map$channel)
   rect = .plot_rect(img_data, rect)
   p = .plot_colorized(img_data@data, channel_map, value_var = value_var, rect = rect)
-  .plot_return(img_data, p, rect, um_axes, scale_bar, return_object, plot_name)
+  .plot_return(img_data, p, rect, .resolve_plot_options(img_data, um_axes, scale_bar, scale_bar_style, plot_theme),
+               return_object, plot_name)
 }
 
 .check_plot_input = function(img_data){
@@ -262,10 +282,8 @@ plotTiffData.colorized = function(img_data,
   df
 }
 
-.plot_return = function(img_data, p, rect, um_axes, scale_bar, return_object, plot_name, scale_colors = NULL){
-  um_axes = .plot_flag(img_data, um_axes, "um_axes", .default_um_axes)
-  scale_bar = .plot_flag(img_data, scale_bar, "scale_bar", .default_scale_bar)
-  p = .apply_um(p, img_data, rect, um_axes, scale_bar)
+.plot_return = function(img_data, p, rect, opts, return_object, plot_name, scale_colors = NULL){
+  p = .apply_plot_options(p, img_data, rect, opts)
   if(!isTRUE(return_object)) return(p)
   if(!is.character(plot_name) || length(plot_name) != 1 || !nzchar(plot_name)){
     stop("plot_name must be a single non-empty string.")
@@ -273,68 +291,77 @@ plotTiffData.colorized = function(img_data,
   img_data@plots[[plot_name]] = p
   img_data@activePlot = plot_name
   if(!is.null(scale_colors)) img_data@plot_parameters$scale_colors = scale_colors
-  img_data@plot_parameters$um_axes = um_axes
-  img_data@plot_parameters$scale_bar = scale_bar
+  img_data = .record_plot_options(img_data, opts)
   validObject(img_data)
   img_data
 }
 
-# Defaults for um_axes / scale_bar: the TPR_UM_AXES and TPR_UM_SCALE_BAR
-# options (see ?TiffPlotR), FALSE when unset.
-.default_um_axes = function() .option_flag("TPR_UM_AXES")
-.default_scale_bar = function() .option_flag("TPR_UM_SCALE_BAR")
+# Plot options applied after the builders, in both the fetch and the replot
+# paths: um_axes, scale_bar, scale_bar_style and plot_theme. Getters for their
+# defaults are in R/options.R.
 
-.option_flag = function(name){
-  val = getOption(name, FALSE)
-  if(!is.logical(val) || length(val) != 1 || is.na(val)){
-    stop("Option ", name, " must be TRUE or FALSE.", call. = FALSE)
+# Explicit argument, else the value recorded with the object, else the
+# option. check_FUN validates whichever is used. A recorded NULL (no theme)
+# counts as recorded.
+.plot_option = function(img_data, x, name, default_FUN, check_FUN){
+  if(is.null(x)){
+    x = if(name %in% names(img_data@plot_parameters)) img_data@plot_parameters[[name]] else default_FUN()
   }
-  val
+  check_FUN(x, name)
 }
 
-.check_flag = function(x, arg){
-  if(!is.logical(x) || length(x) != 1 || is.na(x)) stop(arg, " must be TRUE or FALSE.")
-  x
+# Resolve the four plot options for a replot of img_data.
+.resolve_plot_options = function(img_data, um_axes, scale_bar, scale_bar_style, plot_theme){
+  list(um_axes = .plot_option(img_data, um_axes, "um_axes", .default_um_axes, .check_flag),
+       scale_bar = .plot_option(img_data, scale_bar, "scale_bar", .default_scale_bar, .check_flag),
+       scale_bar_style = .plot_option(img_data, scale_bar_style, "scale_bar_style",
+                                      .default_scale_bar_style, .check_scale_bar_style),
+       plot_theme = .plot_option(img_data, plot_theme, "plot_theme", .default_plot_theme, .check_plot_theme))
 }
 
-# Explicit argument, else the value recorded with the object, else the option.
-.plot_flag = function(img_data, x, name, default_FUN){
-  if(is.null(x)) x = img_data@plot_parameters[[name]]
-  if(is.null(x)) x = default_FUN()
-  .check_flag(x, name)
-}
-
-# Micron axes and/or a micron scale bar on p. Images without a physical pixel
-# size stay in pixels, with a warning. The bar is placed from rect, which
-# avoids building the plot to find its range.
-.apply_um = function(p, img_data, rect, um_axes, scale_bar){
-  if(!um_axes && !scale_bar) return(p)
-  upp = img_data@unit_per_pixel
-  if(!is.numeric(upp) || length(upp) != 1 || !is.finite(upp) || upp <= 0){
-    warning("The image records no physical pixel size, so ",
-            paste(c("micron axes", "a micron scale bar")[c(um_axes, scale_bar)], collapse = " and "),
-            " can't be drawn; the plot stays in pixels.", call. = FALSE)
-    return(p)
+# Micron axes, micron scale bar and theme on p. Images without a physical
+# pixel size stay in pixels, with a warning. The bar is placed from rect,
+# which avoids building the plot to find its range.
+.apply_plot_options = function(p, img_data, rect, opts){
+  if(opts$um_axes || opts$scale_bar){
+    upp = img_data@unit_per_pixel
+    if(!is.numeric(upp) || length(upp) != 1 || !is.finite(upp) || upp <= 0){
+      warning("The image records no physical pixel size, so ",
+              paste(c("micron axes", "a micron scale bar")[c(opts$um_axes, opts$scale_bar)], collapse = " and "),
+              " can't be drawn; the plot stays in pixels.", call. = FALSE)
+    }else{
+      unit_name = img_data@unit_name
+      if(is.na(unit_name) || !nzchar(unit_name)) unit_name = "um"
+      if(opts$um_axes) p = set_axes_um(p, unit_per_pixel = upp, unit_name = unit_name)
+      if(opts$scale_bar){
+        bar_args = c(list(p, unit_per_pixel = upp, unit_name = unit_name,
+                          xlim = c(rect@coords$xmin, rect@coords$xmax),
+                          ylim = c(rect@coords$ymin, rect@coords$ymax)),
+                     opts$scale_bar_style)
+        p = do.call(add_um_scale_bar, bar_args)
+      }
+    }
   }
-  unit_name = img_data@unit_name
-  if(is.na(unit_name) || !nzchar(unit_name)) unit_name = "um"
-  if(um_axes) p = set_axes_um(p, unit_per_pixel = upp, unit_name = unit_name)
-  if(scale_bar){
-    p = add_um_scale_bar(p, unit_per_pixel = upp, unit_name = unit_name,
-                         xlim = c(rect@coords$xmin, rect@coords$xmax),
-                         ylim = c(rect@coords$ymin, rect@coords$ymax))
-  }
+  if(!is.null(opts$plot_theme)) p = p + opts$plot_theme
   p
 }
 
-# Final step of the fetch functions: apply um_axes / scale_bar to the
-# object's plots and record them in @plot_parameters.
-.finish_um = function(img_data, um_axes, scale_bar){
-  um_axes = .check_flag(um_axes, "um_axes")
-  scale_bar = .check_flag(scale_bar, "scale_bar")
-  img_data@plots = lapply(img_data@plots, .apply_um, img_data = img_data, rect = img_data@rect,
-                          um_axes = um_axes, scale_bar = scale_bar)
-  img_data@plot_parameters$um_axes = um_axes
-  img_data@plot_parameters$scale_bar = scale_bar
+.record_plot_options = function(img_data, opts){
+  for(nm in names(opts)){
+    # [nm] = list(NULL) keeps a NULL plot_theme as an entry instead of dropping it
+    img_data@plot_parameters[nm] = list(opts[[nm]])
+  }
   img_data
+}
+
+# Final step of the public fetch functions: apply the plot options to the
+# object's plots and record them in @plot_parameters.
+.finish_plot_options = function(img_data, um_axes, scale_bar, scale_bar_style, plot_theme){
+  opts = list(um_axes = .check_flag(um_axes, "um_axes"),
+              scale_bar = .check_flag(scale_bar, "scale_bar"),
+              scale_bar_style = .check_scale_bar_style(scale_bar_style, "scale_bar_style"),
+              plot_theme = .check_plot_theme(plot_theme, "plot_theme"))
+  img_data@plots = lapply(img_data@plots, .apply_plot_options, img_data = img_data,
+                          rect = img_data@rect, opts = opts)
+  .record_plot_options(img_data, opts)
 }

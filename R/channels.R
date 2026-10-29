@@ -80,12 +80,15 @@ read_tiff_channels = function(tiff_path){
 # The channel dictionary stored in TiffPlotData@channels: every channel in the
 # image, with the name used for display and the OME name and color.
 #
-# channel_names: NULL (names are the channel numbers), "ome" (the OME names),
-# or a character vector naming every channel in order.
-.channel_table = function(tiff_path, channel_names = NULL){
+# channel_names: "auto" (or NULL: OME names where usable, else "channel N"),
+# "ome" (OME names, all required), "number" ("1", "2", ...; the default
+# in 0.1.20 and earlier), or a character vector naming every channel in order.
+.channel_table = function(tiff_path, channel_names = "auto"){
   ome = read_tiff_channels(tiff_path)
   n = nrow(ome)
-  if(is.null(channel_names)){
+  if(is.null(channel_names) || identical(channel_names, "auto")){
+    display = .auto_channel_names(ome$name, ome$channel)
+  }else if(identical(channel_names, "number")){
     display = as.character(ome$channel)
   }else if(identical(channel_names, "ome")){
     if(anyNA(ome$name)) stop("channel_names = \"ome\", but this TIFF's OME-XML does not name every channel.")
@@ -105,6 +108,18 @@ read_tiff_channels = function(tiff_path){
   }
   data.frame(channel = ome$channel, channel_name = display, ome_name = ome$name, color = ome$color,
              stringsAsFactors = FALSE)
+}
+
+# Each channel's OME name when it has a unique, non-empty one, else
+# "channel <number>". If that still leaves duplicates (an OME name such as
+# "channel 2" on another channel), every channel is "channel <number>".
+.auto_channel_names = function(ome_name, channel){
+  fallback = paste("channel", channel)
+  dup = duplicated(ome_name) | duplicated(ome_name, fromLast = TRUE)
+  ok = !is.na(ome_name) & nzchar(ome_name) & !dup
+  display = ifelse(ok, ome_name, fallback)
+  if(anyDuplicated(display)) display = fallback
+  display
 }
 
 # The channel table for an object built without a TIFF: channels named by

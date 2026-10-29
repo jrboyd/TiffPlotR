@@ -72,6 +72,8 @@
 #' @param resolution Resolution level to read. If NULL, a resolution is selected
 #'   automatically to keep dimensions under \code{max_pixels}.
 #' @param max_pixels Maximum pixel dimension used when \code{resolution = NULL}.
+#'   Defaults to the \code{TPR_MAX_PIXELS} option (see \link{TiffPlotR-package}),
+#'   else 800. Recorded in \code{@plot_parameters$max_pixels}.
 #' @param precalc_max Optional data frame with \code{channel},
 #'   \code{min_value}, and \code{max_value} for normalization. \code{channel}
 #'   may hold channel numbers or names.
@@ -79,10 +81,20 @@
 #'   normalized values.
 #' @param quantile_norm Quantile used to estimate per-channel max values when
 #'   \code{precalc_max} is NULL.
-#' @param channel_names Names for the channels: NULL (the default) labels them
-#'   by number, \code{"ome"} uses the names in the TIFF's OME-XML (see
-#'   \code{read_tiff_channels()}), and a character vector names every channel
-#'   in order. Names must be unique.
+#' @param channel_names How to name the channels:
+#'   \itemize{
+#'     \item \code{"auto"}: each channel's name in the TIFF's OME-XML (see
+#'       \code{read_tiff_channels()}) where it has a unique one, otherwise
+#'       \code{"channel 1"}, \code{"channel 2"}, ...
+#'     \item \code{"ome"}: the OME names; an error if any channel lacks one.
+#'     \item \code{"number"}: \code{"1"}, \code{"2"}, ..., the labels used by
+#'       TiffPlotR 0.1.20 and earlier.
+#'     \item a character vector naming every channel in order. Names must be
+#'       unique.
+#'   }
+#'   Defaults to the \code{TPR_CHANNEL_NAMES} option, else \code{"auto"}.
+#'   NULL means \code{"auto"}. Recorded in
+#'   \code{@plot_parameters$channel_names}.
 #' @param selected_channels Optional subset of channels to keep, as channel
 #'   numbers or names. Also sets the plotting order. Names match
 #'   \code{channel_names} first, then the OME names.
@@ -97,8 +109,22 @@
 #' @param scale_bar If TRUE, add a micron scale bar (see
 #'   \code{add_um_scale_bar()}). Defaults to the \code{TPR_UM_SCALE_BAR}
 #'   option, else FALSE. Both need the image's physical pixel size from its
-#'   OME-XML; without it the plot stays in pixels, with a warning. The values
-#'   used are recorded in \code{@plot_parameters}.
+#'   OME-XML; without it the plot stays in pixels, with a warning.
+#' @param scale_bar_style A named list of \code{add_um_scale_bar()} arguments
+#'   for the bar, e.g. \code{list(line_color = "black", position =
+#'   "bottomright")}. Defaults to the \code{TPR_SCALE_BAR_STYLE} option, else
+#'   the bar's own defaults.
+#' @param plot_theme A ggplot2 theme added to the plot, e.g.
+#'   \code{theme(panel.background = element_blank(), panel.grid =
+#'   element_blank())}. Defaults to the \code{TPR_THEME} option, else none.
+#' @param verbose If FALSE, suppress progress messages (such as the selected
+#'   resolution and image size). Defaults to the \code{TPR_VERBOSE} option,
+#'   else TRUE.
+#'
+#' @details The plot settings used (\code{scale_colors}, \code{um_axes},
+#' \code{scale_bar}, \code{scale_bar_style}, \code{plot_theme}) are recorded
+#' in \code{@plot_parameters}, along with \code{channel_names} and
+#' \code{max_pixels}; \code{plotTiffData()} reuses them.
 #'
 #' @returns A \linkS4class{TiffPlotData} object. \code{@data} has one row per
 #'   pixel and channel, with \code{channel} (always the channel number) and
@@ -121,10 +147,12 @@
 #'
 #' fetchTiffData(tiff_path, view_rect, channel_names = "ome",
 #'               selected_channels = c("DAPI", "Opal 570"))
-fetchTiffData = function(tiff_path, rect = NULL, resolution = NULL, max_pixels = 800, precalc_max = NULL, show_raw = FALSE, quantile_norm = .999, channel_names = NULL, selected_channels = NULL, scale_colors = .default_scale_colors(),
-                        um_axes = .default_um_axes(), scale_bar = .default_scale_bar()){
+fetchTiffData = function(tiff_path, rect = NULL, resolution = NULL, max_pixels = .default_max_pixels(), precalc_max = NULL, show_raw = FALSE, quantile_norm = .999, channel_names = .default_channel_names(), selected_channels = NULL, scale_colors = .default_scale_colors(),
+                        um_axes = .default_um_axes(), scale_bar = .default_scale_bar(),
+                        scale_bar_style = .default_scale_bar_style(), plot_theme = .default_plot_theme(),
+                        verbose = .default_verbose()){
   rect = .rect_null_check(rect, tiff_path)
-  obj = .fetch_tiff_data(tiff_path,
+  obj = .quiet_unless(verbose, .fetch_tiff_data(tiff_path,
                    rect,
                    resolution = resolution,
                    max_pixels = max_pixels,
@@ -134,8 +162,8 @@ fetchTiffData = function(tiff_path, rect = NULL, resolution = NULL, max_pixels =
                    channel_names = channel_names,
                    selected_channels = selected_channels,
                    scale_colors = scale_colors
-  )
-  .finish_um(obj, um_axes, scale_bar)
+  ))
+  .finish_plot_options(obj, um_axes, scale_bar, scale_bar_style, plot_theme)
 }
 
 .fetch_ome_pixel_scale <- function(tiff_path) {
@@ -224,14 +252,11 @@ to_rgba_hex = function(int_cols){
 #'   If NULL, the full image extent at maximum resolution is used.
 #' @param resolution Resolution level to read. If NULL, a resolution is selected
 #'   automatically to keep dimensions under \code{max_pixels}.
-#' @param max_pixels Maximum pixel dimension used when \code{resolution = NULL}.
 #' @param precalc_max Optional data frame with \code{channel}, \code{min_value},
 #'   and \code{max_value} for normalization.
 #' @param show_raw If TRUE, plot raw values. If FALSE (default), plot normalized values.
 #' @param quantile_norm Quantile used to estimate per-channel max values when
 #'   \code{precalc_max} is NULL.
-#' @param channel_names Channel names, as in \code{fetchTiffData()}: NULL,
-#'   \code{"ome"}, or a character vector naming every channel.
 #' @param selected_channels Optional subset of channels to keep, as channel numbers
 #'   or names.
 #' @param bit_order Bit order to use when decoding OME mask payloads.
@@ -259,11 +284,11 @@ to_rgba_hex = function(int_cols){
 fetchTiffDataMasked <- function(tiff_path,
                                 rect = NULL,
                                 resolution = NULL,
-                                max_pixels = 800,
+                                max_pixels = .default_max_pixels(),
                                 precalc_max = NULL,
                                 show_raw = FALSE,
                                 quantile_norm = .999,
-                                channel_names = NULL,
+                                channel_names = .default_channel_names(),
                                 selected_channels = NULL,
                                 mask_points = NULL,
                                 retain_unmasked = FALSE,
@@ -271,9 +296,24 @@ fetchTiffDataMasked <- function(tiff_path,
                                 bit_order = c("msb", "lsb"),
                                 scale_colors = .default_scale_colors(),
                                 um_axes = .default_um_axes(),
-                                scale_bar = .default_scale_bar()) {
+                                scale_bar = .default_scale_bar(),
+                                scale_bar_style = .default_scale_bar_style(),
+                                plot_theme = .default_plot_theme(),
+                                verbose = .default_verbose()) {
   bit_order <- match.arg(bit_order)
   rect <- .rect_null_check(rect, tiff_path)
+  out_obj <- .quiet_unless(verbose, .fetch_tiff_data_masked(
+    tiff_path = tiff_path, rect = rect, resolution = resolution, max_pixels = max_pixels,
+    precalc_max = precalc_max, show_raw = show_raw, quantile_norm = quantile_norm,
+    channel_names = channel_names, selected_channels = selected_channels,
+    mask_points = mask_points, retain_unmasked = retain_unmasked, bit_order = bit_order,
+    scale_colors = scale_colors))
+  .finish_plot_options(out_obj, um_axes, scale_bar, scale_bar_style, plot_theme)
+}
+
+.fetch_tiff_data_masked <- function(tiff_path, rect, resolution, max_pixels, precalc_max, show_raw,
+                                    quantile_norm, channel_names, selected_channels, mask_points,
+                                    retain_unmasked, bit_order, scale_colors) {
   
   # masks first: reading the image is the slow part, and is wasted without them
   if(is.null(mask_points)){
@@ -343,7 +383,7 @@ fetchTiffDataMasked <- function(tiff_path,
   # select most common mask assignment per ROI_ID in pixel
   mask_pixels = mask_points %>%
     dplyr::group_by(Text, ROI_ID, i_bin, j_bin) %>%
-    dplyr::summarise(N = length(Text)) %>%
+    dplyr::summarise(N = length(Text), .groups = "drop") %>%
     dplyr::group_by(ROI_ID, i_bin, j_bin) %>%
     dplyr::mutate(fraction = N / sum(N)) %>%
     dplyr::filter(fraction > .5)
@@ -391,7 +431,7 @@ fetchTiffDataMasked <- function(tiff_path,
   out_obj@unit_per_pixel <- base_obj@unit_per_pixel
   out_obj@unit_name <- base_obj@unit_name
   out_obj@channels <- base_obj@channels
-  .finish_um(out_obj, um_axes, scale_bar)
+  out_obj
 }
 
 
@@ -596,7 +636,7 @@ convertTidyToRGB = function(img_df, red_channel = 1, green_channel = 2, blue_cha
 #'   If NULL, the full image extent at maximum resolution is used.
 #' @param resolution Resolution level to read. If NULL, a resolution is selected
 #'   automatically to keep dimensions under \code{max_pixels}.
-#' @param max_pixels Maximum pixel dimension used when \code{resolution = NULL}.
+#' @inheritParams fetchTiffData
 #'
 #' @returns An image array returned by \code{RBioFormats::read.image()} for the
 #'   selected region and resolution.
@@ -608,7 +648,7 @@ convertTidyToRGB = function(img_df, red_channel = 1, green_channel = 2, blue_cha
 #' dim(arr)
 #' }
 fetchTiffArray = function(tiff_path, rect = NULL,
-                          resolution = NULL, max_pixels = 800){
+                          resolution = NULL, max_pixels = .default_max_pixels()){
   rect = .rect_null_check(rect, tiff_path)
   img_info = read_tiff_meta_data(tiff_path)
   max_info = dplyr::filter(img_info, resolutionLevel == 1)
@@ -652,11 +692,11 @@ fetchTiffArray = function(tiff_path, rect = NULL,
 #'
 .fetch_tiff_data = function(tiff_path, rect,
                             resolution = NULL,
-                            max_pixels = 800,
+                            max_pixels = .default_max_pixels(),
                             precalc_max = NULL,
                             show_raw = FALSE,
                             quantile_norm = .999,
-                            channel_names = NULL,
+                            channel_names = .default_channel_names(),
                             selected_channels = NULL,
                             scale_colors = .default_scale_colors()){
   scale_colors = .check_scale_colors(scale_colors)
@@ -755,7 +795,9 @@ fetchTiffArray = function(tiff_path, rect = NULL,
       unit_per_pixel = pixel_scale$unit_per_pixel,
       unit_name = pixel_scale$unit_name,
       channels = channel_table,
-      plot_parameters = list(scale_colors = scale_colors))
+      plot_parameters = list(scale_colors = scale_colors,
+                             channel_names = if(is.null(channel_names)) "auto" else channel_names,
+                             max_pixels = max_pixels))
 }
 
 #' Plot a rectangular region of a TIFF image as RGB
@@ -766,13 +808,10 @@ fetchTiffArray = function(tiff_path, rect = NULL,
 #' @param tiff_path Path to the TIFF image file
 #' @param rect A \linkS4class{TiffRect} object defining the rectangle region
 #' @param resolution Resolution level to read from the TIFF file. If NULL, automatically selects resolution
-#' @param max_pixels Maximum dimension in pixels for the plotted image
 #' @param precalc_max Optional data frame with precalculated min/max values per channel for normalization
 #' @param red_channel Channel (number or name) for the red component (default 2)
 #' @param green_channel Channel (number or name) for the green component (default 3)
 #' @param blue_channel Channel (number or name) for the blue component (default 1)
-#' @param channel_names Channel names, as in \code{fetchTiffData()}: NULL,
-#'   \code{"ome"}, or a character vector naming every channel.
 #' @param value_var Variable to use for RGB values, either "norm_value" or "value" (default "norm_value")
 #' @param quantile_norm Quantile for normalization (default 0.999)
 #' @inheritParams fetchTiffData
@@ -793,20 +832,23 @@ fetchTiffArray = function(tiff_path, rect = NULL,
 fetchTiffData.rgb = function(tiff_path,
                              rect = NULL,
                              resolution = NULL,
-                             max_pixels = 800,
+                             max_pixels = .default_max_pixels(),
                              red_channel = 2,
                              green_channel = 3,
                              blue_channel = 1,
-                             channel_names = NULL,
+                             channel_names = .default_channel_names(),
                              value_var = "norm_value",
                              precalc_max = NULL,
                              quantile_norm = .999,
                              um_axes = .default_um_axes(),
-                             scale_bar = .default_scale_bar()
+                             scale_bar = .default_scale_bar(),
+                             scale_bar_style = .default_scale_bar_style(),
+                             plot_theme = .default_plot_theme(),
+                             verbose = .default_verbose()
 ){
   rect = .rect_null_check(rect, tiff_path)
   if(nrow(rect@coords) != 1) stop("fetchTiffData.rgb requires a TiffRect with exactly one row")
-  obj = .fetch_tiff_data.rgb(tiff_path,
+  obj = .quiet_unless(verbose, .fetch_tiff_data.rgb(tiff_path,
                        rect = rect,
                        resolution = resolution,
                        max_pixels = max_pixels,
@@ -817,8 +859,8 @@ fetchTiffData.rgb = function(tiff_path,
                        value_var = value_var,
                        precalc_max = precalc_max,
                        quantile_norm = quantile_norm
-  )
-  .finish_um(obj, um_axes, scale_bar)
+  ))
+  .finish_plot_options(obj, um_axes, scale_bar, scale_bar_style, plot_theme)
 }
 
 #' Plot a rectangular region of a TIFF image with multi-channel color mapping
@@ -830,12 +872,9 @@ fetchTiffData.rgb = function(tiff_path,
 #' @param tiff_path Path to the TIFF image file
 #' @param rect A \linkS4class{TiffRect} object defining the rectangle region
 #' @param resolution Resolution level to read from the TIFF file. If NULL, automatically selects resolution
-#' @param max_pixels Maximum dimension in pixels for the plotted image
 #' @param channel_colors Channel-to-color mapping. Use an unnamed positional list/vector (index = channel number),
 #'   where NULL/NA entries are ignored, or a named list/vector whose names are channel names: those from
 #'   `channel_names`, or the OME names (see \code{read_tiff_channels()}).
-#' @param channel_names Channel names, as in \code{fetchTiffData()}: NULL,
-#'   \code{"ome"}, or a character vector naming every channel.
 #' @param value_var Variable to use for channel intensities, either "norm_value" or "value" (default "norm_value")
 #' @param precalc_max Optional data frame with precalculated min/max values per channel for normalization
 #' @param quantile_norm Quantile for normalization (default 0.999)
@@ -865,18 +904,21 @@ fetchTiffData.rgb = function(tiff_path,
 fetchTiffData.colorized = function(tiff_path,
                                    rect = NULL,
                                    resolution = NULL,
-                                   max_pixels = 800,
+                                   max_pixels = .default_max_pixels(),
                                    channel_colors,
-                                   channel_names = NULL,
+                                   channel_names = .default_channel_names(),
                                    value_var = "norm_value",
                                    precalc_max = NULL,
                                    quantile_norm = .999,
                                    um_axes = .default_um_axes(),
-                                   scale_bar = .default_scale_bar()){
+                                   scale_bar = .default_scale_bar(),
+                                   scale_bar_style = .default_scale_bar_style(),
+                                   plot_theme = .default_plot_theme(),
+                                   verbose = .default_verbose()){
   rect = .rect_null_check(rect, tiff_path)
   if(nrow(rect@coords) != 1) stop("fetchTiffData.colorized requires a TiffRect with exactly one row")
   if(!is.list(channel_colors)) stop("channel_colors must be a list.")
-  obj = .fetch_tiff_data.colorized(
+  obj = .quiet_unless(verbose, .fetch_tiff_data.colorized(
     tiff_path = tiff_path,
     rect = rect,
     resolution = resolution,
@@ -886,8 +928,13 @@ fetchTiffData.colorized = function(tiff_path,
     value_var = value_var,
     precalc_max = precalc_max,
     quantile_norm = quantile_norm
-  )
-  .finish_um(obj, um_axes, scale_bar)
+  ))
+  .finish_plot_options(obj, um_axes, scale_bar, scale_bar_style, plot_theme)
+}
+
+# expr, with its messages suppressed unless verbose
+.quiet_unless = function(verbose, expr){
+  if(.check_flag(verbose, "verbose")) expr else suppressMessages(expr)
 }
 
 .apply_coord_rect = function(p, r, coord_FUN){
@@ -950,7 +997,6 @@ apply_coord_cartesian = function(img_data){
 #' @param tiff_path Path to the TIFF image file
 #' @param rect A \linkS4class{TiffRect} object defining the rectangle region
 #' @param resolution Resolution level to read from the TIFF file. If NULL, automatically selects resolution
-#' @param max_pixels Maximum dimension in pixels for the plotted image
 #' @param precalc_max Optional data frame with precalculated min/max values per channel for normalization
 #' @param red_channel Channel number to use for red component (default 6)
 #' @param green_channel Channel number to use for green component (default 1)
@@ -975,11 +1021,11 @@ apply_coord_cartesian = function(img_data){
     tiff_path,
     rect = NULL,
     resolution = NULL,
-    max_pixels = 800,
+    max_pixels = .default_max_pixels(),
     red_channel = 6,
     green_channel = 1,
     blue_channel = 5,
-    channel_names = NULL,
+    channel_names = .default_channel_names(),
     value_var = "norm_value",
     precalc_max = NULL,
     quantile_norm = .999
@@ -1006,9 +1052,9 @@ apply_coord_cartesian = function(img_data){
     tiff_path,
     rect = NULL,
     resolution = NULL,
-    max_pixels = 800,
+    max_pixels = .default_max_pixels(),
     channel_colors,
-    channel_names = NULL,
+    channel_names = .default_channel_names(),
     value_var = "norm_value",
     precalc_max = NULL,
     quantile_norm = .999

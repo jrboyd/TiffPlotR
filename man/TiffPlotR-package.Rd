@@ -11,38 +11,56 @@ plus shape classes for annotating them. Start with \code{fetchTiffData()}.
 }
 \section{Options}{
 
-TiffPlotR reads these \code{\link[base]{options}}:
+TiffPlotR reads these \code{\link[base]{options}}, each the default of the
+function argument named in brackets. An explicit argument always wins.
 \describe{
-  \item{\code{TPR_SCALE_COLORS}}{Default fill gradient colours for
-    single-channel image plots: a character vector of at least 2 colours,
-    low to high. It is used whenever \code{scale_colors} isn't given to
-    \code{fetchTiffData()} or \code{fetchTiffDataMasked()}. If unset, the
-    magma palette is used. The colours used are recorded in each object's
-    \code{@plot_parameters$scale_colors}, so changing the option later does
-    not change objects already made. An invalid value is an error at the
-    next fetch.}
-  \item{\code{TPR_UM_AXES}}{TRUE or FALSE (the default): whether plots get
-    axes labelled in microns instead of pixels (see \code{set_axes_um()}).}
-  \item{\code{TPR_UM_SCALE_BAR}}{TRUE or FALSE (the default): whether plots
-    get a micron scale bar (see \code{add_um_scale_bar()}).}
+  \item{\code{TPR_MAX_PIXELS} (\code{max_pixels})}{Largest plotted
+    dimension in pixels when the resolution is chosen automatically.
+    Default 800.}
+  \item{\code{TPR_CHANNEL_NAMES} (\code{channel_names})}{How channels are
+    named: \code{"auto"} (the default: OME names where available, else
+    \code{"channel 1"}, \code{"channel 2"}, ...), \code{"ome"},
+    \code{"number"} (\code{"1"}, \code{"2"}, ..., as in TiffPlotR 0.1.20
+    and earlier) or a character vector. See \code{fetchTiffData()}.}
+  \item{\code{TPR_SCALE_COLORS} (\code{scale_colors})}{Fill gradient
+    colours for single-channel plots: at least 2 colours, low to high.
+    Default: the magma palette.}
+  \item{\code{TPR_UM_AXES} (\code{um_axes})}{TRUE to label axes in microns
+    instead of pixels (see \code{set_axes_um()}). Default FALSE.}
+  \item{\code{TPR_UM_SCALE_BAR} (\code{scale_bar})}{TRUE to add a micron
+    scale bar (see \code{add_um_scale_bar()}). Default FALSE.}
+  \item{\code{TPR_SCALE_BAR_STYLE} (\code{scale_bar_style})}{A named list of
+    \code{add_um_scale_bar()} arguments for the bar, such as
+    \code{line_color}, \code{position} or \code{text_size}. Default: the
+    bar's own defaults.}
+  \item{\code{TPR_THEME} (\code{plot_theme})}{A ggplot2 theme added to every
+    image plot. Unlike \code{theme_set()}, it affects only TiffPlotR plots.
+    Default: none.}
+  \item{\code{TPR_VERBOSE} (\code{verbose})}{FALSE to silence progress
+    messages from the \code{fetchTiffData*()} functions. Default TRUE.}
 }
-The \code{TPR_UM_*} options are the defaults of the \code{um_axes} and
-\code{scale_bar} arguments of the \code{fetchTiffData*()} functions, and
-of the \code{plotTiffData*()} functions when the object doesn't record its
-own choice in \code{@plot_parameters}. Both need the image's physical pixel
-size from its OME-XML; images without one are plotted in pixels, with a
-warning, so the options can be set globally.
+Each fetch records the values it used in the object's
+\code{@plot_parameters} (all of the above except \code{TPR_VERBOSE}), so
+changing an option later doesn't change objects already made. The
+\code{plotTiffData*()} functions reuse an object's recorded plot settings
+and fall back to the options only for settings it doesn't record.
+
+Micron axes and scale bars need the image's physical pixel size from its
+OME-XML; images without one are plotted in pixels, with a warning, so those
+options can be set globally. An invalid option value is an error naming the
+option.
 }
 
 \examples{
 \dontrun{
-options(TPR_SCALE_COLORS = c("black", "darkgreen", "yellow"))
+options(TPR_MAX_PIXELS = 1500,
+        TPR_UM_AXES = TRUE,
+        TPR_UM_SCALE_BAR = TRUE,
+        TPR_SCALE_BAR_STYLE = list(line_color = "black", position = "bottomright"),
+        TPR_THEME = ggplot2::theme_minimal(),
+        TPR_VERBOSE = FALSE)
 img <- fetchTiffData(exampleTiff(), TiffRect(900, 2300, 1400, 2800))
-img@plot_parameters$scale_colors
-options(TPR_SCALE_COLORS = NULL)  # back to magma
-
-options(TPR_UM_AXES = TRUE, TPR_UM_SCALE_BAR = TRUE)
-fetchTiffData(exampleTiff(), TiffRect(900, 2300, 1400, 2800))
+str(img@plot_parameters)
 }
 
 }

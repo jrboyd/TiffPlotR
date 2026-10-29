@@ -88,8 +88,15 @@ Use `devtools::test()` for the whole suite. Shape-class tests are small and fine
   - `.resolve_channels()` matches `channel_name` first, then the OME name if no other channel
     shares it. So `"DAPI"` resolves even when `channel_names` was NULL.
   - `precalc_max` is always stored keyed by channel number.
-  - Without `channel_names`, labels default to the channel numbers. OME names are used only with
-    `channel_names = "ome"`. That was a deliberate choice, so existing figures keep their labels.
+  - **The default naming changed after 0.1.20.** It is now `"auto"`: each channel's OME name
+    where it is unique and non-empty, else `"channel N"`. If that leaves a clash, every channel
+    becomes `"channel N"` (see `.auto_channel_names()`).
+    - `"number"` gives the old `"1"`, `"2"` labels. Set `options(TPR_CHANNEL_NAMES = "number")`
+      to reproduce figures made with 0.1.20 or earlier.
+    - The example TIFF names every channel, so its default labels are `DAPI`, `Opal 520`, ...
+  - `update_TiffPlotData()` pins `"number"` for old objects, because their plots were labelled
+    by number. `.default_channel_table()` (objects built without a TIFF, e.g. in tests) also still
+    uses bare numbers.
 - **`@package_version` records the TiffPlotR version that created an object.** It is set by the
   `initialize` method, so every creation path stamps it. `readRDS()` doesn't call `initialize`,
   so a saved object keeps the version it was made with.
@@ -120,14 +127,31 @@ Use `devtools::test()` for the whole suite. Shape-class tests are small and fine
     coords, theme and meta). Only the label order of the masked plot changed.
   - `plotTiffData*()` can only plot channels that are in `@data`. `selected_channels` at fetch
     time drops the others for good.
-  - Micron axes and scale bars (options `TPR_UM_AXES` / `TPR_UM_SCALE_BAR`, arguments `um_axes` /
-    `scale_bar`) are applied after the builders.
-    - On fetch, `.finish_um()` runs at the end of each public `fetchTiffData*()`. The internal
-      `.fetch_tiff_data*()` never apply them.
+  - Four plot options are applied after the builders by `.apply_plot_options()`: `um_axes`,
+    `scale_bar`, `scale_bar_style` and `plot_theme`.
+    - On fetch, `.finish_plot_options()` runs at the end of each public `fetchTiffData*()`. The
+      internal `.fetch_tiff_data*()` never apply them.
     - On replot, `.plot_return()` applies them.
-    - The precedence is explicit argument > `@plot_parameters` > option.
+    - For replots the precedence is explicit argument > `@plot_parameters` > option. A recorded
+      `plot_theme = NULL` counts as recorded, so `.plot_option()` tests `%in% names()`, not
+      `is.null()`.
     - Images without `@unit_per_pixel` warn and stay in pixels, so the options are safe to set
       globally.
+- **Options all live in `R/options.R`** (except `TPR_SCALE_COLORS`, in `R/fill_scales.R`) and
+  are documented in `?TiffPlotR`. The pattern for adding one:
+  - Add a `.default_*()` getter that validates through `.check_option()`, so errors name the
+    option.
+  - Use the getter as the argument default.
+  - Record the value in `@plot_parameters`.
+  - Document it in `R/TiffPlotR-package.R`.
+  - `verbose` is the one option deliberately not recorded. It works by wrapping the internal
+    fetch in `.quiet_unless()`, which is `suppressMessages()`, so it silences every message from
+    the fetch, not only TiffPlotR's.
+  - `@plot_parameters` from a fetch holds `scale_colors`, `channel_names`, `max_pixels`,
+    `um_axes`, `scale_bar`, `scale_bar_style` and `plot_theme`.
+- **`man/hello.Rd` is stale.** It documents a `hello()` that no longer exists. The examples on
+  the internal topics (`man/dot-*.Rd`) call private functions. Both make
+  `devtools::run_examples()` stop early, so run the exported topics' examples individually.
 - **Image fills come from two helpers in `R/fill_scales.R`.**
   - Single-channel plots use `.fill_gradient_layers(scale_colors)`: `geom_raster()` plus
     `scale_fill_gradientn()`.

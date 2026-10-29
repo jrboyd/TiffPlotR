@@ -4,7 +4,12 @@
 \alias{fetchTiffArray}
 \title{Read a TIFF region as an array}
 \usage{
-fetchTiffArray(tiff_path, rect = NULL, resolution = NULL, max_pixels = 800)
+fetchTiffArray(
+  tiff_path,
+  rect = NULL,
+  resolution = NULL,
+  max_pixels = .default_max_pixels()
+)
 }
 \arguments{
 \item{tiff_path}{Path to the TIFF image file.}
@@ -15,7 +20,9 @@ If NULL, the full image extent at maximum resolution is used.}
 \item{resolution}{Resolution level to read. If NULL, a resolution is selected
 automatically to keep dimensions under \code{max_pixels}.}
 
-\item{max_pixels}{Maximum pixel dimension used when \code{resolution = NULL}.}
+\item{max_pixels}{Maximum pixel dimension used when \code{resolution = NULL}.
+Defaults to the \code{TPR_MAX_PIXELS} option (see \link{TiffPlotR-package}),
+else 800. Recorded in \code{@plot_parameters$max_pixels}.}
 }
 \value{
 An image array returned by \code{RBioFormats::read.image()} for the

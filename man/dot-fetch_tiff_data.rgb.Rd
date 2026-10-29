@@ -8,11 +8,11 @@
   tiff_path,
   rect = NULL,
   resolution = NULL,
-  max_pixels = 800,
+  max_pixels = .default_max_pixels(),
   red_channel = 6,
   green_channel = 1,
   blue_channel = 5,
-  channel_names = NULL,
+  channel_names = .default_channel_names(),
   value_var = "norm_value",
   precalc_max = NULL,
   quantile_norm = 0.999
@@ -24,8 +24,6 @@
 \item{rect}{A \linkS4class{TiffRect} object defining the rectangle region}
 
 \item{resolution}{Resolution level to read from the TIFF file. If NULL, automatically selects resolution}
-
-\item{max_pixels}{Maximum dimension in pixels for the plotted image}
 
 \item{red_channel}{Channel number to use for red component (default 6)}
 

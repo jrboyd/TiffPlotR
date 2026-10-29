@@ -8,11 +8,11 @@
   tiff_path,
   rect,
   resolution = NULL,
-  max_pixels = 800,
+  max_pixels = .default_max_pixels(),
   precalc_max = NULL,
   show_raw = FALSE,
   quantile_norm = 0.999,
-  channel_names = NULL,
+  channel_names = .default_channel_names(),
   selected_channels = NULL,
   scale_colors = .default_scale_colors()
 )

@@ -8,15 +8,18 @@ fetchTiffData(
   tiff_path,
   rect = NULL,
   resolution = NULL,
-  max_pixels = 800,
+  max_pixels = .default_max_pixels(),
   precalc_max = NULL,
   show_raw = FALSE,
   quantile_norm = 0.999,
-  channel_names = NULL,
+  channel_names = .default_channel_names(),
   selected_channels = NULL,
   scale_colors = .default_scale_colors(),
   um_axes = .default_um_axes(),
-  scale_bar = .default_scale_bar()
+  scale_bar = .default_scale_bar(),
+  scale_bar_style = .default_scale_bar_style(),
+  plot_theme = .default_plot_theme(),
+  verbose = .default_verbose()
 )
 }
 \arguments{
@@ -28,7 +31,9 @@ If NULL, the full image extent at maximum resolution is used.}
 \item{resolution}{Resolution level to read. If NULL, a resolution is selected
 automatically to keep dimensions under \code{max_pixels}.}
 
-\item{max_pixels}{Maximum pixel dimension used when \code{resolution = NULL}.}
+\item{max_pixels}{Maximum pixel dimension used when \code{resolution = NULL}.
+Defaults to the \code{TPR_MAX_PIXELS} option (see \link{TiffPlotR-package}),
+else 800. Recorded in \code{@plot_parameters$max_pixels}.}
 
 \item{precalc_max}{Optional data frame with \code{channel},
 \code{min_value}, and \code{max_value} for normalization. \code{channel}
@@ -40,10 +45,20 @@ normalized values.}
 \item{quantile_norm}{Quantile used to estimate per-channel max values when
 \code{precalc_max} is NULL.}
 
-\item{channel_names}{Names for the channels: NULL (the default) labels them
-by number, \code{"ome"} uses the names in the TIFF's OME-XML (see
-\code{read_tiff_channels()}), and a character vector names every channel
-in order. Names must be unique.}
+\item{channel_names}{How to name the channels:
+\itemize{
+  \item \code{"auto"}: each channel's name in the TIFF's OME-XML (see
+    \code{read_tiff_channels()}) where it has a unique one, otherwise
+    \code{"channel 1"}, \code{"channel 2"}, ...
+  \item \code{"ome"}: the OME names; an error if any channel lacks one.
+  \item \code{"number"}: \code{"1"}, \code{"2"}, ..., the labels used by
+    TiffPlotR 0.1.20 and earlier.
+  \item a character vector naming every channel in order. Names must be
+    unique.
+}
+Defaults to the \code{TPR_CHANNEL_NAMES} option, else \code{"auto"}.
+NULL means \code{"auto"}. Recorded in
+\code{@plot_parameters$channel_names}.}
 
 \item{selected_channels}{Optional subset of channels to keep, as channel
 numbers or names. Also sets the plotting order. Names match
@@ -62,8 +77,20 @@ else FALSE.}
 \item{scale_bar}{If TRUE, add a micron scale bar (see
 \code{add_um_scale_bar()}). Defaults to the \code{TPR_UM_SCALE_BAR}
 option, else FALSE. Both need the image's physical pixel size from its
-OME-XML; without it the plot stays in pixels, with a warning. The values
-used are recorded in \code{@plot_parameters}.}
+OME-XML; without it the plot stays in pixels, with a warning.}
+
+\item{scale_bar_style}{A named list of \code{add_um_scale_bar()} arguments
+for the bar, e.g. \code{list(line_color = "black", position =
+"bottomright")}. Defaults to the \code{TPR_SCALE_BAR_STYLE} option, else
+the bar's own defaults.}
+
+\item{plot_theme}{A ggplot2 theme added to the plot, e.g.
+\code{theme(panel.background = element_blank(), panel.grid =
+element_blank())}. Defaults to the \code{TPR_THEME} option, else none.}
+
+\item{verbose}{If FALSE, suppress progress messages (such as the selected
+resolution and image size). Defaults to the \code{TPR_VERBOSE} option,
+else TRUE.}
 }
 \value{
 A \linkS4class{TiffPlotData} object. \code{@data} has one row per
@@ -76,6 +103,12 @@ A \linkS4class{TiffPlotData} object. \code{@data} has one row per
 Reads a rectangular subset of a multi-resolution TIFF and returns a
 normalized, tidy representation with a faceted ggplot wrapped in a
 \linkS4class{TiffPlotData} object.
+}
+\details{
+The plot settings used (\code{scale_colors}, \code{um_axes},
+\code{scale_bar}, \code{scale_bar_style}, \code{plot_theme}) are recorded
+in \code{@plot_parameters}, along with \code{channel_names} and
+\code{max_pixels}; \code{plotTiffData()} reuses them.
 }
 \examples{
 tiff_path <- exampleTiff()

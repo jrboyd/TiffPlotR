@@ -8,16 +8,19 @@ fetchTiffData.rgb(
   tiff_path,
   rect = NULL,
   resolution = NULL,
-  max_pixels = 800,
+  max_pixels = .default_max_pixels(),
   red_channel = 2,
   green_channel = 3,
   blue_channel = 1,
-  channel_names = NULL,
+  channel_names = .default_channel_names(),
   value_var = "norm_value",
   precalc_max = NULL,
   quantile_norm = 0.999,
   um_axes = .default_um_axes(),
-  scale_bar = .default_scale_bar()
+  scale_bar = .default_scale_bar(),
+  scale_bar_style = .default_scale_bar_style(),
+  plot_theme = .default_plot_theme(),
+  verbose = .default_verbose()
 )
 }
 \arguments{
@@ -27,7 +30,9 @@ fetchTiffData.rgb(
 
 \item{resolution}{Resolution level to read from the TIFF file. If NULL, automatically selects resolution}
 
-\item{max_pixels}{Maximum dimension in pixels for the plotted image}
+\item{max_pixels}{Maximum pixel dimension used when \code{resolution = NULL}.
+Defaults to the \code{TPR_MAX_PIXELS} option (see \link{TiffPlotR-package}),
+else 800. Recorded in \code{@plot_parameters$max_pixels}.}
 
 \item{red_channel}{Channel (number or name) for the red component (default 2)}
 
@@ -35,8 +40,20 @@ fetchTiffData.rgb(
 
 \item{blue_channel}{Channel (number or name) for the blue component (default 1)}
 
-\item{channel_names}{Channel names, as in \code{fetchTiffData()}: NULL,
-\code{"ome"}, or a character vector naming every channel.}
+\item{channel_names}{How to name the channels:
+\itemize{
+  \item \code{"auto"}: each channel's name in the TIFF's OME-XML (see
+    \code{read_tiff_channels()}) where it has a unique one, otherwise
+    \code{"channel 1"}, \code{"channel 2"}, ...
+  \item \code{"ome"}: the OME names; an error if any channel lacks one.
+  \item \code{"number"}: \code{"1"}, \code{"2"}, ..., the labels used by
+    TiffPlotR 0.1.20 and earlier.
+  \item a character vector naming every channel in order. Names must be
+    unique.
+}
+Defaults to the \code{TPR_CHANNEL_NAMES} option, else \code{"auto"}.
+NULL means \code{"auto"}. Recorded in
+\code{@plot_parameters$channel_names}.}
 
 \item{value_var}{Variable to use for RGB values, either "norm_value" or "value" (default "norm_value")}
 
@@ -51,8 +68,20 @@ else FALSE.}
 \item{scale_bar}{If TRUE, add a micron scale bar (see
 \code{add_um_scale_bar()}). Defaults to the \code{TPR_UM_SCALE_BAR}
 option, else FALSE. Both need the image's physical pixel size from its
-OME-XML; without it the plot stays in pixels, with a warning. The values
-used are recorded in \code{@plot_parameters}.}
+OME-XML; without it the plot stays in pixels, with a warning.}
+
+\item{scale_bar_style}{A named list of \code{add_um_scale_bar()} arguments
+for the bar, e.g. \code{list(line_color = "black", position =
+"bottomright")}. Defaults to the \code{TPR_SCALE_BAR_STYLE} option, else
+the bar's own defaults.}
+
+\item{plot_theme}{A ggplot2 theme added to the plot, e.g.
+\code{theme(panel.background = element_blank(), panel.grid =
+element_blank())}. Defaults to the \code{TPR_THEME} option, else none.}
+
+\item{verbose}{If FALSE, suppress progress messages (such as the selected
+resolution and image size). Defaults to the \code{TPR_VERBOSE} option,
+else TRUE.}
 }
 \value{
 A TiffPlotData object containing the RGB data and a named ggplot object. The object includes metadata slots `tiff_path`, `resolution`, `precalc_max`, `rect`, `img_info` and `channels`.

@@ -34,7 +34,7 @@
 #'
 #' @examples
 #' library(ggplot2)
-#' theme_set(theme(panel.background = element_blank(), panel.grid = element_blank()))
+#' options(TPR_THEME = theme(panel.background = element_blank(), panel.grid = element_blank()))
 #' tiff_path = exampleTiff()
 #' imgd = fetchTiffData(tiff_path, selected_channels = c(1, 5))
 #' zoom_rect = TiffRect(2500, 3000, 4000, 4500)
