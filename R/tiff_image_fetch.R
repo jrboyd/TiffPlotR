@@ -258,19 +258,7 @@ fetchTiffDataMasked <- function(tiff_path,
   bit_order <- match.arg(bit_order)
   rect <- .rect_null_check(rect, tiff_path)
   
-  base_obj <- .fetch_tiff_data(
-    tiff_path = tiff_path,
-    rect = rect,
-    resolution = resolution,
-    max_pixels = max_pixels,
-    precalc_max = precalc_max,
-    show_raw = show_raw,
-    quantile_norm = quantile_norm,
-    channel_names = channel_names,
-    selected_channels = selected_channels,
-    scale_colors = scale_colors
-  )
-  
+  # masks first: reading the image is the slow part, and is wasted without them
   if(is.null(mask_points)){
     ann <- fetchTiffAnnotations(
       tiff_path = tiff_path,
@@ -296,8 +284,24 @@ fetchTiffDataMasked <- function(tiff_path,
     (mask_points$j >= rect@coords$ymin) & (mask_points$j <= rect@coords$ymax)
   mask_points <- mask_points[in_rect, , drop = FALSE]
   if (nrow(mask_points) == 0) {
+    if (!isTRUE(retain_unmasked)) {
+      stop("No decoded mask points overlap the requested rect.")
+    }
     warning("No decoded mask points overlap the requested rect.")
   }
+  
+  base_obj <- .fetch_tiff_data(
+    tiff_path = tiff_path,
+    rect = rect,
+    resolution = resolution,
+    max_pixels = max_pixels,
+    precalc_max = precalc_max,
+    show_raw = show_raw,
+    quantile_norm = quantile_norm,
+    channel_names = channel_names,
+    selected_channels = selected_channels,
+    scale_colors = scale_colors
+  )
   
   signal_df <- base_obj@data
   
@@ -327,14 +331,15 @@ fetchTiffDataMasked <- function(tiff_path,
     dplyr::mutate(fraction = N / sum(N)) %>%
     dplyr::filter(fraction > .5)
   
-  mask_pixels = mask_pixels %>%
-    dplyr::mutate(i = i_bin*delta_i+remain_i, j = j_bin*delta_j+remain_j)
-  
   mask_merge = mask_pixels %>%
     dplyr::ungroup() %>%
-    dplyr::select(Text, ROI_ID, i, j)
-  
-  masked_df = merge(signal_df, mask_merge, by = c("i", "j"), all.x = retain_unmasked)
+    dplyr::select(Text, ROI_ID, i_bin, j_bin)
+
+  # Join on the integer bins, not on i/j rebuilt from them: below full
+  # resolution the pixel spacing isn't an integer (e.g. 8651/1082 px), and the
+  # rebuilt coordinates miss the signal's by a few ulps, so nothing matched.
+  masked_df = merge(signal_df, mask_merge, by = c("i_bin", "j_bin"), all.x = retain_unmasked)
+  masked_df = masked_df[, c("i", "j", setdiff(colnames(signal_df), c("i", "j")), "Text", "ROI_ID")]
   
   if (nrow(masked_df) == 0) {
     stop(

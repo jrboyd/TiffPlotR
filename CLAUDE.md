@@ -121,6 +121,17 @@ Use `devtools::test()` for the whole suite. Shape-class tests are small and fine
   - `scale_colors` is recorded in `@plot_parameters`, a named list meant for any plotting
     option that later rebuilds need to recall. rgb/colorized objects also carry it, from the
     underlying `.fetch_tiff_data()` call.
+- **`fetchTiffDataMasked()` checks masks before it reads the image.**
+  - It stops if there are no mask points, they lack `i`/`j`, or none fall in `rect`. With
+    `retain_unmasked = TRUE`, no points in `rect` is only a warning.
+  - The example TIFF has no mask annotations. `test_fetch_masked.R` passes synthetic
+    `mask_points` and mocks `.fetch_tiff_data()`.
+  - **Below full resolution, pixel coordinates aren't integers.** The example TIFF is 8651 px wide,
+    but 1082 at level 4, so the spacing is 7.9953789… Never join or compare `i`/`j` across
+    sources with `==`/`merge()`. `fetchTiffDataMasked()` joins masks to the signal on the integer
+    `i_bin`/`j_bin` instead. Before that fix, rebuilding `i`/`j` from the bins missed by a few ulps.
+    Levels 3 and 4 then matched nothing, and level 2 silently lost about 30% of masked pixels.
+  - A pixel covered by two ROIs gets one row per ROI, because overlap is decided per `ROI_ID`.
 - **OME `Color` is RGBA (red in the high byte), but `to_rgba_hex()` decodes it as ARGB.**
   - `read_tiff_channels()` uses its own correct decoder, `.ome_color_to_hex()`.
   - The mask `FillColor` path still uses `to_rgba_hex()` via `.ome_fill_color_to_hex()`, so mask
