@@ -27,7 +27,7 @@ test_that("update_TiffPlotData converts numeric channels and stamps the version"
   expect_equal(new_obj@data$channel, rep(c(3L, 1L), each = 2))
   expect_equal(levels(new_obj@data$channel_name), c("1", "3"))
   expect_equal(new_obj@precalc_max, old@precalc_max)
-  expect_equal(new_obj@plot_parameters, list(scale_colors = TiffPlotR:::.default_scale_colors()))
+  expect_equal(new_obj@plot_parameters, list(scale_colors = TiffPlotR:::.magma_scale_colors()))
 
   p <- new_obj@plots$raw
   expect_true("channel_name" %in% colnames(p$data))
@@ -90,7 +90,7 @@ test_that("0.1.20 objects get plot_parameters and keep their version", {
   expect_false(methods::.hasSlot(obj, "plot_parameters"))
 
   expect_warning(out <- TiffPlotR:::.check_TiffPlotData_version(obj), "made by TiffPlotR 0.1.20")
-  expect_equal(out@plot_parameters, list(scale_colors = TiffPlotR:::.default_scale_colors()))
+  expect_equal(out@plot_parameters, list(scale_colors = TiffPlotR:::.magma_scale_colors()))
   expect_equal(out@package_version, "0.1.20")
   expect_equal(out@data, obj@data)
   expect_equal(out@channels, obj@channels)

@@ -115,9 +115,14 @@ Use `devtools::test()` for the whole suite. Shape-class tests are small and fine
     `scale_fill_gradientn()`.
   - rgb/colorized composites use `.fill_identity_layers(rgb_df)`: a `chex` raster plus
     `scale_fill_identity()`. `renormalize()` swaps in `.identity_raster()`.
-  - The default `scale_colors` is a hardcoded `viridisLite::magma(6)`, which is exactly what
+  - The default `scale_colors` comes from `.default_scale_colors()`. That is the
+    `TPR_SCALE_COLORS` option when it is set (documented in `?TiffPlotR`, `R/TiffPlotR-package.R`),
+    otherwise `.magma_scale_colors()`.
+  - Magma is a hardcoded `viridisLite::magma(6)`, which is exactly what
     `scale_fill_viridis_c(option = "magma")` interpolated, so old figures are unchanged. A test
     checks this. viridisLite isn't a declared dependency, which is why the colours are hardcoded.
+  - Use `.magma_scale_colors()` (not the default) when you need what old plots were actually
+    drawn with, as `update_TiffPlotData()` does. The option may have changed since.
   - `scale_colors` is recorded in `@plot_parameters`, a named list meant for any plotting
     option that later rebuilds need to recall. rgb/colorized objects also carry it, from the
     underlying `.fetch_tiff_data()` call.

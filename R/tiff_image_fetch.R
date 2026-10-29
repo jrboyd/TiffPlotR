@@ -87,8 +87,10 @@
 #'   numbers or names. Also sets the plotting order. Names match
 #'   \code{channel_names} first, then the OME names.
 #' @param scale_colors Colours of the fill gradient, low to high, passed to
-#'   \code{scale_fill_gradientn()}. Defaults to the magma palette used by
-#'   earlier versions. Stored in \code{@plot_parameters$scale_colors}.
+#'   \code{scale_fill_gradientn()}. Defaults to the \code{TPR_SCALE_COLORS}
+#'   option when it is set (see \link{TiffPlotR-package}), otherwise to the
+#'   magma palette used by earlier versions. Stored in
+#'   \code{@plot_parameters$scale_colors}.
 #'
 #' @returns A \linkS4class{TiffPlotData} object. \code{@data} has one row per
 #'   pixel and channel, with \code{channel} (always the channel number) and
@@ -224,8 +226,10 @@ to_rgba_hex = function(int_cols){
 #'   or names.
 #' @param bit_order Bit order to use when decoding OME mask payloads.
 #' @param scale_colors Colours of the fill gradient, low to high, passed to
-#'   \code{scale_fill_gradientn()}. Defaults to the magma palette used by
-#'   earlier versions. Stored in \code{@plot_parameters$scale_colors}.
+#'   \code{scale_fill_gradientn()}. Defaults to the \code{TPR_SCALE_COLORS}
+#'   option when it is set (see \link{TiffPlotR-package}), otherwise to the
+#'   magma palette used by earlier versions. Stored in
+#'   \code{@plot_parameters$scale_colors}.
 #'
 #' @returns A \linkS4class{TiffPlotDataMasked} object with:
 #' \itemize{
