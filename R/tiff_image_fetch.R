@@ -91,6 +91,14 @@
 #'   option when it is set (see \link{TiffPlotR-package}), otherwise to the
 #'   magma palette used by earlier versions. Stored in
 #'   \code{@plot_parameters$scale_colors}.
+#' @param um_axes If TRUE, label the axes in microns (see \code{set_axes_um()}).
+#'   Defaults to the \code{TPR_UM_AXES} option (see \link{TiffPlotR-package}),
+#'   else FALSE.
+#' @param scale_bar If TRUE, add a micron scale bar (see
+#'   \code{add_um_scale_bar()}). Defaults to the \code{TPR_UM_SCALE_BAR}
+#'   option, else FALSE. Both need the image's physical pixel size from its
+#'   OME-XML; without it the plot stays in pixels, with a warning. The values
+#'   used are recorded in \code{@plot_parameters}.
 #'
 #' @returns A \linkS4class{TiffPlotData} object. \code{@data} has one row per
 #'   pixel and channel, with \code{channel} (always the channel number) and
@@ -113,9 +121,10 @@
 #'
 #' fetchTiffData(tiff_path, view_rect, channel_names = "ome",
 #'               selected_channels = c("DAPI", "Opal 570"))
-fetchTiffData = function(tiff_path, rect = NULL, resolution = NULL, max_pixels = 800, precalc_max = NULL, show_raw = FALSE, quantile_norm = .999, channel_names = NULL, selected_channels = NULL, scale_colors = .default_scale_colors()){
+fetchTiffData = function(tiff_path, rect = NULL, resolution = NULL, max_pixels = 800, precalc_max = NULL, show_raw = FALSE, quantile_norm = .999, channel_names = NULL, selected_channels = NULL, scale_colors = .default_scale_colors(),
+                        um_axes = .default_um_axes(), scale_bar = .default_scale_bar()){
   rect = .rect_null_check(rect, tiff_path)
-  .fetch_tiff_data(tiff_path,
+  obj = .fetch_tiff_data(tiff_path,
                    rect,
                    resolution = resolution,
                    max_pixels = max_pixels,
@@ -126,6 +135,7 @@ fetchTiffData = function(tiff_path, rect = NULL, resolution = NULL, max_pixels =
                    selected_channels = selected_channels,
                    scale_colors = scale_colors
   )
+  .finish_um(obj, um_axes, scale_bar)
 }
 
 .fetch_ome_pixel_scale <- function(tiff_path) {
@@ -225,6 +235,7 @@ to_rgba_hex = function(int_cols){
 #' @param selected_channels Optional subset of channels to keep, as channel numbers
 #'   or names.
 #' @param bit_order Bit order to use when decoding OME mask payloads.
+#' @inheritParams fetchTiffData
 #' @param scale_colors Colours of the fill gradient, low to high, passed to
 #'   \code{scale_fill_gradientn()}. Defaults to the \code{TPR_SCALE_COLORS}
 #'   option when it is set (see \link{TiffPlotR-package}), otherwise to the
@@ -258,7 +269,9 @@ fetchTiffDataMasked <- function(tiff_path,
                                 retain_unmasked = FALSE,
                                 segment_var = "Text",
                                 bit_order = c("msb", "lsb"),
-                                scale_colors = .default_scale_colors()) {
+                                scale_colors = .default_scale_colors(),
+                                um_axes = .default_um_axes(),
+                                scale_bar = .default_scale_bar()) {
   bit_order <- match.arg(bit_order)
   rect <- .rect_null_check(rect, tiff_path)
   
@@ -378,7 +391,7 @@ fetchTiffDataMasked <- function(tiff_path,
   out_obj@unit_per_pixel <- base_obj@unit_per_pixel
   out_obj@unit_name <- base_obj@unit_name
   out_obj@channels <- base_obj@channels
-  out_obj
+  .finish_um(out_obj, um_axes, scale_bar)
 }
 
 
@@ -762,6 +775,7 @@ fetchTiffArray = function(tiff_path, rect = NULL,
 #'   \code{"ome"}, or a character vector naming every channel.
 #' @param value_var Variable to use for RGB values, either "norm_value" or "value" (default "norm_value")
 #' @param quantile_norm Quantile for normalization (default 0.999)
+#' @inheritParams fetchTiffData
 #'
 #' @returns A TiffPlotData object containing the RGB data and a named ggplot object. The object includes metadata slots `tiff_path`, `resolution`, `precalc_max`, `rect`, `img_info` and `channels`.
 #' @export
@@ -786,11 +800,13 @@ fetchTiffData.rgb = function(tiff_path,
                              channel_names = NULL,
                              value_var = "norm_value",
                              precalc_max = NULL,
-                             quantile_norm = .999
+                             quantile_norm = .999,
+                             um_axes = .default_um_axes(),
+                             scale_bar = .default_scale_bar()
 ){
   rect = .rect_null_check(rect, tiff_path)
   if(nrow(rect@coords) != 1) stop("fetchTiffData.rgb requires a TiffRect with exactly one row")
-  .fetch_tiff_data.rgb(tiff_path,
+  obj = .fetch_tiff_data.rgb(tiff_path,
                        rect = rect,
                        resolution = resolution,
                        max_pixels = max_pixels,
@@ -802,6 +818,7 @@ fetchTiffData.rgb = function(tiff_path,
                        precalc_max = precalc_max,
                        quantile_norm = quantile_norm
   )
+  .finish_um(obj, um_axes, scale_bar)
 }
 
 #' Plot a rectangular region of a TIFF image with multi-channel color mapping
@@ -822,6 +839,7 @@ fetchTiffData.rgb = function(tiff_path,
 #' @param value_var Variable to use for channel intensities, either "norm_value" or "value" (default "norm_value")
 #' @param precalc_max Optional data frame with precalculated min/max values per channel for normalization
 #' @param quantile_norm Quantile for normalization (default 0.999)
+#' @inheritParams fetchTiffData
 #'
 #' @returns A TiffPlotData object containing the colorized data and a named ggplot object.
 #' @export
@@ -852,11 +870,13 @@ fetchTiffData.colorized = function(tiff_path,
                                    channel_names = NULL,
                                    value_var = "norm_value",
                                    precalc_max = NULL,
-                                   quantile_norm = .999){
+                                   quantile_norm = .999,
+                                   um_axes = .default_um_axes(),
+                                   scale_bar = .default_scale_bar()){
   rect = .rect_null_check(rect, tiff_path)
   if(nrow(rect@coords) != 1) stop("fetchTiffData.colorized requires a TiffRect with exactly one row")
   if(!is.list(channel_colors)) stop("channel_colors must be a list.")
-  .fetch_tiff_data.colorized(
+  obj = .fetch_tiff_data.colorized(
     tiff_path = tiff_path,
     rect = rect,
     resolution = resolution,
@@ -867,6 +887,7 @@ fetchTiffData.colorized = function(tiff_path,
     precalc_max = precalc_max,
     quantile_norm = quantile_norm
   )
+  .finish_um(obj, um_axes, scale_bar)
 }
 
 .apply_coord_rect = function(p, r, coord_FUN){

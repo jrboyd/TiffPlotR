@@ -14,7 +14,17 @@
 #'     \code{@plot_parameters$scale_colors}, so changing the option later does
 #'     not change objects already made. An invalid value is an error at the
 #'     next fetch.}
+#'   \item{\code{TPR_UM_AXES}}{TRUE or FALSE (the default): whether plots get
+#'     axes labelled in microns instead of pixels (see \code{set_axes_um()}).}
+#'   \item{\code{TPR_UM_SCALE_BAR}}{TRUE or FALSE (the default): whether plots
+#'     get a micron scale bar (see \code{add_um_scale_bar()}).}
 #' }
+#' The \code{TPR_UM_*} options are the defaults of the \code{um_axes} and
+#' \code{scale_bar} arguments of the \code{fetchTiffData*()} functions, and
+#' of the \code{plotTiffData*()} functions when the object doesn't record its
+#' own choice in \code{@plot_parameters}. Both need the image's physical pixel
+#' size from its OME-XML; images without one are plotted in pixels, with a
+#' warning, so the options can be set globally.
 #'
 #' @examples
 #' \dontrun{
@@ -22,6 +32,9 @@
 #' img <- fetchTiffData(exampleTiff(), TiffRect(900, 2300, 1400, 2800))
 #' img@plot_parameters$scale_colors
 #' options(TPR_SCALE_COLORS = NULL)  # back to magma
+#'
+#' options(TPR_UM_AXES = TRUE, TPR_UM_SCALE_BAR = TRUE)
+#' fetchTiffData(exampleTiff(), TiffRect(900, 2300, 1400, 2800))
 #' }
 #'
 #' @keywords internal

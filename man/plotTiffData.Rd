@@ -15,6 +15,8 @@ plotTiffData(
   rect = NULL,
   ncol = NULL,
   nrow = NULL,
+  um_axes = NULL,
+  scale_bar = NULL,
   return_object = FALSE,
   plot_name = NULL
 )
@@ -25,6 +27,8 @@ plotTiffDataMasked(
   value_var = c("norm_value", "value"),
   scale_colors = NULL,
   rect = NULL,
+  um_axes = NULL,
+  scale_bar = NULL,
   return_object = FALSE,
   plot_name = "masked"
 )
@@ -36,6 +40,8 @@ plotTiffData.rgb(
   blue_channel = 1,
   value_var = c("norm_value", "value"),
   rect = NULL,
+  um_axes = NULL,
+  scale_bar = NULL,
   return_object = FALSE,
   plot_name = "rgb"
 )
@@ -45,6 +51,8 @@ plotTiffData.colorized(
   channel_colors,
   value_var = c("norm_value", "value"),
   rect = NULL,
+  um_axes = NULL,
+  scale_bar = NULL,
   return_object = FALSE,
   plot_name = "colorized"
 )
@@ -69,10 +77,21 @@ fetched with.}
 \item{ncol, nrow}{Number of facet columns or rows, passed to
 \code{facet_wrap()}.}
 
+\item{um_axes}{If TRUE, label the axes in microns (see
+\code{set_axes_um()}). NULL uses \code{@plot_parameters$um_axes}, else
+the \code{TPR_UM_AXES} option (see \link{TiffPlotR-package}), else FALSE.}
+
+\item{scale_bar}{If TRUE, add a micron scale bar (see
+\code{add_um_scale_bar()}). NULL uses \code{@plot_parameters$scale_bar},
+else the \code{TPR_UM_SCALE_BAR} option, else FALSE. Both need the
+image's physical pixel size (\code{@unit_per_pixel}); without it the plot
+stays in pixels, with a warning.}
+
 \item{return_object}{If FALSE (the default), return the ggplot. If TRUE,
 return \code{img_data} with the plot added to \code{@plots} as
-\code{plot_name} and made the active plot. For gradient plots,
-\code{@plot_parameters$scale_colors} is updated too.}
+\code{plot_name} and made the active plot. \code{um_axes} and
+\code{scale_bar} are recorded in \code{@plot_parameters}, and for
+gradient plots \code{scale_colors} too.}
 
 \item{plot_name}{Name for the plot in \code{@plots} when
 \code{return_object = TRUE}. Defaults to the name the fetch functions use:

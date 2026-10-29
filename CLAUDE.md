@@ -120,6 +120,14 @@ Use `devtools::test()` for the whole suite. Shape-class tests are small and fine
     coords, theme and meta). Only the label order of the masked plot changed.
   - `plotTiffData*()` can only plot channels that are in `@data`. `selected_channels` at fetch
     time drops the others for good.
+  - Micron axes and scale bars (options `TPR_UM_AXES` / `TPR_UM_SCALE_BAR`, arguments `um_axes` /
+    `scale_bar`) are applied after the builders.
+    - On fetch, `.finish_um()` runs at the end of each public `fetchTiffData*()`. The internal
+      `.fetch_tiff_data*()` never apply them.
+    - On replot, `.plot_return()` applies them.
+    - The precedence is explicit argument > `@plot_parameters` > option.
+    - Images without `@unit_per_pixel` warn and stay in pixels, so the options are safe to set
+      globally.
 - **Image fills come from two helpers in `R/fill_scales.R`.**
   - Single-channel plots use `.fill_gradient_layers(scale_colors)`: `geom_raster()` plus
     `scale_fill_gradientn()`.

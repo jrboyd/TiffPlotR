@@ -13,7 +13,9 @@ fetchTiffData.colorized(
   channel_names = NULL,
   value_var = "norm_value",
   precalc_max = NULL,
-  quantile_norm = 0.999
+  quantile_norm = 0.999,
+  um_axes = .default_um_axes(),
+  scale_bar = .default_scale_bar()
 )
 }
 \arguments{
@@ -37,6 +39,16 @@ where NULL/NA entries are ignored, or a named list/vector whose names are channe
 \item{precalc_max}{Optional data frame with precalculated min/max values per channel for normalization}
 
 \item{quantile_norm}{Quantile for normalization (default 0.999)}
+
+\item{um_axes}{If TRUE, label the axes in microns (see \code{set_axes_um()}).
+Defaults to the \code{TPR_UM_AXES} option (see \link{TiffPlotR-package}),
+else FALSE.}
+
+\item{scale_bar}{If TRUE, add a micron scale bar (see
+\code{add_um_scale_bar()}). Defaults to the \code{TPR_UM_SCALE_BAR}
+option, else FALSE. Both need the image's physical pixel size from its
+OME-XML; without it the plot stays in pixels, with a warning. The values
+used are recorded in \code{@plot_parameters}.}
 }
 \value{
 A TiffPlotData object containing the colorized data and a named ggplot object.

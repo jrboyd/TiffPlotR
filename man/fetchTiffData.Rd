@@ -14,7 +14,9 @@ fetchTiffData(
   quantile_norm = 0.999,
   channel_names = NULL,
   selected_channels = NULL,
-  scale_colors = .default_scale_colors()
+  scale_colors = .default_scale_colors(),
+  um_axes = .default_um_axes(),
+  scale_bar = .default_scale_bar()
 )
 }
 \arguments{
@@ -52,6 +54,16 @@ numbers or names. Also sets the plotting order. Names match
 option when it is set (see \link{TiffPlotR-package}), otherwise to the
 magma palette used by earlier versions. Stored in
 \code{@plot_parameters$scale_colors}.}
+
+\item{um_axes}{If TRUE, label the axes in microns (see \code{set_axes_um()}).
+Defaults to the \code{TPR_UM_AXES} option (see \link{TiffPlotR-package}),
+else FALSE.}
+
+\item{scale_bar}{If TRUE, add a micron scale bar (see
+\code{add_um_scale_bar()}). Defaults to the \code{TPR_UM_SCALE_BAR}
+option, else FALSE. Both need the image's physical pixel size from its
+OME-XML; without it the plot stays in pixels, with a warning. The values
+used are recorded in \code{@plot_parameters}.}
 }
 \value{
 A \linkS4class{TiffPlotData} object. \code{@data} has one row per

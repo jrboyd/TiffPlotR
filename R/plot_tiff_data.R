@@ -95,10 +95,19 @@
 #'   \code{@rect}. A smaller rect zooms in; the data are not cropped.
 #' @param ncol,nrow Number of facet columns or rows, passed to
 #'   \code{facet_wrap()}.
+#' @param um_axes If TRUE, label the axes in microns (see
+#'   \code{set_axes_um()}). NULL uses \code{@plot_parameters$um_axes}, else
+#'   the \code{TPR_UM_AXES} option (see \link{TiffPlotR-package}), else FALSE.
+#' @param scale_bar If TRUE, add a micron scale bar (see
+#'   \code{add_um_scale_bar()}). NULL uses \code{@plot_parameters$scale_bar},
+#'   else the \code{TPR_UM_SCALE_BAR} option, else FALSE. Both need the
+#'   image's physical pixel size (\code{@unit_per_pixel}); without it the plot
+#'   stays in pixels, with a warning.
 #' @param return_object If FALSE (the default), return the ggplot. If TRUE,
 #'   return \code{img_data} with the plot added to \code{@plots} as
-#'   \code{plot_name} and made the active plot. For gradient plots,
-#'   \code{@plot_parameters$scale_colors} is updated too.
+#'   \code{plot_name} and made the active plot. \code{um_axes} and
+#'   \code{scale_bar} are recorded in \code{@plot_parameters}, and for
+#'   gradient plots \code{scale_colors} too.
 #' @param plot_name Name for the plot in \code{@plots} when
 #'   \code{return_object = TRUE}. Defaults to the name the fetch functions use:
 #'   \code{"normalized"} or \code{"raw"}, \code{"masked"}, \code{"rgb"} or
@@ -126,16 +135,19 @@ plotTiffData = function(img_data,
                         rect = NULL,
                         ncol = NULL,
                         nrow = NULL,
+                        um_axes = NULL,
+                        scale_bar = NULL,
                         return_object = FALSE,
                         plot_name = NULL){
   img_data = .check_plot_input(img_data)
   value_var = match.arg(value_var)
   scale_colors = .plot_scale_colors(img_data, scale_colors)
   df = .plot_select_channels(img_data, selected_channels)
-  p = .plot_channels(df, .plot_rect(img_data, rect), value_var = value_var, scale_colors = scale_colors,
+  rect = .plot_rect(img_data, rect)
+  p = .plot_channels(df, rect, value_var = value_var, scale_colors = scale_colors,
                      facets = facet_wrap(~channel_name, ncol = ncol, nrow = nrow))
   if(is.null(plot_name)) plot_name = if(value_var == "value") "raw" else "normalized"
-  .plot_return(img_data, p, return_object, plot_name, scale_colors)
+  .plot_return(img_data, p, rect, um_axes, scale_bar, return_object, plot_name, scale_colors)
 }
 
 #' @rdname plotTiffData
@@ -145,6 +157,8 @@ plotTiffDataMasked = function(img_data,
                               value_var = c("norm_value", "value"),
                               scale_colors = NULL,
                               rect = NULL,
+                              um_axes = NULL,
+                              scale_bar = NULL,
                               return_object = FALSE,
                               plot_name = "masked"){
   img_data = .check_plot_input(img_data)
@@ -154,8 +168,9 @@ plotTiffDataMasked = function(img_data,
   }
   scale_colors = .plot_scale_colors(img_data, scale_colors)
   df = .plot_select_channels(img_data, selected_channels)
-  p = .plot_masked(df, .plot_rect(img_data, rect), value_var = value_var, scale_colors = scale_colors)
-  .plot_return(img_data, p, return_object, plot_name, scale_colors)
+  rect = .plot_rect(img_data, rect)
+  p = .plot_masked(df, rect, value_var = value_var, scale_colors = scale_colors)
+  .plot_return(img_data, p, rect, um_axes, scale_bar, return_object, plot_name, scale_colors)
 }
 
 #' @rdname plotTiffData
@@ -168,6 +183,8 @@ plotTiffData.rgb = function(img_data,
                             blue_channel = 1,
                             value_var = c("norm_value", "value"),
                             rect = NULL,
+                            um_axes = NULL,
+                            scale_bar = NULL,
                             return_object = FALSE,
                             plot_name = "rgb"){
   img_data = .check_plot_input(img_data)
@@ -175,9 +192,9 @@ plotTiffData.rgb = function(img_data,
   rgb_channels = vapply(list(red_channel, green_channel, blue_channel), .resolve_channels, numeric(1),
                         channel_table = img_data@channels, arg = "red/green/blue_channel")
   .plot_require_channels(img_data, rgb_channels)
-  p = .plot_rgb(img_data@data, img_data@channels, rgb_channels, value_var = value_var,
-                rect = .plot_rect(img_data, rect))
-  .plot_return(img_data, p, return_object, plot_name)
+  rect = .plot_rect(img_data, rect)
+  p = .plot_rgb(img_data@data, img_data@channels, rgb_channels, value_var = value_var, rect = rect)
+  .plot_return(img_data, p, rect, um_axes, scale_bar, return_object, plot_name)
 }
 
 #' @rdname plotTiffData
@@ -189,6 +206,8 @@ plotTiffData.colorized = function(img_data,
                                   channel_colors,
                                   value_var = c("norm_value", "value"),
                                   rect = NULL,
+                                  um_axes = NULL,
+                                  scale_bar = NULL,
                                   return_object = FALSE,
                                   plot_name = "colorized"){
   img_data = .check_plot_input(img_data)
@@ -196,8 +215,9 @@ plotTiffData.colorized = function(img_data,
   if(!is.list(channel_colors)) stop("channel_colors must be a list.")
   channel_map = .resolve_channel_color_map(channel_colors = channel_colors, channel_table = img_data@channels)
   .plot_require_channels(img_data, channel_map$channel)
-  p = .plot_colorized(img_data@data, channel_map, value_var = value_var, rect = .plot_rect(img_data, rect))
-  .plot_return(img_data, p, return_object, plot_name)
+  rect = .plot_rect(img_data, rect)
+  p = .plot_colorized(img_data@data, channel_map, value_var = value_var, rect = rect)
+  .plot_return(img_data, p, rect, um_axes, scale_bar, return_object, plot_name)
 }
 
 .check_plot_input = function(img_data){
@@ -242,7 +262,10 @@ plotTiffData.colorized = function(img_data,
   df
 }
 
-.plot_return = function(img_data, p, return_object, plot_name, scale_colors = NULL){
+.plot_return = function(img_data, p, rect, um_axes, scale_bar, return_object, plot_name, scale_colors = NULL){
+  um_axes = .plot_flag(img_data, um_axes, "um_axes", .default_um_axes)
+  scale_bar = .plot_flag(img_data, scale_bar, "scale_bar", .default_scale_bar)
+  p = .apply_um(p, img_data, rect, um_axes, scale_bar)
   if(!isTRUE(return_object)) return(p)
   if(!is.character(plot_name) || length(plot_name) != 1 || !nzchar(plot_name)){
     stop("plot_name must be a single non-empty string.")
@@ -250,6 +273,68 @@ plotTiffData.colorized = function(img_data,
   img_data@plots[[plot_name]] = p
   img_data@activePlot = plot_name
   if(!is.null(scale_colors)) img_data@plot_parameters$scale_colors = scale_colors
+  img_data@plot_parameters$um_axes = um_axes
+  img_data@plot_parameters$scale_bar = scale_bar
   validObject(img_data)
+  img_data
+}
+
+# Defaults for um_axes / scale_bar: the TPR_UM_AXES and TPR_UM_SCALE_BAR
+# options (see ?TiffPlotR), FALSE when unset.
+.default_um_axes = function() .option_flag("TPR_UM_AXES")
+.default_scale_bar = function() .option_flag("TPR_UM_SCALE_BAR")
+
+.option_flag = function(name){
+  val = getOption(name, FALSE)
+  if(!is.logical(val) || length(val) != 1 || is.na(val)){
+    stop("Option ", name, " must be TRUE or FALSE.", call. = FALSE)
+  }
+  val
+}
+
+.check_flag = function(x, arg){
+  if(!is.logical(x) || length(x) != 1 || is.na(x)) stop(arg, " must be TRUE or FALSE.")
+  x
+}
+
+# Explicit argument, else the value recorded with the object, else the option.
+.plot_flag = function(img_data, x, name, default_FUN){
+  if(is.null(x)) x = img_data@plot_parameters[[name]]
+  if(is.null(x)) x = default_FUN()
+  .check_flag(x, name)
+}
+
+# Micron axes and/or a micron scale bar on p. Images without a physical pixel
+# size stay in pixels, with a warning. The bar is placed from rect, which
+# avoids building the plot to find its range.
+.apply_um = function(p, img_data, rect, um_axes, scale_bar){
+  if(!um_axes && !scale_bar) return(p)
+  upp = img_data@unit_per_pixel
+  if(!is.numeric(upp) || length(upp) != 1 || !is.finite(upp) || upp <= 0){
+    warning("The image records no physical pixel size, so ",
+            paste(c("micron axes", "a micron scale bar")[c(um_axes, scale_bar)], collapse = " and "),
+            " can't be drawn; the plot stays in pixels.", call. = FALSE)
+    return(p)
+  }
+  unit_name = img_data@unit_name
+  if(is.na(unit_name) || !nzchar(unit_name)) unit_name = "um"
+  if(um_axes) p = set_axes_um(p, unit_per_pixel = upp, unit_name = unit_name)
+  if(scale_bar){
+    p = add_um_scale_bar(p, unit_per_pixel = upp, unit_name = unit_name,
+                         xlim = c(rect@coords$xmin, rect@coords$xmax),
+                         ylim = c(rect@coords$ymin, rect@coords$ymax))
+  }
+  p
+}
+
+# Final step of the fetch functions: apply um_axes / scale_bar to the
+# object's plots and record them in @plot_parameters.
+.finish_um = function(img_data, um_axes, scale_bar){
+  um_axes = .check_flag(um_axes, "um_axes")
+  scale_bar = .check_flag(scale_bar, "scale_bar")
+  img_data@plots = lapply(img_data@plots, .apply_um, img_data = img_data, rect = img_data@rect,
+                          um_axes = um_axes, scale_bar = scale_bar)
+  img_data@plot_parameters$um_axes = um_axes
+  img_data@plot_parameters$scale_bar = scale_bar
   img_data
 }
