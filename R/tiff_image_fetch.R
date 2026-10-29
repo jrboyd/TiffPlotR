@@ -354,16 +354,9 @@ fetchTiffDataMasked <- function(tiff_path,
     )
   }
   
-  fill_var <- if (isTRUE(show_raw)) "value" else "norm_value"
-  p <- ggplot(masked_df, aes(x = i, y = j, fill = !!ensym(fill_var))) +
-    facet_grid(channel_name~Text) +
-    scale_y_reverse() +
-    .fill_gradient_layers(base_obj@plot_parameters$scale_colors) +
-    # theme(panel.background = element_rect(fill = "gray100"), panel.grid = element_blank()) +
-    labs(x = "pixels") +
-    labs(y = "pixels")
-  
-  p <- .apply_coord_rect(p, rect, ggplot2::coord_fixed)
+  p <- .plot_masked(masked_df, rect,
+                    value_var = if (isTRUE(show_raw)) "value" else "norm_value",
+                    scale_colors = base_obj@plot_parameters$scale_colors)
   plots_list <- list(masked = p)
   
   mask_color_mappings <- .build_mask_color_mappings(mask_points)
@@ -729,20 +722,8 @@ fetchTiffArray = function(tiff_path, rect = NULL,
   tidy_img$channel_name = factor(channel_table$channel_name[match(tidy_img$channel, channel_table$channel)],
                                  levels = channel_table$channel_name[match(shown, channel_table$channel)])
   
-  # return_data parameter removed; functions now return a TiffPlotData object
-  if(show_raw){
-    p = ggplot(tidy_img, aes(x = i, y = j, fill = value))
-  }else{
-    p = ggplot(tidy_img, aes(x = i, y = j, fill = norm_value))
-  }
-  
-  p = p +
-    facet_wrap(~channel_name) +
-    scale_y_reverse() +
-    .fill_gradient_layers(scale_colors) #+
-  # theme(panel.background = element_rect(fill = "gray20"), panel.grid = element_blank())
-  
-  p = .apply_coord_rect(p, rect, ggplot2::coord_fixed)
+  p = .plot_channels(tidy_img, rect, value_var = if(show_raw) "value" else "norm_value",
+                     scale_colors = scale_colors)
   
   plots_list = list()
   plots_list[[ifelse(show_raw, "raw", "normalized")]] = p
@@ -994,31 +975,7 @@ apply_coord_cartesian = function(img_data){
   channel_table = img_obj@channels
   rgb_channels = vapply(list(red_channel, green_channel, blue_channel), .resolve_channels, numeric(1),
                         channel_table = channel_table, arg = "red/green/blue_channel")
-  img_df = img_obj@data
-  rgb_df = convertTidyToRGB(img_df, red_channel = rgb_channels[1], green_channel = rgb_channels[2], blue_channel = rgb_channels[3], value_var = value_var)
-  
-  leg_df = data.frame(channel = rgb_channels)
-  leg_df$colors = c("red", "green", "blue")
-  leg_cols = leg_df$colors
-  leg_df$channel_name = channel_table$channel_name[match(leg_df$channel, channel_table$channel)]
-  names(leg_cols) = leg_df$channel_name
-  suppressWarnings({
-    p_rgb = ggplot() +
-      .fill_identity_layers(rgb_df) +
-      geom_point(data = leg_df, aes(color = channel_name), x = NA, y = NA, alpha = 0, na.rm = TRUE) +
-      scale_color_manual(values = leg_cols, name = NULL) +
-      guides(color = guide_legend(override.aes = list(size = 12, shape = 16, alpha = 1),
-                                  theme = theme(legend.background = element_blank(), legend.key = element_blank()))) +
-      scale_y_reverse() +
-      theme(panel.spacing = unit(0, "npc")) + #, panel.background = element_blank(), axis.text = element_text(size = 6)) +
-      # theme(legend.position = "bottom") +
-      labs(x= "pixel", y = "pixel")
-  })
-  p_rgb = .apply_coord_rect(p_rgb, rect, ggplot2::coord_fixed)
-  # lets renormalize() rebuild the composite
-  p_rgb$meta$tiffplotr_composite = list(type = "rgb",
-                                        channels = rgb_channels,
-                                        value_var = value_var)
+  p_rgb = .plot_rgb(img_obj@data, channel_table, rgb_channels, value_var = value_var, rect = rect)
   img_obj@plots = list(rgb = p_rgb)
   img_obj@activePlot = "rgb"
   img_obj
@@ -1045,40 +1002,11 @@ apply_coord_cartesian = function(img_data){
     channel_names = channel_names
   )
   
-  img_df = img_obj@data
   channel_map = .resolve_channel_color_map(
     channel_colors = channel_colors,
     channel_table = img_obj@channels
   )
-  
-  rgb_df = .convert_tidy_to_colorized(
-    img_df = img_df,
-    channel_map = channel_map,
-    value_var = value_var
-  )
-  
-  leg_df = channel_map
-  leg_df$channel_name = factor(leg_df$channel_name, levels = leg_df$channel_name)
-  leg_cols = leg_df$color
-  names(leg_cols) = as.character(leg_df$channel_name)
-  
-  suppressWarnings({
-    p_rgb = ggplot() +
-      .fill_identity_layers(rgb_df) +
-      geom_point(data = leg_df, aes(color = channel_name), x = NA, y = NA, alpha = 0, na.rm = TRUE) +
-      scale_color_manual(values = leg_cols, name = NULL) +
-      guides(color = guide_legend(override.aes = list(size = 12, shape = 16, alpha = 1),
-                                  theme = theme(legend.background = element_blank(), legend.key = element_blank()))) +
-      scale_y_reverse() +
-      theme(panel.spacing = unit(0, "npc")) +
-      labs(x= "pixel", y = "pixel")
-  })
-  
-  p_rgb = .apply_coord_rect(p_rgb, rect, ggplot2::coord_fixed)
-  # lets renormalize() rebuild the composite
-  p_rgb$meta$tiffplotr_composite = list(type = "colorized",
-                                        channel_map = channel_map,
-                                        value_var = value_var)
+  p_rgb = .plot_colorized(img_obj@data, channel_map, value_var = value_var, rect = rect)
   img_obj@plots = list(colorized = p_rgb)
   img_obj@activePlot = "colorized"
   img_obj

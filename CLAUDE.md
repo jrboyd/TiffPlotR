@@ -110,6 +110,16 @@ Use `devtools::test()` for the whole suite. Shape-class tests are small and fine
   - Real 0.1.19 objects can be made for testing with `git worktree add <scratch> bb5b802` and
     `devtools::load_all(<scratch>)`. The example TIFF is untracked, so pass its `inst/extdata` path.
     The 0.1.19 rgb fetch errors on an all-zero channel (channels 2–4 in the test region).
+- **All image plots are built in `R/plot_tiff_data.R`.**
+  - The builders are `.plot_channels()`, `.plot_masked()`, `.plot_rgb()` and `.plot_colorized()`.
+    The last two share `.plot_composite()`, which sets `p$meta$tiffplotr_composite` for
+    `renormalize()`.
+  - Both the `.fetch_tiff_data*()` / `fetchTiffDataMasked()` path and the public
+    `plotTiffData*()` wrappers call them. Change plot appearance there, not in the fetchers.
+  - Moving the fetchers onto the builders left fetched plots identical (built layer data, scales,
+    coords, theme and meta). Only the label order of the masked plot changed.
+  - `plotTiffData*()` can only plot channels that are in `@data`. `selected_channels` at fetch
+    time drops the others for good.
 - **Image fills come from two helpers in `R/fill_scales.R`.**
   - Single-channel plots use `.fill_gradient_layers(scale_colors)`: `geom_raster()` plus
     `scale_fill_gradientn()`.

@@ -52,5 +52,6 @@ Collate:
   'update_TiffPlotData.R'
   'fill_scales.R'
   'TiffPlotR-package.R'
+  'plot_tiff_data.R'
 Config/roxygen2/version: 8.0.0
 RoxygenNote: 7.3.3
