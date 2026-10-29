@@ -90,15 +90,22 @@ Use `devtools::test()` for the whole suite. Shape-class tests are small and fine
   - `precalc_max` is always stored keyed by channel number.
   - Without `channel_names`, labels default to the channel numbers. OME names are used only with
     `channel_names = "ome"`. That was a deliberate choice, so existing figures keep their labels.
-  - Objects saved before `@channels` existed have no such slot. `renormalize()` refuses them and
-    asks for a re-fetch.
 - **`@package_version` records the TiffPlotR version that created an object.** It is set by the
   `initialize` method, so every creation path stamps it. `readRDS()` doesn't call `initialize`,
   so a saved object keeps the version it was made with.
-  - Objects from 0.1.19 and earlier have no such slot, so test with `.hasSlot()` before reading
-    it.
-  - When the object format changes again, gate on this version rather than guessing from the
-    data's shape.
+  - Objects from 0.1.19 and earlier have neither `@package_version` nor `@channels`.
+    `update_TiffPlotData()` (`R/update_TiffPlotData.R`) converts them and restamps the version.
+  - **Every function that takes a TiffPlotData must start with
+    `.check_TiffPlotData_version()`**, which updates old objects with a warning. Accessing a slot
+    the old object lacks errors, and `validObject()` fails, so the check has to come first.
+  - 0.1.19 discarded channel numbers once `channel_names` was applied. The update maps names back
+    through the TIFF's OME names; otherwise the caller must pass the fetch-time `channel_names`.
+    Number-like labels (`"5"`, `"1"`) are treated as channel numbers.
+  - When the object format changes again, add a step in `.needs_update()` /
+    `update_TiffPlotData()` gated on `@package_version`, rather than guessing from the data's shape.
+  - Real 0.1.19 objects can be made for testing with `git worktree add <scratch> bb5b802` and
+    `devtools::load_all(<scratch>)`. The example TIFF is untracked, so pass its `inst/extdata` path.
+    The 0.1.19 rgb fetch errors on an all-zero channel (channels 2–4 in the test region).
 - **OME `Color` is RGBA (red in the high byte), but `to_rgba_hex()` decodes it as ARGB.**
   - `read_tiff_channels()` uses its own correct decoder, `.ome_color_to_hex()`.
   - The mask `FillColor` path still uses `to_rgba_hex()` via `.ome_fill_color_to_hex()`, so mask

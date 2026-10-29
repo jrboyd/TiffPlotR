@@ -76,12 +76,13 @@ add_um_scale_bar <- function(p,
     }
 
     if (is(p, "TiffPlotData")) {
+        p <- .check_TiffPlotData_version(p)
         active_name <- p@activePlot
         if (!active_name %in% names(p@plots)) {
             stop("activePlot is not present in plots")
         }
 
-        xlim <- c(min(p@rect@coords$xmin), max(p@rect@coords$xmax))
+        xlim <-c(min(p@rect@coords$xmin), max(p@rect@coords$xmax))
         ylim <- c(min(p@rect@coords$ymin), max(p@rect@coords$ymax))
 
         # if (is.null(unit_per_pixel)) {
@@ -333,6 +334,7 @@ add_um_scale_bar <- function(p,
 #' imgd
 set_axes_um <- function(p, unit_per_pixel = NULL, unit_name = NULL, n = 5) {
     if (is(p, "TiffPlotData")) {
+        p <- .check_TiffPlotData_version(p)
         if (is.null(unit_per_pixel)) unit_per_pixel <- p@unit_per_pixel
         if (is.null(unit_name)) unit_name <- p@unit_name
         return(.set_axes_active_plot(p, set_axes_um,
@@ -379,6 +381,7 @@ set_axes_um <- function(p, unit_per_pixel = NULL, unit_name = NULL, n = 5) {
 #' @export
 set_axes_pixel <- function(p, name = "pixel") {
     if (is(p, "TiffPlotData")) {
+        p <- .check_TiffPlotData_version(p)
         return(.set_axes_active_plot(p, set_axes_pixel, name = name))
     }
 

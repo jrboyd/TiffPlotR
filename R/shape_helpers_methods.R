@@ -663,6 +663,7 @@ shape_name_annotate <- function(p,
   }
 
   if (is(p, "TiffPlotData")) {
+    p <- .check_TiffPlotData_version(p)
     active_name <- p@activePlot
     if (!active_name %in% names(p@plots)) {
       stop("activePlot is not present in plots")

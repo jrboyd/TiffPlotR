@@ -97,7 +97,7 @@ test_that("bad input is rejected", {
   # OME names resolve even when the object was fetched without channel_names
   img2 <- renormalize(img, channels = "Opal 570", max_value = 1)
   expect_equal(img2@precalc_max$max_value[3], 1)
-  # objects from before @channels existed
+  # objects with no channel table
   img@channels <- data.frame()
-  expect_error(renormalize(img, channels = 1, max_value = 1), "Fetch it again")
+  expect_error(renormalize(img, channels = 1, max_value = 1), "does not record its channels")
 })

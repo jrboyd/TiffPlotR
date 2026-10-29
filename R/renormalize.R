@@ -19,8 +19,8 @@
 #'
 #' Channels can be given by number or by name. Names are looked up in
 #' \code{@channels}: the \code{channel_names} used at fetch time first, then
-#' the OME names. Objects made before TiffPlotR recorded \code{@channels} must
-#' be fetched again.
+#' the OME names. Objects made before TiffPlotR recorded \code{@channels} are
+#' updated first (see \code{update_TiffPlotData()}).
 #'
 #' Plots are rebuilt from the new data. Layers added afterwards (for example by
 #' \code{add_points()} or shape annotations) are kept.
@@ -53,8 +53,9 @@ renormalize = function(img_data,
                        max_value = NULL,
                        precalc_max = NULL){
   if(!is(img_data, "TiffPlotData")) stop("img_data must be a TiffPlotData object.")
-  if(!.hasSlot(img_data, "channels") || nrow(img_data@channels) == 0){
-    stop("img_data does not record its channels; it was made by an older TiffPlotR. Fetch it again.")
+  img_data = .check_TiffPlotData_version(img_data)
+  if(nrow(img_data@channels) == 0){
+    stop("img_data does not record its channels, so channels can't be looked up.")
   }
   channel_table = img_data@channels
   old_pm = img_data@precalc_max

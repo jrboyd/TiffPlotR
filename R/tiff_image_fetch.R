@@ -872,11 +872,12 @@ fetchTiffData.colorized = function(tiff_path,
 }
 
 .apply_coord_FUN = function(img_data, coord_FUN){
+  img_data = .check_TiffPlotData_version(img_data)
   r = img_data@rect
   img_data@plots = lapply(img_data@plots, function(p){
     .apply_coord_rect(p, r, coord_FUN)
   })
-  
+  img_data
 }
 
 #' Apply \code{coord_fixed()} to stored plots

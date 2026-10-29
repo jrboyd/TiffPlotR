@@ -49,8 +49,8 @@ There are two ways to give the new limits:
 
 Channels can be given by number or by name. Names are looked up in
 \code{@channels}: the \code{channel_names} used at fetch time first, then
-the OME names. Objects made before TiffPlotR recorded \code{@channels} must
-be fetched again.
+the OME names. Objects made before TiffPlotR recorded \code{@channels} are
+updated first (see \code{update_TiffPlotData()}).
 
 Plots are rebuilt from the new data. Layers added afterwards (for example by
 \code{add_points()} or shape annotations) are kept.

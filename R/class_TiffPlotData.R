@@ -116,6 +116,7 @@ setMethod("initialize", "TiffPlotData",
 #' @export
 setMethod("show", "TiffPlotData",
           function(object) {
+            object <- .check_TiffPlotData_version(object)
             cat("TiffPlotData object\n")
             cat("Data frame:\n")
             print(head(object@data))
@@ -144,6 +145,7 @@ setMethod("show", "TiffPlotData",
 #' @export
 setMethod("plot", "TiffPlotData",
           function(x, y = 1, ...) {
+            x <- .check_TiffPlotData_version(x)
             print(x@plots[[x@activePlot]])
           }
 )
@@ -231,6 +233,7 @@ setMethod("names", "TiffPlotData",
 #' @export
 setMethod("$", "TiffPlotData",
           function(x, name) {
+            x <- .check_TiffPlotData_version(x)
             if (name == "data") {
               return(x@data)
             } else if (name == "plots") {
@@ -272,6 +275,7 @@ setMethod("$", "TiffPlotData",
 #' @export
 setMethod("$<-", "TiffPlotData",
           function(x, name, value) {
+            x <- .check_TiffPlotData_version(x)
             if (name == "data") {
               x@data <- value
             } else if (name == "plots") {
