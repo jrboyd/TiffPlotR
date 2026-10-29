@@ -110,17 +110,43 @@ Use `devtools::test()` for the whole suite. Shape-class tests are small and fine
   - Real 0.1.19 objects can be made for testing with `git worktree add <scratch> bb5b802` and
     `devtools::load_all(<scratch>)`. The example TIFF is untracked, so pass its `inst/extdata` path.
     The 0.1.19 rgb fetch errors on an all-zero channel (channels 2–4 in the test region).
+- **All image plots are built in `R/plot_tiff_data.R`.**
+  - The builders are `.plot_channels()`, `.plot_masked()`, `.plot_rgb()` and `.plot_colorized()`.
+    The last two share `.plot_composite()`, which sets `p$meta$tiffplotr_composite` for
+    `renormalize()`.
+  - Both the `.fetch_tiff_data*()` / `fetchTiffDataMasked()` path and the public
+    `plotTiffData*()` wrappers call them. Change plot appearance there, not in the fetchers.
+  - Moving the fetchers onto the builders left fetched plots identical (built layer data, scales,
+    coords, theme and meta). Only the label order of the masked plot changed.
+  - `plotTiffData*()` can only plot channels that are in `@data`. `selected_channels` at fetch
+    time drops the others for good.
 - **Image fills come from two helpers in `R/fill_scales.R`.**
   - Single-channel plots use `.fill_gradient_layers(scale_colors)`: `geom_raster()` plus
     `scale_fill_gradientn()`.
   - rgb/colorized composites use `.fill_identity_layers(rgb_df)`: a `chex` raster plus
     `scale_fill_identity()`. `renormalize()` swaps in `.identity_raster()`.
-  - The default `scale_colors` is a hardcoded `viridisLite::magma(6)`, which is exactly what
+  - The default `scale_colors` comes from `.default_scale_colors()`. That is the
+    `TPR_SCALE_COLORS` option when it is set (documented in `?TiffPlotR`, `R/TiffPlotR-package.R`),
+    otherwise `.magma_scale_colors()`.
+  - Magma is a hardcoded `viridisLite::magma(6)`, which is exactly what
     `scale_fill_viridis_c(option = "magma")` interpolated, so old figures are unchanged. A test
     checks this. viridisLite isn't a declared dependency, which is why the colours are hardcoded.
+  - Use `.magma_scale_colors()` (not the default) when you need what old plots were actually
+    drawn with, as `update_TiffPlotData()` does. The option may have changed since.
   - `scale_colors` is recorded in `@plot_parameters`, a named list meant for any plotting
     option that later rebuilds need to recall. rgb/colorized objects also carry it, from the
     underlying `.fetch_tiff_data()` call.
+- **`fetchTiffDataMasked()` checks masks before it reads the image.**
+  - It stops if there are no mask points, they lack `i`/`j`, or none fall in `rect`. With
+    `retain_unmasked = TRUE`, no points in `rect` is only a warning.
+  - The example TIFF has no mask annotations. `test_fetch_masked.R` passes synthetic
+    `mask_points` and mocks `.fetch_tiff_data()`.
+  - **Below full resolution, pixel coordinates aren't integers.** The example TIFF is 8651 px wide,
+    but 1082 at level 4, so the spacing is 7.9953789… Never join or compare `i`/`j` across
+    sources with `==`/`merge()`. `fetchTiffDataMasked()` joins masks to the signal on the integer
+    `i_bin`/`j_bin` instead. Before that fix, rebuilding `i`/`j` from the bins missed by a few ulps.
+    Levels 3 and 4 then matched nothing, and level 2 silently lost about 30% of masked pixels.
+  - A pixel covered by two ROIs gets one row per ROI, because overlap is decided per `ROI_ID`.
 - **OME `Color` is RGBA (red in the high byte), but `to_rgba_hex()` decodes it as ARGB.**
   - `read_tiff_channels()` uses its own correct decoder, `.ome_color_to_hex()`.
   - The mask `FillColor` path still uses `to_rgba_hex()` via `.ome_fill_color_to_hex()`, so mask

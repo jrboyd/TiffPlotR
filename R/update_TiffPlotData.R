@@ -56,7 +56,8 @@ update_TiffPlotData = function(img_data, channel_names = NULL){
     obj = .update_from_unversioned(obj, channel_names)
   }
   if(!had_plot_parameters){
-    obj@plot_parameters = list(scale_colors = .default_scale_colors())
+    # what these plots were drawn with, whatever TPR_SCALE_COLORS is now
+    obj@plot_parameters = list(scale_colors = .magma_scale_colors())
   }
   validObject(obj)
   obj

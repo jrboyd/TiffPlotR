@@ -39,3 +39,28 @@ test_that("fetched plots use scale_colors and record it", {
   rgb <- fetchTiffData.rgb(exampleTiff(), rect, resolution = 4, red_channel = 5, green_channel = 6, blue_channel = 1)
   expect_s3_class(rgb@plots$rgb$scales$get_scales("fill"), "ScaleDiscreteIdentity")
 })
+
+test_that("TPR_SCALE_COLORS sets the default scale_colors", {
+  withr::local_options(TPR_SCALE_COLORS = NULL)
+  expect_equal(TiffPlotR:::.default_scale_colors(), TiffPlotR:::.magma_scale_colors())
+
+  withr::local_options(TPR_SCALE_COLORS = c("black", "green"))
+  expect_equal(TiffPlotR:::.default_scale_colors(), c("black", "green"))
+  rect <- TiffRect(900, 2300, 1400, 2800)
+  img <- fetchTiffData(exampleTiff(), rect, resolution = 4, selected_channels = 1)
+  expect_equal(img@plot_parameters$scale_colors, c("black", "green"))
+  expect_equal(img@plots[[1]]$scales$get_scales("fill")$palette(c(0, 1)), c("#000000", "#00FF00"))
+  # an explicit argument wins
+  img <- fetchTiffData(exampleTiff(), rect, resolution = 4, selected_channels = 1, scale_colors = c("white", "red"))
+  expect_equal(img@plot_parameters$scale_colors, c("white", "red"))
+
+  # updating an old object records magma, which its plots were drawn with
+  df <- data.frame(i = 1:2, j = 1, channel = 1L, value = 1, norm_value = 1)
+  obj <- TiffPlotData(df, plots = list(raw = ggplot(df, aes(i, j)) + geom_point()))
+  attr(obj, "plot_parameters") <- NULL
+  expect_equal(suppressWarnings(update_TiffPlotData(obj))@plot_parameters$scale_colors,
+               TiffPlotR:::.magma_scale_colors())
+
+  withr::local_options(TPR_SCALE_COLORS = "red")
+  expect_error(TiffPlotR:::.default_scale_colors(), "Invalid TPR_SCALE_COLORS option: .*at least 2")
+})
