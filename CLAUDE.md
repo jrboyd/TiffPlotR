@@ -149,6 +149,19 @@ Use `devtools::test()` for the whole suite. Shape-class tests are small and fine
     the fetch, not only TiffPlotR's.
   - `@plot_parameters` from a fetch holds `scale_colors`, `channel_names`, `max_pixels`,
     `um_axes`, `scale_bar`, `scale_bar_style` and `plot_theme`.
+- **Vignettes use only package data** (`exampleTiff()`). Keep it that way: no paths into
+  `/netfiles` or home directories.
+  - The example TIFF (400 MB) is **gitignored** (`inst/extdata/*tiff`). A fresh clone has no
+    `exampleTiff()`, so vignettes, examples and most tests fail there.
+  - The bundled ImageJ ROIs (`inst/extdata/*.roi`, `*_rects.zip`) belong to a different, larger
+    image (y ~ 19,400), so they can't be drawn on the example TIFF.
+  - Render both vignettes against the dev code with:
+    `devtools::load_all(); rmarkdown::render("vignettes/tiff_plotting.Rmd", output_dir = <scratch>, envir = new.env())`.
+    `tiff_plotting` takes about 2 min and peaks around 2.3 GB, so it is fine inline but near the
+    4 GB limit.
+  - In the test region, Opal 520 is all zero. Its `norm_value` is NA, so it draws as a grey panel.
+  - Full-resolution row j = 1452 is all zeros in the TIFF itself (a scanner tile seam). It shows
+    as a thin dark line in plots, and isn't a TiffPlotR bug.
 - **`man/hello.Rd` is stale.** It documents a `hello()` that no longer exists. The examples on
   the internal topics (`man/dot-*.Rd`) call private functions. Both make
   `devtools::run_examples()` stop early, so run the exported topics' examples individually.

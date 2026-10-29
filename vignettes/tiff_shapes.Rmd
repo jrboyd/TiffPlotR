@@ -1,6 +1,5 @@
 ---
 title: "Working with TiffShape Classes"
-author: "TiffPlotR"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Working with TiffShape Classes}
@@ -26,9 +25,8 @@ This vignette demonstrates how to:
 3. Use `ggplot2` to visualize each manipulation.
 
 ```{r libraries}
-library(TiffPlotR)
+library(TiffPlotR)  # also provides the %>% pipe
 library(ggplot2)
-library(tidyverse)
 ```
 
 ## A plotting helper

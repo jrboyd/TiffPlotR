@@ -24,7 +24,10 @@ Imports:
 Suggests:
     testthat,
     ggnewscale,
-    EBImage
+    EBImage,
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
 Collate:
   'class_TiffShape.R'
   'shape_generics.R'

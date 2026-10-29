@@ -1,234 +1,211 @@
 ---
-title: "tiff_confirm"
-author: "Joe Boyd"
-date: "2026-03-03"
-output:
-    BiocStyle::html_document:
-    toc_float: true
+title: "Plotting TIFF images with TiffPlotR"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Plotting TIFF images with TiffPlotR}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, fig.width = 12, fig.height = 7.5)
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 8, fig.height = 5)
 ```
 
-## Objective
+TiffPlotR reads rectangular regions of large, multi-resolution (OME-)TIFF
+images at a resolution suited to plotting, and returns them as tidy data plus
+ggplot2 plots. This vignette uses the multiplex immunofluorescence image that
+ships with the package.
 
-Demonstrate key functions in TiffPlotR
-
-```{r}
-library(tidyverse)
+```{r libraries}
 library(TiffPlotR)
+library(ggplot2)
+# hide the per-fetch progress messages
+options(TPR_VERBOSE = FALSE)
 ```
 
-## Select TIFFs
+## The example image
 
-Image files uploaded so far
-
-```{r}
-tiff_path = exampleTiff()
-```
-```{r}
-fetchTiffData(tiff_path)
-fetchTiffData.rgb(tiff_path)
+```{r image-info}
+tiff_path <- exampleTiff()
+read_tiff_meta_data(tiff_path)
 ```
 
-Manually select a few to use for examples
+The image is 8651 x 5998 pixels at full resolution, with 6 channels and 5
+resolution levels, each half the size of the one before. The OME-XML names and
+colours each channel:
 
-```{r}
-pheno_tiffs = c(
-  "/netfiles/volaric_research/DLBCL_EBV_detection/image_files/Phenocycler/201_D-EB-3_cropped.ome.tiff",
-  "/netfiles/volaric_research/DLBCL_EBV_detection/image_files/Phenocycler/234_CTEBV2_cropped.ome.tiff"
-)
-
-rscope1_tiffs= c(
-  "/netfiles/volaric_research/DLBCL_EBV_detection/image_files/RNAScopeRound1/D-EB-22.ome.tiff",
-  "/netfiles/volaric_research/DLBCL_EBV_detection/image_files/RNAScopeRound1/D-EB-16.qptiff"
-)
-
-rscope2_tiffs = c(
-  "/netfiles/volaric_research/DLBCL_EBV_detection/image_files/RNAScopeRound2/300_CellPellet_EBER-LMP1-EBNA1_GM18502.ome.tiff",
-  "/netfiles/volaric_research/DLBCL_EBV_detection/image_files/RNAScopeRound2/301_CellPellet_NegCTL_Scan2_GM12878.ome.tiff",
-  "/netfiles/volaric_research/DLBCL_EBV_detection/image_files/RNAScopeRound2/201_D-EB-2_D-EB-3.tif"
-)
+```{r channels}
+read_tiff_channels(tiff_path)[, c("channel", "name", "color")]
 ```
 
-## Helper functions
+## Fetching a region
 
-```{r}
-my_plot = function(tiff_dat){
-  plot(tiff_dat) + labs(title = basename(tiff_dat@tiff_path)) +
-    coord_fixed()
-}
+`fetchTiffData()` reads a region, given as a `TiffRect` in full-resolution
+pixel coordinates. It picks the coarsest resolution that keeps the plot at
+least `max_pixels` (default 800) wide, so a large region is never read at full
+resolution by accident.
 
-my_zoom = function(tiff_dat, zoom_rect){
-  p = tiff_dat@plots$channels
-  p_anno = p %>% rect_annotate(zoom_rect)
-  zoom_dat = fetchTiffData(tiff_dat$tiff_path, rect = zoom_rect, precalc_max = tiff_dat@precalc_max)
-  zoom_dat@plots[["original"]] = p_anno
-  zoom_dat@plots[["assembly"]] = cowplot::plot_grid(p_anno, zoom_dat@plots$channels)
-  zoom_dat@activePlot = "assembly"
-  zoom_dat
-}
+```{r fetch}
+rect <- TiffRect(xmin = 900, xmax = 2300, ymin = 1400, ymax = 2800)
+img <- fetchTiffData(tiff_path, rect)
+img
 ```
 
-## Phenocycler
+The result is a `TiffPlotData` object. `@data` holds one row per pixel and
+channel, with raw `value`s and `norm_value`s scaled to 0-1 by each channel's
+limits in `@precalc_max`. `@plots` holds the plots, and printing the object
+draws the active plot. Opal 520 has no signal in this region, so its
+normalized values are missing and its panel is grey.
 
-```{r}
-pc_1 = fetchTiffData(pheno_tiffs[1], TiffRect(0, 10e4, 0, 10e4))
-pc_2 = fetchTiffData(pheno_tiffs[2], TiffRect(0, 10e4, 0, 10e4))
+```{r data}
+head(img@data)
+img@precalc_max
 ```
 
-```{r}
-my_plot(pc_1)
-my_plot(pc_2)
+### Channel names
+
+Channels are named by their OME names where the TIFF has them, and otherwise
+`"channel 1"`, `"channel 2"`, and so on. `channel_names` can give your own
+names, or `"number"` for bare channel numbers. `selected_channels` keeps a
+subset, in the order given, by number or name:
+
+```{r select}
+fetchTiffData(tiff_path, rect,
+              channel_names = c("nuclei", paste("marker", LETTERS[1:5])),
+              selected_channels = c("marker D", "nuclei"))
 ```
 
-```{r, fig.width=20}
-r1 = pc_1@rect %>% 
-  rect_resize_mult(.25, anchor = "botleft") %>% 
-  rect_shift(dy = -4e4) %>%
-  rect_resize_mult(.25)
-# plot(pc_1) %>% rect_annotate(rect = r1)
-pc_1.1 = my_zoom(pc_1, r1)
-plot(pc_1.1)
-```
-```{r, fig.width=20}
-r2 = TiffRect(13e3, 13.5e3, 45.5e3, 46e3)
-pc_1.2 = my_zoom(pc_1.1, r2)
-plot(pc_1.2)
+## Composite images
+
+`fetchTiffData.rgb()` shows three channels as red, green and blue.
+`fetchTiffData.colorized()` blends any number of channels, each with its own
+colour.
+
+```{r rgb}
+fetchTiffData.rgb(tiff_path, rect,
+                  red_channel = "Opal 690", green_channel = "Autofluorescence",
+                  blue_channel = "DAPI")
 ```
 
-## RNAScope1 4 plex
-
-```{r}
-rs_1 = fetchTiffData(rscope1_tiffs[1], TiffRect(0, 10e4, 0, 10e4))
-rs_2 = fetchTiffData(rscope1_tiffs[2], TiffRect(0, 10e4, 0, 10e4))
+```{r colorized}
+colorized <- fetchTiffData.colorized(tiff_path, rect,
+                                     channel_colors = list(DAPI = "blue", "Opal 690" = "yellow"))
+colorized
 ```
 
-```{r}
-my_plot(rs_1)
-my_plot(rs_2)
+## Replotting without reading the image again
+
+The `plotTiffData*()` functions build new plots from the data already in an
+object. They return a ggplot, so they combine with any other ggplot2 code.
+
+```{r replot}
+plotTiffData(img, selected_channels = c("Opal 690", "DAPI"), ncol = 1,
+             scale_colors = c("black", "white"))
 ```
 
-```{r, fig.width=16, fig.height=6}
-zoom_rect = rect_resize_mult(rs_1$rect, .15, anchor = "topleft")
-zoom_rect = zoom_rect %>% rect_shift(55e3, 2e4) %>% rect_resize_abs(5e3, 5e3)
-rs_1.1 = my_zoom(rs_1, zoom_rect)
-plot(rs_1.1)
+```{r replot-composite}
+plotTiffData.colorized(img, channel_colors = list(DAPI = "cyan", "Opal 690" = "magenta"))
 ```
 
-```{r, fig.width=16, fig.height=6}
-zoom_rect2 = zoom_rect %>% rect_resize_mult(.3, anchor = "botleft")
-zoom_rect2 = zoom_rect2 %>% rect_shift(1e3, -500) %>% rect_resize_mult(.5)
-rs_1.2 = my_zoom(rs_1.1, zoom_rect2)
-plot(rs_1.2)
+With `return_object = TRUE`, the new plot is stored in the object instead and
+becomes its active plot:
+
+```{r replot-store}
+img <- plotTiffData(img, value_var = "value", return_object = TRUE)
+names(img@plots)
+img@activePlot
 ```
 
-## RNAScope2 3 plex+IF
+## Adjusting contrast
 
+`renormalize()` sets new limits for some channels and rebuilds the plots,
+again without reading the image. Here the DAPI ceiling is lowered so dim
+nuclei show up:
 
-```{r}
-rs2_1 = fetchTiffData(rscope2_tiffs[1], TiffRect(0, 10e4, 0, 10e4))
-rs2_2 = fetchTiffData(rscope2_tiffs[2], TiffRect(0, 10e4, 0, 10e4))
+```{r renormalize}
+bright <- renormalize(colorized, channels = "DAPI", max_value = 40)
+bright
 ```
 
-```{r}
-my_plot(rs2_1)
-my_plot(rs2_2)
+## Physical units
+
+When the OME-XML records the pixel size, plots can be labelled in microns
+instead of pixels and given a scale bar. Only the labels change: the data stay
+in pixel coordinates, so shapes and zoom regions keep working.
+
+```{r microns}
+img <- fetchTiffData(tiff_path, rect, selected_channels = c("DAPI", "Opal 690"),
+                     um_axes = TRUE, scale_bar = TRUE)
+img
 ```
 
-```{r, fig.width=20}
-zr = TiffRect(5e3, 10e3, 5e3, 10e3)
-rs2_2.1 = my_zoom(rs2_2, zr)
-plot(rs2_2.1)
+`set_axes_um()`, `set_axes_pixel()` and `add_um_scale_bar()` do the same for
+an existing plot or object.
+
+## Zooming in
+
+Shapes such as `TiffRect` can be drawn on a plot with `shape_annotate()`, and
+then fetched in more detail. Passing the overview's `precalc_max` keeps the
+contrast the same in both.
+
+```{r zoom-overview}
+zoom <- TiffRect(xmin = 1500, xmax = 1800, ymin = 2100, ymax = 2400)
+overview <- fetchTiffData.colorized(tiff_path, rect,
+                                    channel_colors = list(DAPI = "blue", "Opal 690" = "yellow"))
+shape_annotate(overview, zoom, color = "white", fill = NA)
 ```
 
-```{r, fig.width=20}
-zr = TiffRect(6.5e3, 7.2e3, 6.5e3, 7e3)
-rs2_2.2 = my_zoom(rs2_2.1, zr)
-plot(rs2_2.2)
+```{r zoom-detail}
+fetchTiffData.colorized(tiff_path, zoom, precalc_max = overview@precalc_max,
+                        channel_colors = list(DAPI = "blue", "Opal 690" = "yellow"))
 ```
 
-## Per cell data
+The zoomed region is small enough to be read at full resolution.
 
-```{r}
-df = data.table::fread("/users/j/r/jrboyd/VolaricDataAndScriptsForJoe/4PlexRNAScope_Jan2026_Object_Results.csv")
-head(df)
-dim(df)
+## Adding points
 
-tabs = df$`Image Location` %>%  basename %>% table
-tiff_in_xls = names(tabs)
-samples_in_xls = tiff_in_xls %>% 
-  strsplit("\\\\") %>% 
-  sapply(function(x)x[length(x)]) %>% sub('\"$', "", x = .) %>% 
-  sub("\\..+", "", .) %>% sub("_Res.+", "", .)
-names(samples_in_xls) = tiff_in_xls
-names(tabs) = samples_in_xls
-tabs
+`add_points()` overlays point data, such as cell centroids from a segmentation
+tool, on a composite plot without losing its channel legend. As a stand-in for
+real per-cell results, this takes bright DAPI pixels and calls them positive
+when Opal 690 is also high:
+
+```{r points}
+d <- overview@data
+dapi <- d[d$channel_name == "DAPI" & d$norm_value > 0.5, c("i", "j")]
+opal <- d[d$channel_name == "Opal 690", c("i", "j", "norm_value")]
+cells <- merge(dapi, opal, by = c("i", "j"))
+cells <- cells[seq(1, nrow(cells), by = 25), ]
+cells$status <- ifelse(cells$norm_value > 0.4, "positive", "negative")
+
+add_points(overview@plots$colorized, cells, x = "i", y = "j", colour_by = "status",
+           palette = c(positive = "red", negative = "white"), size = 1)
 ```
 
-```{r}
-df$sample_id = samples_in_xls[df$`Image Location`]
-head(df$sample_id)
+## Package options
+
+Options set the defaults for every fetch, for example in `.Rprofile`. Each
+object records the settings it was made with in `@plot_parameters`, and
+`plotTiffData*()` reuses them. See `?TiffPlotR` for the full list.
+
+```{r options}
+options(TPR_MAX_PIXELS = 400,
+        TPR_UM_AXES = TRUE,
+        TPR_UM_SCALE_BAR = TRUE,
+        TPR_SCALE_BAR_STYLE = list(line_color = "yellow", position = "bottomright"),
+        TPR_THEME = theme(panel.background = element_rect(fill = "black"),
+                          panel.grid = element_blank()))
+img <- fetchTiffData(tiff_path, rect, selected_channels = c("DAPI", "Opal 570", "Opal 690"))
+img
+str(img@plot_parameters[c("max_pixels", "um_axes", "scale_bar", "scale_bar_style")])
 ```
 
-```{r}
-rscope1_names = rscope1_tiffs %>% basename() %>% sub("\\..+", "", .)
-rscope1_names %in% names(tabs)
+```{r options-reset}
+options(TPR_MAX_PIXELS = NULL, TPR_UM_AXES = NULL, TPR_UM_SCALE_BAR = NULL,
+        TPR_SCALE_BAR_STYLE = NULL, TPR_THEME = NULL)
 ```
 
-```{r}
-df.sel = subset(df, sample_id %in% rscope1_names)
-df.sel$sample_id %>% table
-```
+## Saved objects
 
-```{r}
-df.sel$XMax
-df.sel = df.sel %>% mutate(x = (XMin + XMax)/2, y = (YMin + YMax)/2)
-```
-```{r}
-ggplot(df.sel, aes(x = x, y = y)) +
-  geom_point() +
-  facet_wrap(~sample_id)
-```
-
-```{r}
-rs_1@tiff_path
-rs_1
-```
-
-```{r}
-x = subset(df.sel, sample_id == "D-EB-16")
-rs_2@tiff_path
-rs_2@plots$channels + annotate("point", x= x$x, y = x$y, color = "green") 
-```
-
-```{r}
-x = subset(df.sel, sample_id == "D-EB-22")
-rs_1@tiff_path
-rs_1@plots$channels + annotate("point", x= x$x, y = x$y, color = "green") 
-```
-```{r, fig.width = 16, fig.height=8}
-rs_1.2@plots$channels
-r = rs_1.2@rect
-x.2 = subset(x, x < r@coords$xmax[[1]] & x > r@coords$xmin[[1]] & y < r@coords$ymax[[1]] & y > r@coords$ymin[[1]])
-
-rs_1.2@plots$channels + annotate("point", x= x.2$x, y = x.2$y, color = "green")
-
-rs_1.2@plots$channels + annotate("rect", xmin= x.2$XMin, xmax = x.2$XMax, ymin = x.2$YMin, ymax = x.2$YMax, color = "green", fill = NA) 
-```
-
-```{r}
-if(FALSE){
-  weird_tifs = dir("/netfiles/volaric_research/DLBCL_EBV_detection/image_files", recursive = TRUE, pattern = "tif$", full.names = TRUE)
-  tmp = RBioFormats::ImageMetadata(weird_tifs[1])
-  tmp@.Data
-  RBioFormats::ImageMetadata(weird_tifs[2])
-  lapply(weird_tifs, RBioFormats::ImageMetadata)
-  fetchTiffData(weird_tifs[1], TiffRect(0, 10e4, 0, 10e4))
-  fetchTiffData(weird_tifs[2], TiffRect(0, 10e4, 0, 10e4))
-  fetchTiffData(weird_tifs[3], TiffRect(0, 10e4, 0, 10e4))
-  fetchTiffData(weird_tifs[4], TiffRect(0, 10e4, 0, 10e4))
-}
-```
-
+`TiffPlotData` objects can be saved with `saveRDS()`. Objects saved by older
+versions of TiffPlotR are updated automatically when used, with a warning;
+`update_TiffPlotData()` updates one explicitly so it can be saved again.
