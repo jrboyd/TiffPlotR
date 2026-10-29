@@ -70,6 +70,41 @@ Use `devtools::test()` for the whole suite. Shape-class tests are small and fine
     black.
   - A full `gather_channel_quantiles(exampleTiff(), max_full_fetch = 1e6, workers = 1)`
     takes about 35 s, so the tests use synthetic quantile matrices instead.
+- **Channels: one dictionary, one resolver** (`R/channels.R`).
+  - `@channels` lists *every* channel in the image, not only the selected ones. Its columns are
+    `channel`, `channel_name` (the display label), `ome_name` and `color`. It is built by
+    `.channel_table()`.
+  - `@data$channel` is always the integer channel number. `@data$channel_name` is a factor in
+    plotting order, and plots facet on it.
+  - Code that filters by name must use `channel_name`. In 0.1.19 and earlier, `channel` held the names
+    whenever `channel_names` was given.
+  - Every channel argument goes through `.resolve_channels()`. That covers `selected_channels`,
+    `red/green/blue_channel`, `channel_colors` names, a `precalc_max` keyed by name, and
+    `renormalize(channels =)`.
+  - `.resolve_channels()` matches `channel_name` first, then the OME name if no other channel
+    shares it. So `"DAPI"` resolves even when `channel_names` was NULL.
+  - `precalc_max` is always stored keyed by channel number.
+  - Without `channel_names`, labels default to the channel numbers. OME names are used only with
+    `channel_names = "ome"`. That was a deliberate choice, so existing figures keep their labels.
+  - Objects saved before `@channels` existed have no such slot. `renormalize()` refuses them and
+    asks for a re-fetch.
+- **OME `Color` is RGBA (red in the high byte), but `to_rgba_hex()` decodes it as ARGB.**
+  - `read_tiff_channels()` uses its own correct decoder, `.ome_color_to_hex()`.
+  - The mask `FillColor` path still uses `to_rgba_hex()` via `.ome_fill_color_to_hex()`, so mask
+    colours are probably wrong. That helper also prepends a second `#`. It hasn't been fixed
+    because changing it changes existing mask colours.
+- **`read_tiff_channels()` reads only the first OME `Image`** (series 1). `.fetch_ome_nodes()`
+  searches the whole document, so it would mix in Channel nodes from label or macro images.
+- **`renormalize()` rebuilds rgb/colorized plots from `p$meta$tiffplotr_composite`.** That field
+  records the resolved channel numbers, colours and `value_var`. A plot without it can't be
+  rebuilt and is left unchanged, with a warning.
+  - **Swap in a new raster layer; don't edit it in place.** Layers are environments shared with
+    the original plot, so assigning to `p$layers[[k]]$data` changes the original object too.
+    `ggproto(NULL, layer)` overflows the S7 stack at build time, just as it does for guides.
+- **The example TIFF holds small floats.** DAPI (channel 1) reaches about 115, and the other
+  channels are below about 20. Several channels are entirely zero in small regions, so
+  `TiffRect(900, 1000, 1400, 1500)` is a poor test region. Tests use
+  `TiffRect(900, 2300, 1400, 2800)` at resolution 4.
 
 ## Tooling
 

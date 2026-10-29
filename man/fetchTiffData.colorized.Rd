@@ -26,9 +26,11 @@ fetchTiffData.colorized(
 \item{max_pixels}{Maximum dimension in pixels for the plotted image}
 
 \item{channel_colors}{Channel-to-color mapping. Use an unnamed positional list/vector (index = channel number),
-where NULL/NA entries are ignored, or a named list/vector with names that exactly match `channel_names`.}
+where NULL/NA entries are ignored, or a named list/vector whose names are channel names: those from
+`channel_names`, or the OME names (see \code{read_tiff_channels()}).}
 
-\item{channel_names}{Optional character vector of channel names. Required for named `channel_colors` mapping.}
+\item{channel_names}{Channel names, as in \code{fetchTiffData()}: NULL,
+\code{"ome"}, or a character vector naming every channel.}
 
 \item{value_var}{Variable to use for channel intensities, either "norm_value" or "value" (default "norm_value")}
 
@@ -56,5 +58,9 @@ fetchTiffData.colorized(tf,
   channel_colors = list("A" = "blue", E = "purple", F = "cyan"),
   rect = TiffRect(2500, 3000, 2500, 3000),
   channel_names = LETTERS[1:6]
+)
+fetchTiffData.colorized(tf,
+  channel_colors = list(DAPI = "blue", "Opal 570" = "yellow"),
+  rect = TiffRect(2500, 3000, 2500, 3000)
 )
 }

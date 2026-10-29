@@ -39,9 +39,10 @@ and \code{max_value} for normalization.}
 \item{quantile_norm}{Quantile used to estimate per-channel max values when
 \code{precalc_max} is NULL.}
 
-\item{channel_names}{Optional character vector used to rename channels.}
+\item{channel_names}{Channel names, as in \code{fetchTiffData()}: NULL,
+\code{"ome"}, or a character vector naming every channel.}
 
-\item{selected_channels}{Optional subset of channels to keep, as channel indices
+\item{selected_channels}{Optional subset of channels to keep, as channel numbers
 or names.}
 
 \item{bit_order}{Bit order to use when decoding OME mask payloads.}

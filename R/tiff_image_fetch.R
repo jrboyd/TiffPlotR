@@ -33,11 +33,18 @@
   resolution
 }
 
-.handle_precalc_max = function(precalc_max, tidy_img, resolution, channel_names, quantile_norm){
+# precalc_max keyed by channel number. Channels given by name are resolved
+# through channel_table (see .channel_table()).
+.handle_precalc_max = function(precalc_max, tidy_img, resolution, channel_table, quantile_norm){
   if(is.null(precalc_max)){
     precalc_max = tidy_img  %>% group_by(channel) %>% summarise(min_value = 0, max_value = quantile(value, quantile_norm))
   }else{
     stopifnot(c("channel", "min_value", "max_value") %in% colnames(precalc_max))
+    precalc_max = as.data.frame(dplyr::ungroup(precalc_max))
+    if(!is.numeric(precalc_max$channel)){
+      precalc_max$channel = .resolve_channels(precalc_max$channel, channel_table,
+                                              arg = "precalc_max channels", allow_duplicates = TRUE)
+    }
     if(any(precalc_max %>% dplyr::pull(channel) %>% duplicated)){
       #now resolution must be present and fetch resolution must be present
       stopifnot("resolution" %in% colnames(precalc_max))
@@ -48,23 +55,9 @@
         stop("Multiple values for each channel after resolution selection. Is this precalc_max for a single tiff file?")
       }
     }
-    precalc_max = precalc_max %>% dplyr::ungroup() %>% select(channel, min_value, max_value)
+    precalc_max = precalc_max %>% select(channel, min_value, max_value)
   }
-  stopifnot(c("channel", "min_value", "max_value") %in% colnames(precalc_max))
-  #check if channel is specified by name, convert back to number if so
-  if(!is.numeric(precalc_max$channel)){
-    if(!is.null(channel_names)){
-      if(!all(precalc_max$channel %in% channel_names)){
-        stop("precalc_max channel identities are not compatible with supplied channel_names")
-      }else{
-        precalc_max$channel = factor(precalc_max$channel, levels = channel_names)
-        precalc_max$channel = as.numeric(precalc_max$channel)
-      }
-    }else{
-      stop("channel_names is required when prec_calc max specifies character channel identities.")
-    }
-  }
-  precalc_max
+  as.data.frame(precalc_max)
 }
 
 #' Fetch TIFF image data for a rectangular region
@@ -80,17 +73,25 @@
 #'   automatically to keep dimensions under \code{max_pixels}.
 #' @param max_pixels Maximum pixel dimension used when \code{resolution = NULL}.
 #' @param precalc_max Optional data frame with \code{channel},
-#'   \code{min_value}, and \code{max_value} for normalization.
+#'   \code{min_value}, and \code{max_value} for normalization. \code{channel}
+#'   may hold channel numbers or names.
 #' @param show_raw If TRUE, plot raw values. If FALSE (default), plot
 #'   normalized values.
 #' @param quantile_norm Quantile used to estimate per-channel max values when
 #'   \code{precalc_max} is NULL.
-#' @param channel_names Optional character vector used to rename channels.
+#' @param channel_names Names for the channels: NULL (the default) labels them
+#'   by number, \code{"ome"} uses the names in the TIFF's OME-XML (see
+#'   \code{read_tiff_channels()}), and a character vector names every channel
+#'   in order. Names must be unique.
 #' @param selected_channels Optional subset of channels to keep, as channel
-#'   indices or names.
+#'   numbers or names. Also sets the plotting order. Names match
+#'   \code{channel_names} first, then the OME names.
 #'
-#' @returns A \linkS4class{TiffPlotData} object with image data in
-#'   \code{@data} and a faceted plot in \code{@plots}.
+#' @returns A \linkS4class{TiffPlotData} object. \code{@data} has one row per
+#'   pixel and channel, with \code{channel} (always the channel number) and
+#'   \code{channel_name} (a factor in plotting order), plus \code{value} and
+#'   \code{norm_value}. \code{@channels} lists every channel in the image with
+#'   its name, OME name and OME color. The faceted plot is in \code{@plots}.
 #' @export
 #'
 #' @examples
@@ -104,6 +105,9 @@
 #'   channel_names = c("DAPI", paste("channel", LETTERS[1:5])),
 #'   selected_channels = c("channel B", "channel E", "DAPI")
 #' )
+#'
+#' fetchTiffData(tiff_path, view_rect, channel_names = "ome",
+#'               selected_channels = c("DAPI", "Opal 570"))
 fetchTiffData = function(tiff_path, rect = NULL, resolution = NULL, max_pixels = 800, precalc_max = NULL, show_raw = FALSE, quantile_norm = .999, channel_names = NULL, selected_channels = NULL){
   rect = .rect_null_check(rect, tiff_path)
   .fetch_tiff_data(tiff_path,
@@ -210,8 +214,9 @@ to_rgba_hex = function(int_cols){
 #' @param show_raw If TRUE, plot raw values. If FALSE (default), plot normalized values.
 #' @param quantile_norm Quantile used to estimate per-channel max values when
 #'   \code{precalc_max} is NULL.
-#' @param channel_names Optional character vector used to rename channels.
-#' @param selected_channels Optional subset of channels to keep, as channel indices
+#' @param channel_names Channel names, as in \code{fetchTiffData()}: NULL,
+#'   \code{"ome"}, or a character vector naming every channel.
+#' @param selected_channels Optional subset of channels to keep, as channel numbers
 #'   or names.
 #' @param bit_order Bit order to use when decoding OME mask payloads.
 #'
@@ -333,7 +338,7 @@ fetchTiffDataMasked <- function(tiff_path,
   
   fill_var <- if (isTRUE(show_raw)) "value" else "norm_value"
   p <- ggplot(masked_df, aes(x = i, y = j, fill = !!ensym(fill_var))) +
-    facet_grid(channel~Text) +
+    facet_grid(channel_name~Text) +
     scale_y_reverse() +
     geom_raster() +
     scale_fill_viridis_c(option = "magma") +
@@ -361,6 +366,7 @@ fetchTiffDataMasked <- function(tiff_path,
   
   out_obj@unit_per_pixel <- base_obj@unit_per_pixel
   out_obj@unit_name <- base_obj@unit_name
+  out_obj@channels <- base_obj@channels
   out_obj
 }
 
@@ -430,16 +436,18 @@ convertTidyToRGB = function(img_df, red_channel = 1, green_channel = 2, blue_cha
     mutate(red = ifelse(is.na(red), 0, red)) %>%
     mutate(green = ifelse(is.na(green), 0, green)) %>%
     mutate(blue = ifelse(is.na(blue), 0, blue))
-  rgb_df = rgb_df %>% mutate(chex = rgb(red/max(red, na.rm = TRUE), green/max(green, na.rm = TRUE), blue/max(blue, na.rm = TRUE)))
+  # an all-zero channel stays black instead of giving 0/0
+  .scale_to_max = function(v){
+    v_max = max(v, na.rm = TRUE)
+    if(is.finite(v_max) && v_max > 0) v / v_max else v * 0
+  }
+  rgb_df = rgb_df %>% mutate(chex = rgb(.scale_to_max(red), .scale_to_max(green), .scale_to_max(blue)))
   rgb_df
 }
 
-.resolve_channel_color_map = function(channel_colors, channel_names = NULL, available_channels){
+.resolve_channel_color_map = function(channel_colors, channel_table){
   if(is.null(channel_colors)){
     stop("channel_colors cannot be NULL.")
-  }
-  if(length(available_channels) == 0){
-    stop("No available channels found in image data.")
   }
   
   color_values = if(is.list(channel_colors)) channel_colors else as.list(channel_colors)
@@ -447,26 +455,11 @@ convertTidyToRGB = function(img_df, red_channel = 1, green_channel = 2, blue_cha
   has_nonempty_name = !is.null(raw_names) && any(nzchar(raw_names))
   
   if(has_nonempty_name){
-    if(is.null(channel_names)){
-      stop("Named channel_colors requires channel_names.")
-    }
-    if(anyDuplicated(channel_names)){
-      dup = unique(channel_names[duplicated(channel_names)])
-      stop("channel_names must be unique for named channel_colors. Duplicates: ",
-           paste(dup, collapse = ", "))
-    }
-    
-    entry_names = names(color_values)
-    if(any(!nzchar(entry_names))){
+    if(any(!nzchar(raw_names))){
       stop("Named channel_colors must have a non-empty name for every entry.")
     }
-    
-    missing_names = unique(setdiff(entry_names, channel_names))
-    if(length(missing_names) > 0){
-      stop("Named channel_colors entries were not found in channel_names (exact match required): ",
-           paste(missing_names, collapse = ", "))
-    }
-    channel_idx = match(entry_names, channel_names)
+    channel_idx = .resolve_channels(raw_names, channel_table, arg = "channel_colors names",
+                                    allow_duplicates = TRUE)
   }else{
     channel_idx = seq_along(color_values)
   }
@@ -483,9 +476,9 @@ convertTidyToRGB = function(img_df, red_channel = 1, green_channel = 2, blue_cha
     }
     
     ch = channel_idx[i]
-    if(!(ch %in% available_channels)){
+    if(!(ch %in% channel_table$channel)){
       stop("Mapped channel index ", ch, " is not available in this image. Available channels: ",
-           paste(sort(unique(available_channels)), collapse = ", "))
+           paste(channel_table$channel, collapse = ", "))
     }
     
     out_channels = c(out_channels, ch)
@@ -509,22 +502,9 @@ convertTidyToRGB = function(img_df, red_channel = 1, green_channel = 2, blue_cha
     }
   )
   
-  if(is.null(channel_names)){
-    out_labels = as.character(out_channels)
-  }else{
-    if(max(out_channels) > length(channel_names)){
-      stop("channel_names does not include all mapped channels. Largest mapped channel index is ",
-           max(out_channels), " but channel_names has length ", length(channel_names), ".")
-    }
-    out_labels = channel_names[out_channels]
-    if(any(is.na(out_labels) | !nzchar(out_labels))){
-      stop("Mapped channels resolved to missing/empty labels in channel_names.")
-    }
-  }
-  
   data.frame(
     channel = as.integer(out_channels),
-    channel_name = as.character(out_labels),
+    channel_name = channel_table$channel_name[match(out_channels, channel_table$channel)],
     color = as.character(out_colors),
     stringsAsFactors = FALSE
   )
@@ -653,6 +633,9 @@ fetchTiffArray = function(tiff_path, rect = NULL,
                             quantile_norm = .999,
                             channel_names = NULL,
                             selected_channels = NULL){
+  # resolve names before the read, so bad names fail fast
+  channel_table = .channel_table(tiff_path, channel_names)
+  selected_channels = .resolve_channels(selected_channels, channel_table, arg = "selected_channels")
   img_data = fetchTiffArray(
     tiff_path = tiff_path,
     rect = rect,
@@ -695,8 +678,8 @@ fetchTiffArray = function(tiff_path, rect = NULL,
   tidy_img$i = (tidy_img$i + rect$xmin*x_ratio)/x_ratio
   tidy_img$j = (tidy_img$j + rect$ymin*y_ratio)/y_ratio
   
-  precalc_max = .handle_precalc_max(precalc_max, tidy_img, resolution, channel_names, quantile_norm)
-  
+  precalc_max = .handle_precalc_max(precalc_max, tidy_img, resolution, channel_table, quantile_norm)
+
   tidy_img = merge(tidy_img, precalc_max %>% select(channel, min_value, max_value), all.x = TRUE)
   tidy_img = tidy_img %>% mutate(norm_value = (value - min_value) / (max_value - min_value))
   tidy_img = tidy_img %>% select(!c(min_value, max_value))
@@ -717,42 +700,13 @@ fetchTiffArray = function(tiff_path, rect = NULL,
   }
   message("full resolution image would have been ", round(x_pix), "x", round(y_pix), " (", pix_area,  " pixels)")
   
-  if(!is.null(channel_names)){
-    nchan = length(unique(tidy_img$channel))
-    if(length(channel_names) != nchan){
-      if(length(channel_names) < nchan){
-        stop("Not enough channel names specified, expected ", nchan, " channels.")
-      }else{
-        warning("Too many channel names specified, only found ", nchan, " channels.")
-      }
-    }
-    tidy_img$channel = channel_names[tidy_img$channel]
-    tidy_img$channel = factor(tidy_img$channel, levels = channel_names)
-  }
-  # wait to selectchannels until possibly converted to names
+  # channel stays the channel number; channel_name is the label, in plotting order
   if(!is.null(selected_channels)){
-    if(is.numeric(selected_channels)){
-      if(!is.null(channel_names)){
-        selected_channels = channel_names[selected_channels]
-      }
-    }
-    if(!(is.numeric(selected_channels) & is.numeric(tidy_img$channel))){
-      .is_char_or_fact = function(x){
-        is.character(x) | is.factor(x)
-      }
-      if(!(.is_char_or_fact(selected_channels) & .is_char_or_fact(tidy_img$channel))){
-        stop("selected channels and channel are not compatible types.")
-      }
-    }
-    if(!all(selected_channels %in% unique(tidy_img$channel))){
-      stop("Not all selected_channels are present. Offending values:\n",
-           paste(setdiff(selected_channels, unique(tidy_img$channel)), collapse = "\n")
-      )
-    }
     tidy_img = tidy_img %>% dplyr::filter(channel %in% selected_channels)
-    #selected channels also impose order
-    tidy_img$channel = factor(tidy_img$channel, levels = selected_channels)
   }
+  shown = if(is.null(selected_channels)) channel_table$channel else selected_channels
+  tidy_img$channel_name = factor(channel_table$channel_name[match(tidy_img$channel, channel_table$channel)],
+                                 levels = channel_table$channel_name[match(shown, channel_table$channel)])
   
   # return_data parameter removed; functions now return a TiffPlotData object
   if(show_raw){
@@ -762,7 +716,7 @@ fetchTiffArray = function(tiff_path, rect = NULL,
   }
   
   p = p +
-    facet_wrap(~channel) +
+    facet_wrap(~channel_name) +
     scale_y_reverse() +
     geom_raster() +
     scale_fill_viridis_c(option = "magma") #+
@@ -785,7 +739,8 @@ fetchTiffArray = function(tiff_path, rect = NULL,
       rect = rect,
       img_info = read_tiff_meta_data(tiff_path),
       unit_per_pixel = pixel_scale$unit_per_pixel,
-      unit_name = pixel_scale$unit_name)
+      unit_name = pixel_scale$unit_name,
+      channels = channel_table)
 }
 
 #' Plot a rectangular region of a TIFF image as RGB
@@ -798,12 +753,15 @@ fetchTiffArray = function(tiff_path, rect = NULL,
 #' @param resolution Resolution level to read from the TIFF file. If NULL, automatically selects resolution
 #' @param max_pixels Maximum dimension in pixels for the plotted image
 #' @param precalc_max Optional data frame with precalculated min/max values per channel for normalization
-#' @param red_channel Channel number to use for red component (default 6)
-#' @param green_channel Channel number to use for green component (default 1)
-#' @param blue_channel Channel number to use for blue component (default 5)
+#' @param red_channel Channel (number or name) for the red component (default 2)
+#' @param green_channel Channel (number or name) for the green component (default 3)
+#' @param blue_channel Channel (number or name) for the blue component (default 1)
+#' @param channel_names Channel names, as in \code{fetchTiffData()}: NULL,
+#'   \code{"ome"}, or a character vector naming every channel.
 #' @param value_var Variable to use for RGB values, either "norm_value" or "value" (default "norm_value")
+#' @param quantile_norm Quantile for normalization (default 0.999)
 #'
-#' @returns A TiffPlotData object containing the RGB data and a named ggplot object. The object includes metadata slots `tiff_path`, `resolution`, `precalc_max`, `rect`, and `img_info`.
+#' @returns A TiffPlotData object containing the RGB data and a named ggplot object. The object includes metadata slots `tiff_path`, `resolution`, `precalc_max`, `rect`, `img_info` and `channels`.
 #' @export
 #' @import ggplot2
 #'
@@ -811,10 +769,11 @@ fetchTiffArray = function(tiff_path, rect = NULL,
 #' tiff_path = exampleTiff()
 #' fetchTiffData.rgb(tiff_path, rect = TiffRect(900,2300,1400,2800), red_channel=2, green_channel=3, blue_channel=1)
 #'
-#' channel_names = c("DAPI", "probe1", "probe2", "probe3", "probe4")
+#' channel_names = c("DAPI", "probe1", "probe2", "probe3", "probe4", "autofluor")
 #' fetchTiffData.rgb(tiff_path, rect = TiffRect(900,2300,1400,2800), red_channel=2, green_channel=3, blue_channel=1, channel_names = channel_names)
 #'
-#' fetchTiffData.rgb(tiff_path, rect = TiffRect(900,2300,1400,2800), red_channel=5, green_channel=4, blue_channel=1, channel_names = channel_names)
+#' fetchTiffData.rgb(tiff_path, rect = TiffRect(900,2300,1400,2800),
+#'   red_channel = "Opal 690", green_channel = "Opal 520", blue_channel = "DAPI", channel_names = "ome")
 fetchTiffData.rgb = function(tiff_path,
                              rect = NULL,
                              resolution = NULL,
@@ -854,8 +813,10 @@ fetchTiffData.rgb = function(tiff_path,
 #' @param resolution Resolution level to read from the TIFF file. If NULL, automatically selects resolution
 #' @param max_pixels Maximum dimension in pixels for the plotted image
 #' @param channel_colors Channel-to-color mapping. Use an unnamed positional list/vector (index = channel number),
-#'   where NULL/NA entries are ignored, or a named list/vector with names that exactly match `channel_names`.
-#' @param channel_names Optional character vector of channel names. Required for named `channel_colors` mapping.
+#'   where NULL/NA entries are ignored, or a named list/vector whose names are channel names: those from
+#'   `channel_names`, or the OME names (see \code{read_tiff_channels()}).
+#' @param channel_names Channel names, as in \code{fetchTiffData()}: NULL,
+#'   \code{"ome"}, or a character vector naming every channel.
 #' @param value_var Variable to use for channel intensities, either "norm_value" or "value" (default "norm_value")
 #' @param precalc_max Optional data frame with precalculated min/max values per channel for normalization
 #' @param quantile_norm Quantile for normalization (default 0.999)
@@ -876,6 +837,10 @@ fetchTiffData.rgb = function(tiff_path,
 #'   channel_colors = list("A" = "blue", E = "purple", F = "cyan"),
 #'   rect = TiffRect(2500, 3000, 2500, 3000),
 #'   channel_names = LETTERS[1:6]
+#' )
+#' fetchTiffData.colorized(tf,
+#'   channel_colors = list(DAPI = "blue", "Opal 570" = "yellow"),
+#'   rect = TiffRect(2500, 3000, 2500, 3000)
 #' )
 fetchTiffData.colorized = function(tiff_path,
                                    rect = NULL,
@@ -1001,25 +966,19 @@ apply_coord_cartesian = function(img_data){
     resolution = resolution,
     max_pixels = max_pixels,
     precalc_max = precalc_max,
-    quantile_norm = quantile_norm
+    quantile_norm = quantile_norm,
+    channel_names = channel_names
   )
+  channel_table = img_obj@channels
+  rgb_channels = vapply(list(red_channel, green_channel, blue_channel), .resolve_channels, numeric(1),
+                        channel_table = channel_table, arg = "red/green/blue_channel")
   img_df = img_obj@data
-  rgb_df = convertTidyToRGB(img_df, red_channel = red_channel, green_channel = green_channel, blue_channel = blue_channel, value_var = value_var)
+  rgb_df = convertTidyToRGB(img_df, red_channel = rgb_channels[1], green_channel = rgb_channels[2], blue_channel = rgb_channels[3], value_var = value_var)
   
-  leg_df = data.frame(channel = c(red_channel, green_channel, blue_channel))
-  leg_df$dummy = as.character(leg_df$channel)
-  leg_df$dummy = factor(leg_df$dummy)
+  leg_df = data.frame(channel = rgb_channels)
   leg_df$colors = c("red", "green", "blue")
   leg_cols = leg_df$colors
-  
-  # leg_df$channel = factor(leg_df$channel, levels = leg_df$channel)
-  
-  if(is.null(channel_names)){
-    leg_df$channel_name = as.character(leg_df$dummy)
-    
-  }else{
-    leg_df$channel_name = channel_names[leg_df$channel]
-  }
+  leg_df$channel_name = channel_table$channel_name[match(leg_df$channel, channel_table$channel)]
   names(leg_cols) = leg_df$channel_name
   suppressWarnings({
     p_rgb = ggplot() +
@@ -1035,19 +994,13 @@ apply_coord_cartesian = function(img_data){
       labs(x= "pixel", y = "pixel")
   })
   p_rgb = .apply_coord_rect(p_rgb, rect, ggplot2::coord_fixed)
-  plots_list <- list(rgb = p_rgb)
-  # data_df <- as.data.frame(rgb_df)
-  new("TiffPlotData",
-      data = img_obj@data,
-      plots = plots_list,
-      activePlot = names(plots_list)[1],
-      tiff_path = tiff_path,
-      resolution = img_obj@resolution,
-      precalc_max = img_obj@precalc_max,
-      rect = img_obj@rect,
-      img_info = img_obj@img_info,
-      unit_per_pixel = img_obj@unit_per_pixel,
-      unit_name = img_obj@unit_name)
+  # lets renormalize() rebuild the composite
+  p_rgb$meta$tiffplotr_composite = list(type = "rgb",
+                                        channels = rgb_channels,
+                                        value_var = value_var)
+  img_obj@plots = list(rgb = p_rgb)
+  img_obj@activePlot = "rgb"
+  img_obj
 }
 
 .fetch_tiff_data.colorized = function(
@@ -1067,15 +1020,14 @@ apply_coord_cartesian = function(img_data){
     resolution = resolution,
     max_pixels = max_pixels,
     precalc_max = precalc_max,
-    quantile_norm = quantile_norm
+    quantile_norm = quantile_norm,
+    channel_names = channel_names
   )
   
   img_df = img_obj@data
-  available_channels = sort(unique(img_df$channel))
   channel_map = .resolve_channel_color_map(
     channel_colors = channel_colors,
-    channel_names = channel_names,
-    available_channels = available_channels
+    channel_table = img_obj@channels
   )
   
   rgb_df = .convert_tidy_to_colorized(
@@ -1103,19 +1055,13 @@ apply_coord_cartesian = function(img_data){
   })
   
   p_rgb = .apply_coord_rect(p_rgb, rect, ggplot2::coord_fixed)
-  plots_list <- list(colorized = p_rgb)
-  
-  new("TiffPlotData",
-      data = img_obj@data,
-      plots = plots_list,
-      activePlot = names(plots_list)[1],
-      tiff_path = tiff_path,
-      resolution = img_obj@resolution,
-      precalc_max = img_obj@precalc_max,
-      rect = img_obj@rect,
-      img_info = img_obj@img_info,
-      unit_per_pixel = img_obj@unit_per_pixel,
-      unit_name = img_obj@unit_name)
+  # lets renormalize() rebuild the composite
+  p_rgb$meta$tiffplotr_composite = list(type = "colorized",
+                                        channel_map = channel_map,
+                                        value_var = value_var)
+  img_obj@plots = list(colorized = p_rgb)
+  img_obj@activePlot = "colorized"
+  img_obj
 }
 
 #' Read TIFF image metadata

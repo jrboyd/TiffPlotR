@@ -21,7 +21,8 @@ TiffPlotData(
   rect = TiffRect(0, 1, 0, 1),
   img_info = data.frame(),
   unit_per_pixel = NA_real_,
-  unit_name = NA_character_
+  unit_name = NA_character_,
+  channels = NULL
 )
 }
 \arguments{
@@ -50,6 +51,11 @@ zero-sized rectangle)}
 
 \item{unit_name}{Character scalar physical unit name from OME metadata
 (default \code{NA_character_}).}
+
+\item{channels}{Data frame describing the channels; see the
+\code{channels} slot. If NULL (the default), it is built from the channel
+numbers in \code{data$channel}, each named by its number (empty if
+\code{data} has no numeric \code{channel} column).}
 }
 \value{
 A \linkS4class{TiffPlotData} object

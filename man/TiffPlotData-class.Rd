@@ -31,6 +31,11 @@ or NA when unavailable.}
 
 \item{\code{unit_name}}{Character scalar naming the physical unit for \code{unit_per_pixel}
 (for example \code{"um"}), or NA when unavailable.}
+
+\item{\code{channels}}{A data.frame describing every channel in the image, one row
+per channel: \code{channel} (number), \code{channel_name} (the label used
+in \code{@data} and plots), \code{ome_name} and \code{color} (from the
+OME-XML, may be NA). Empty for objects not made from a TIFF.}
 }}
 
 \examples{
