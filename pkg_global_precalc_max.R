@@ -24,8 +24,14 @@ lapply(tiff_meta.l, function(x){
     as.numeric(x$sizeX)*as.numeric(x$sizeY)/1e6
 })
 
+names(all_tiff) = basename(all_tiff)
+
+tf = all_tiff[1]
+td = fetchTiffData(tf)
+td@channels
+td@data
+
 if(TRUE){
-    names(all_tiff) = basename(all_tiff)
     all_gquant = lapply(all_tiff, gather_channel_quantiles, workers = 1)
     # saveRDS(all_gquant, "all_gquant.reem_geomx.Rds")
 }
