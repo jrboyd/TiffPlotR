@@ -26,8 +26,25 @@ lapply(tiff_meta.l, function(x){
 
 names(all_tiff) = basename(all_tiff)
 
-tf = all_tiff[1]
+tf = all_tiff[2]
 td = fetchTiffData(tf)
+td
+
+td = fetchTiffData(tf, scale_colors = c("black", "white"))
+td
+
+
+chan_df = TiffPlotR::read_tiff_channels(tf)
+chan_names = split(chan_df$Fluor, chan_df$channel)
+chan_colors = split(chan_df$color, chan_df$channel)
+fetchTiffData.colorized(tf, channel_colors = chan_colors)
+
+fetchTiffData.rgb(tf, channel_names = chan_names)
+
+
+fetchTiffDataMasked(tf)
+
+
 td@channels
 td@data
 
