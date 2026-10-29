@@ -32,6 +32,10 @@ Use `devtools::test()` for the whole suite. Shape-class tests are small and fine
     and they draw grey, keyless legends.
   - `add_points()` handles this by rebuilding `p$guides` first.
   - Don't "fix" it with `ggproto(NULL, p$guides)`: that overflows the S7 stack.
+- **`set_axes_um()` / `set_axes_pixel()` only relabel.** Data stay in pixel coordinates (breaks
+  are chosen at round µm values and mapped back), so shapes, scale bars and coord limits keep
+  working. They replace both position scales, keeping a `reverse` transform. Any other custom
+  x/y scale settings (expand, limits) on the plot are dropped.
 - **Label masks** (`label_polygons()`):
   - RBioFormats `subset` indices are 1-based, while `ocontour()` returns 0-based coordinates.
     The crop offset is therefore `min(xs) - 1`.
