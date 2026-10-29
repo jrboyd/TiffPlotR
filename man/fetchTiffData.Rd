@@ -28,7 +28,8 @@ automatically to keep dimensions under \code{max_pixels}.}
 \item{max_pixels}{Maximum pixel dimension used when \code{resolution = NULL}.}
 
 \item{precalc_max}{Optional data frame with \code{channel},
-\code{min_value}, and \code{max_value} for normalization.}
+\code{min_value}, and \code{max_value} for normalization. \code{channel}
+may hold channel numbers or names.}
 
 \item{show_raw}{If TRUE, plot raw values. If FALSE (default), plot
 normalized values.}
@@ -36,14 +37,21 @@ normalized values.}
 \item{quantile_norm}{Quantile used to estimate per-channel max values when
 \code{precalc_max} is NULL.}
 
-\item{channel_names}{Optional character vector used to rename channels.}
+\item{channel_names}{Names for the channels: NULL (the default) labels them
+by number, \code{"ome"} uses the names in the TIFF's OME-XML (see
+\code{read_tiff_channels()}), and a character vector names every channel
+in order. Names must be unique.}
 
 \item{selected_channels}{Optional subset of channels to keep, as channel
-indices or names.}
+numbers or names. Also sets the plotting order. Names match
+\code{channel_names} first, then the OME names.}
 }
 \value{
-A \linkS4class{TiffPlotData} object with image data in
-  \code{@data} and a faceted plot in \code{@plots}.
+A \linkS4class{TiffPlotData} object. \code{@data} has one row per
+  pixel and channel, with \code{channel} (always the channel number) and
+  \code{channel_name} (a factor in plotting order), plus \code{value} and
+  \code{norm_value}. \code{@channels} lists every channel in the image with
+  its name, OME name and OME color. The faceted plot is in \code{@plots}.
 }
 \description{
 Reads a rectangular subset of a multi-resolution TIFF and returns a
@@ -61,4 +69,7 @@ fetchTiffData(
   channel_names = c("DAPI", paste("channel", LETTERS[1:5])),
   selected_channels = c("channel B", "channel E", "DAPI")
 )
+
+fetchTiffData(tiff_path, view_rect, channel_names = "ome",
+              selected_channels = c("DAPI", "Opal 570"))
 }

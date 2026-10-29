@@ -27,18 +27,23 @@ fetchTiffData.rgb(
 
 \item{max_pixels}{Maximum dimension in pixels for the plotted image}
 
-\item{red_channel}{Channel number to use for red component (default 6)}
+\item{red_channel}{Channel (number or name) for the red component (default 2)}
 
-\item{green_channel}{Channel number to use for green component (default 1)}
+\item{green_channel}{Channel (number or name) for the green component (default 3)}
 
-\item{blue_channel}{Channel number to use for blue component (default 5)}
+\item{blue_channel}{Channel (number or name) for the blue component (default 1)}
+
+\item{channel_names}{Channel names, as in \code{fetchTiffData()}: NULL,
+\code{"ome"}, or a character vector naming every channel.}
 
 \item{value_var}{Variable to use for RGB values, either "norm_value" or "value" (default "norm_value")}
 
 \item{precalc_max}{Optional data frame with precalculated min/max values per channel for normalization}
+
+\item{quantile_norm}{Quantile for normalization (default 0.999)}
 }
 \value{
-A TiffPlotData object containing the RGB data and a named ggplot object. The object includes metadata slots `tiff_path`, `resolution`, `precalc_max`, `rect`, and `img_info`.
+A TiffPlotData object containing the RGB data and a named ggplot object. The object includes metadata slots `tiff_path`, `resolution`, `precalc_max`, `rect`, `img_info` and `channels`.
 }
 \description{
 Creates an RGB composite visualization from a rectangular region of a TIFF image.
@@ -48,8 +53,9 @@ Combines three specified channels into red, green, and blue components.
 tiff_path = exampleTiff()
 fetchTiffData.rgb(tiff_path, rect = TiffRect(900,2300,1400,2800), red_channel=2, green_channel=3, blue_channel=1)
 
-channel_names = c("DAPI", "probe1", "probe2", "probe3", "probe4")
+channel_names = c("DAPI", "probe1", "probe2", "probe3", "probe4", "autofluor")
 fetchTiffData.rgb(tiff_path, rect = TiffRect(900,2300,1400,2800), red_channel=2, green_channel=3, blue_channel=1, channel_names = channel_names)
 
-fetchTiffData.rgb(tiff_path, rect = TiffRect(900,2300,1400,2800), red_channel=5, green_channel=4, blue_channel=1, channel_names = channel_names)
+fetchTiffData.rgb(tiff_path, rect = TiffRect(900,2300,1400,2800),
+  red_channel = "Opal 690", green_channel = "Opal 520", blue_channel = "DAPI", channel_names = "ome")
 }

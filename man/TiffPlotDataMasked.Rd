@@ -15,6 +15,7 @@ TiffPlotDataMasked(
   img_info = data.frame(),
   unit_per_pixel = NA_real_,
   unit_name = NA_character_,
+  channels = NULL,
   mask_points = data.frame(),
   mask_color_mappings = data.frame()
 )
@@ -39,6 +40,9 @@ TiffPlotDataMasked(
 \item{unit_per_pixel}{Numeric scalar physical scale from OME metadata.}
 
 \item{unit_name}{Character scalar physical unit name from OME metadata.}
+
+\item{channels}{Data frame describing the channels (see \linkS4class{TiffPlotData}).
+If NULL (the default), built from the channel numbers in \code{data$channel}.}
 
 \item{mask_points}{Decoded mask points and metadata.}
 

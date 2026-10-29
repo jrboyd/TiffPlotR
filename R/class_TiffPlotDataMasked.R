@@ -37,6 +37,8 @@ setClass(
 #' @param img_info TIFF metadata data.frame.
 #' @param unit_per_pixel Numeric scalar physical scale from OME metadata.
 #' @param unit_name Character scalar physical unit name from OME metadata.
+#' @param channels Data frame describing the channels (see \linkS4class{TiffPlotData}).
+#'   If NULL (the default), built from the channel numbers in \code{data$channel}.
 #' @param mask_points Decoded mask points and metadata.
 #' @param mask_color_mappings Mask ID/text to color mapping table.
 #' @return A \linkS4class{TiffPlotDataMasked} object.
@@ -51,10 +53,14 @@ TiffPlotDataMasked <- function(data,
                                img_info = data.frame(),
                                unit_per_pixel = NA_real_,
                                unit_name = NA_character_,
+                               channels = NULL,
                                mask_points = data.frame(),
                                mask_color_mappings = data.frame()) {
   if (is.null(activePlot)) {
     activePlot <- names(plots)[1]
+  }
+  if (is.null(channels)) {
+    channels <- .default_channel_table(data)
   }
 
   new(
@@ -69,6 +75,7 @@ TiffPlotDataMasked <- function(data,
     img_info = img_info,
     unit_per_pixel = unit_per_pixel,
     unit_name = unit_name,
+    channels = channels,
     mask_points = mask_points,
     mask_color_mappings = mask_color_mappings
   )

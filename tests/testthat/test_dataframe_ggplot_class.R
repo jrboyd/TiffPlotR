@@ -274,3 +274,22 @@ test_that("plot_tiff_image returns img_info slot", {
     expect_true(nrow(obj@img_info) > 0)
 })
 
+
+test_that("objects record the TiffPlotR version that made them", {
+    v <- as.character(packageVersion("TiffPlotR"))
+    obj <- TiffPlotData(data.frame(x = 1), plots = list(p = ggplot()))
+    expect_equal(obj@package_version, v)
+    expect_equal(obj$package_version, v)
+    expect_true("package_version" %in% names(obj))
+    expect_equal(new("TiffPlotData")@package_version, v)
+    expect_equal(TiffPlotDataMasked(data.frame(x = 1), plots = list(p = ggplot()))@package_version, v)
+    # an explicit version is kept, e.g. when copying an object
+    obj2 <- new("TiffPlotData", data = data.frame(x = 1), plots = list(p = ggplot()), activePlot = "p",
+                tiff_path = NA_character_, resolution = NA_real_, precalc_max = data.frame(),
+                rect = TiffRect(0, 1, 0, 1), img_info = data.frame(), package_version = "0.0.1")
+    expect_equal(obj2@package_version, "0.0.1")
+    # $<- sets the slot rather than adding a data column
+    obj$package_version <- "9.9.9"
+    expect_equal(obj@package_version, "9.9.9")
+    expect_false("package_version" %in% names(obj@data))
+})
