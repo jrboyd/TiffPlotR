@@ -88,7 +88,7 @@ Use `devtools::test()` for the whole suite. Shape-class tests are small and fine
   - `.resolve_channels()` matches `channel_name` first, then the OME name if no other channel
     shares it. So `"DAPI"` resolves even when `channel_names` was NULL.
   - `precalc_max` is always stored keyed by channel number.
-  - **The default naming changed after 0.1.20.** It is now `"auto"`: each channel's OME name
+  - **The default naming changed in 0.1.21.** It is now `"auto"`: each channel's OME name
     where it is unique and non-empty, else `"channel N"`. If that leaves a clash, every channel
     becomes `"channel N"` (see `.auto_channel_names()`).
     - `"number"` gives the old `"1"`, `"2"` labels. Set `options(TPR_CHANNEL_NAMES = "number")`

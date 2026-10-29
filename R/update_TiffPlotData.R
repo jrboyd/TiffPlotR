@@ -75,7 +75,7 @@ update_TiffPlotData = function(img_data, channel_names = NULL){
 }
 
 # So far every format change added a slot: @channels and @package_version
-# (0.1.20), @plot_parameters (after 0.1.20). A change that keeps the slots should
+# (0.1.20), @plot_parameters (0.1.21). A change that keeps the slots should
 # compare @package_version against the version that introduced it.
 .needs_update = function(img_data){
   !all(vapply(methods::slotNames("TiffPlotData"), methods::.hasSlot, logical(1), object = img_data))
