@@ -40,6 +40,10 @@ OME-XML, may be NA). Empty for objects not made from a TIFF.}
 \item{\code{package_version}}{Character scalar: the version of TiffPlotR that
 created the object, set automatically. Objects saved before 0.1.20 do not
 have this slot (check with \code{methods::.hasSlot()}).}
+
+\item{\code{plot_parameters}}{A named list of optional plotting parameters, kept so
+plots can be rebuilt the same way later. \code{scale_colors} holds the
+fill gradient colours of single-channel plots.}
 }}
 
 \examples{

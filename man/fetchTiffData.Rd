@@ -13,7 +13,8 @@ fetchTiffData(
   show_raw = FALSE,
   quantile_norm = 0.999,
   channel_names = NULL,
-  selected_channels = NULL
+  selected_channels = NULL,
+  scale_colors = .default_scale_colors()
 )
 }
 \arguments{
@@ -45,6 +46,10 @@ in order. Names must be unique.}
 \item{selected_channels}{Optional subset of channels to keep, as channel
 numbers or names. Also sets the plotting order. Names match
 \code{channel_names} first, then the OME names.}
+
+\item{scale_colors}{Colours of the fill gradient, low to high, passed to
+\code{scale_fill_gradientn()}. Defaults to the magma palette used by
+earlier versions. Stored in \code{@plot_parameters$scale_colors}.}
 }
 \value{
 A \linkS4class{TiffPlotData} object. \code{@data} has one row per

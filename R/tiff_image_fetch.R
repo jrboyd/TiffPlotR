@@ -86,6 +86,9 @@
 #' @param selected_channels Optional subset of channels to keep, as channel
 #'   numbers or names. Also sets the plotting order. Names match
 #'   \code{channel_names} first, then the OME names.
+#' @param scale_colors Colours of the fill gradient, low to high, passed to
+#'   \code{scale_fill_gradientn()}. Defaults to the magma palette used by
+#'   earlier versions. Stored in \code{@plot_parameters$scale_colors}.
 #'
 #' @returns A \linkS4class{TiffPlotData} object. \code{@data} has one row per
 #'   pixel and channel, with \code{channel} (always the channel number) and
@@ -108,7 +111,7 @@
 #'
 #' fetchTiffData(tiff_path, view_rect, channel_names = "ome",
 #'               selected_channels = c("DAPI", "Opal 570"))
-fetchTiffData = function(tiff_path, rect = NULL, resolution = NULL, max_pixels = 800, precalc_max = NULL, show_raw = FALSE, quantile_norm = .999, channel_names = NULL, selected_channels = NULL){
+fetchTiffData = function(tiff_path, rect = NULL, resolution = NULL, max_pixels = 800, precalc_max = NULL, show_raw = FALSE, quantile_norm = .999, channel_names = NULL, selected_channels = NULL, scale_colors = .default_scale_colors()){
   rect = .rect_null_check(rect, tiff_path)
   .fetch_tiff_data(tiff_path,
                    rect,
@@ -118,7 +121,8 @@ fetchTiffData = function(tiff_path, rect = NULL, resolution = NULL, max_pixels =
                    show_raw = show_raw,
                    quantile_norm = quantile_norm,
                    channel_names = channel_names,
-                   selected_channels = selected_channels
+                   selected_channels = selected_channels,
+                   scale_colors = scale_colors
   )
 }
 
@@ -219,6 +223,9 @@ to_rgba_hex = function(int_cols){
 #' @param selected_channels Optional subset of channels to keep, as channel numbers
 #'   or names.
 #' @param bit_order Bit order to use when decoding OME mask payloads.
+#' @param scale_colors Colours of the fill gradient, low to high, passed to
+#'   \code{scale_fill_gradientn()}. Defaults to the magma palette used by
+#'   earlier versions. Stored in \code{@plot_parameters$scale_colors}.
 #'
 #' @returns A \linkS4class{TiffPlotDataMasked} object with:
 #' \itemize{
@@ -246,7 +253,8 @@ fetchTiffDataMasked <- function(tiff_path,
                                 mask_points = NULL,
                                 retain_unmasked = FALSE,
                                 segment_var = "Text",
-                                bit_order = c("msb", "lsb")) {
+                                bit_order = c("msb", "lsb"),
+                                scale_colors = .default_scale_colors()) {
   bit_order <- match.arg(bit_order)
   rect <- .rect_null_check(rect, tiff_path)
   
@@ -259,7 +267,8 @@ fetchTiffDataMasked <- function(tiff_path,
     show_raw = show_raw,
     quantile_norm = quantile_norm,
     channel_names = channel_names,
-    selected_channels = selected_channels
+    selected_channels = selected_channels,
+    scale_colors = scale_colors
   )
   
   if(is.null(mask_points)){
@@ -340,8 +349,7 @@ fetchTiffDataMasked <- function(tiff_path,
   p <- ggplot(masked_df, aes(x = i, y = j, fill = !!ensym(fill_var))) +
     facet_grid(channel_name~Text) +
     scale_y_reverse() +
-    geom_raster() +
-    scale_fill_viridis_c(option = "magma") +
+    .fill_gradient_layers(base_obj@plot_parameters$scale_colors) +
     # theme(panel.background = element_rect(fill = "gray100"), panel.grid = element_blank()) +
     labs(x = "pixels") +
     labs(y = "pixels")
@@ -360,6 +368,7 @@ fetchTiffDataMasked <- function(tiff_path,
     precalc_max = base_obj@precalc_max,
     rect = rect,
     img_info = base_obj@img_info,
+    plot_parameters = base_obj@plot_parameters,
     mask_points = mask_points,
     mask_color_mappings = mask_color_mappings
   )
@@ -618,6 +627,7 @@ fetchTiffArray = function(tiff_path, rect = NULL,
 #' @param precalc_max Optional data frame with precalculated min/max values per channel for normalization
 #' @param show_raw If TRUE, displays raw pixel values; if FALSE (default), displays normalized values
 #' @param quantile_norm Quantile for normalization (default 0.999). Values are divided by this quantile
+#' @param scale_colors Colours of the fill gradient, low to high (see \code{fetchTiffData()}).
 #'
 #' @returns A TiffPlotData object containing the sparse image data and a named list of ggplot objects. It also records `tiff_path`, `resolution`, `precalc_max` and `rect` slots.
 #' @importFrom dplyr group_by mutate select summarise
@@ -632,7 +642,9 @@ fetchTiffArray = function(tiff_path, rect = NULL,
                             show_raw = FALSE,
                             quantile_norm = .999,
                             channel_names = NULL,
-                            selected_channels = NULL){
+                            selected_channels = NULL,
+                            scale_colors = .default_scale_colors()){
+  scale_colors = .check_scale_colors(scale_colors)
   # resolve names before the read, so bad names fail fast
   channel_table = .channel_table(tiff_path, channel_names)
   selected_channels = .resolve_channels(selected_channels, channel_table, arg = "selected_channels")
@@ -718,8 +730,7 @@ fetchTiffArray = function(tiff_path, rect = NULL,
   p = p +
     facet_wrap(~channel_name) +
     scale_y_reverse() +
-    geom_raster() +
-    scale_fill_viridis_c(option = "magma") #+
+    .fill_gradient_layers(scale_colors) #+
   # theme(panel.background = element_rect(fill = "gray20"), panel.grid = element_blank())
   
   p = .apply_coord_rect(p, rect, ggplot2::coord_fixed)
@@ -740,7 +751,8 @@ fetchTiffArray = function(tiff_path, rect = NULL,
       img_info = read_tiff_meta_data(tiff_path),
       unit_per_pixel = pixel_scale$unit_per_pixel,
       unit_name = pixel_scale$unit_name,
-      channels = channel_table)
+      channels = channel_table,
+      plot_parameters = list(scale_colors = scale_colors))
 }
 
 #' Plot a rectangular region of a TIFF image as RGB
@@ -872,11 +884,12 @@ fetchTiffData.colorized = function(tiff_path,
 }
 
 .apply_coord_FUN = function(img_data, coord_FUN){
+  img_data = .check_TiffPlotData_version(img_data)
   r = img_data@rect
   img_data@plots = lapply(img_data@plots, function(p){
     .apply_coord_rect(p, r, coord_FUN)
   })
-  
+  img_data
 }
 
 #' Apply \code{coord_fixed()} to stored plots
@@ -982,7 +995,7 @@ apply_coord_cartesian = function(img_data){
   names(leg_cols) = leg_df$channel_name
   suppressWarnings({
     p_rgb = ggplot() +
-      geom_raster(data = rgb_df, aes(x = i, y = j, fill = chex)) +
+      .fill_identity_layers(rgb_df) +
       geom_point(data = leg_df, aes(color = channel_name), x = NA, y = NA, alpha = 0, na.rm = TRUE) +
       scale_color_manual(values = leg_cols, name = NULL) +
       guides(color = guide_legend(override.aes = list(size = 12, shape = 16, alpha = 1),
@@ -990,7 +1003,6 @@ apply_coord_cartesian = function(img_data){
       scale_y_reverse() +
       theme(panel.spacing = unit(0, "npc")) + #, panel.background = element_blank(), axis.text = element_text(size = 6)) +
       # theme(legend.position = "bottom") +
-      scale_fill_identity() +
       labs(x= "pixel", y = "pixel")
   })
   p_rgb = .apply_coord_rect(p_rgb, rect, ggplot2::coord_fixed)
@@ -1043,14 +1055,13 @@ apply_coord_cartesian = function(img_data){
   
   suppressWarnings({
     p_rgb = ggplot() +
-      geom_raster(data = rgb_df, aes(x = i, y = j, fill = chex)) +
+      .fill_identity_layers(rgb_df) +
       geom_point(data = leg_df, aes(color = channel_name), x = NA, y = NA, alpha = 0, na.rm = TRUE) +
       scale_color_manual(values = leg_cols, name = NULL) +
       guides(color = guide_legend(override.aes = list(size = 12, shape = 16, alpha = 1),
                                   theme = theme(legend.background = element_blank(), legend.key = element_blank()))) +
       scale_y_reverse() +
       theme(panel.spacing = unit(0, "npc")) +
-      scale_fill_identity() +
       labs(x= "pixel", y = "pixel")
   })
   

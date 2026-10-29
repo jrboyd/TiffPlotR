@@ -76,12 +76,13 @@ add_um_scale_bar <- function(p,
     }
 
     if (is(p, "TiffPlotData")) {
+        p <- .check_TiffPlotData_version(p)
         active_name <- p@activePlot
         if (!active_name %in% names(p@plots)) {
             stop("activePlot is not present in plots")
         }
 
-        xlim <- c(min(p@rect@coords$xmin), max(p@rect@coords$xmax))
+        xlim <-c(min(p@rect@coords$xmin), max(p@rect@coords$xmax))
         ylim <- c(min(p@rect@coords$ymin), max(p@rect@coords$ymax))
 
         # if (is.null(unit_per_pixel)) {
@@ -300,4 +301,117 @@ add_um_scale_bar <- function(p,
     }
 
     list(x = x, y = y)
+}
+
+#' Label plot axes in microns
+#'
+#' Relabels the x and y axes of a ggplot, or of the active plot inside a
+#' \linkS4class{TiffPlotData} object, in physical units instead of pixels.
+#' Only breaks, labels and axis titles change: the plot data stay in pixel
+#' coordinates, so shapes, scale bars and coordinate limits added before or
+#' after still line up. Breaks are placed at round micron values. An existing
+#' reversed axis (the default y axis of TiffPlotR plots) stays reversed.
+#' Use \code{\link{set_axes_pixel}} to go back to pixel labels.
+#'
+#' @param p A ggplot object or a \linkS4class{TiffPlotData} object.
+#' @param unit_per_pixel Microns per pixel (numeric scalar, must be > 0). If
+#'   NULL and \code{p} is \code{TiffPlotData}, \code{p@unit_per_pixel} is used.
+#' @param unit_name Unit shown in the axis titles. If NULL, uses
+#'   \code{p@unit_name} for \code{TiffPlotData} and \code{"um"} otherwise.
+#' @param n Desired number of breaks per axis, passed to \code{pretty()}.
+#'
+#' @return A ggplot object, or a \linkS4class{TiffPlotData} object if
+#'   \code{p} is \code{TiffPlotData}.
+#' @seealso \code{\link{set_axes_pixel}}, \code{\link{add_um_scale_bar}}
+#' @export
+#'
+#' @examples
+#' tiff_path = exampleTiff()
+#' imgd = fetchTiffData(tiff_path, selected_channels = c(1, 5))
+#' imgd = set_axes_um(imgd)
+#' imgd
+#' imgd = set_axes_pixel(imgd)
+#' imgd
+set_axes_um <- function(p, unit_per_pixel = NULL, unit_name = NULL, n = 5) {
+    if (is(p, "TiffPlotData")) {
+        p <- .check_TiffPlotData_version(p)
+        if (is.null(unit_per_pixel)) unit_per_pixel <- p@unit_per_pixel
+        if (is.null(unit_name)) unit_name <- p@unit_name
+        return(.set_axes_active_plot(p, set_axes_um,
+                                     unit_per_pixel = unit_per_pixel,
+                                     unit_name = unit_name,
+                                     n = n))
+    }
+
+    if (!inherits(p, "ggplot")) {
+        stop("p must be a ggplot or TiffPlotData object")
+    }
+    if (!is.numeric(unit_per_pixel) || length(unit_per_pixel) != 1L || !is.finite(unit_per_pixel) || unit_per_pixel <= 0) {
+        stop("unit_per_pixel must be provided as a single positive numeric value")
+    }
+    if (is.null(unit_name) || is.na(unit_name) || !nzchar(unit_name)) {
+        unit_name <- "um"
+    }
+
+    # Breaks are computed in physical units, then mapped back to pixels.
+    um_breaks <- function(limits) {
+        pretty(sort(limits) * unit_per_pixel, n = n) / unit_per_pixel
+    }
+    um_labels <- function(breaks) {
+        out <- format(round(breaks * unit_per_pixel, 6), trim = TRUE,
+                      scientific = FALSE, drop0trailing = TRUE)
+        out[is.na(breaks)] <- NA_character_
+        out
+    }
+
+    .set_axes_scales(p, name = unit_name, breaks = um_breaks, labels = um_labels)
+}
+
+#' Label plot axes in pixels
+#'
+#' Reverts axes relabelled by \code{\link{set_axes_um}} to default pixel
+#' breaks and labels. An existing reversed axis stays reversed.
+#'
+#' @param p A ggplot object or a \linkS4class{TiffPlotData} object.
+#' @param name Axis title for both axes.
+#'
+#' @return A ggplot object, or a \linkS4class{TiffPlotData} object if
+#'   \code{p} is \code{TiffPlotData}.
+#' @seealso \code{\link{set_axes_um}}
+#' @export
+set_axes_pixel <- function(p, name = "pixel") {
+    if (is(p, "TiffPlotData")) {
+        p <- .check_TiffPlotData_version(p)
+        return(.set_axes_active_plot(p, set_axes_pixel, name = name))
+    }
+
+    if (!inherits(p, "ggplot")) {
+        stop("p must be a ggplot or TiffPlotData object")
+    }
+
+    .set_axes_scales(p, name = name,
+                     breaks = ggplot2::waiver(), labels = ggplot2::waiver())
+}
+
+.set_axes_active_plot <- function(p, FUN, ...) {
+    active_name <- p@activePlot
+    if (!active_name %in% names(p@plots)) {
+        stop("activePlot is not present in plots")
+    }
+    p@plots[[active_name]] <- FUN(p@plots[[active_name]], ...)
+    validObject(p)
+    p
+}
+
+# Replace both position scales, keeping any existing reversal.
+.set_axes_scales <- function(p, name, breaks, labels) {
+    x_trans <- if (.scale_bar_axis_reversed(p, "x")) "reverse" else "identity"
+    y_trans <- if (.scale_bar_axis_reversed(p, "y")) "reverse" else "identity"
+
+    # Silence "Scale for x is already present", which is the point here.
+    suppressMessages(
+        p +
+            ggplot2::scale_x_continuous(name = name, breaks = breaks, labels = labels, transform = x_trans) +
+            ggplot2::scale_y_continuous(name = name, breaks = breaks, labels = labels, transform = y_trans)
+    )
 }

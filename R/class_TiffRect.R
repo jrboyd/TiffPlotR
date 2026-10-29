@@ -645,6 +645,7 @@ setMethod("shape_annotate", signature(p = "ANY", shape = "TiffRect"),
 #' @export
 setMethod("shape_annotate", signature(p = "TiffPlotData", shape = "TiffShape"),
           function(p, shape, color = NULL, fill = NULL, alpha = 0.2, annotate_center = FALSE, n = 120L, ...){
+            p <- .check_TiffPlotData_version(p)
             active_name <- p@activePlot
             if(!grepl("annotated", active_name)){
                 anno_name = paste0(active_name, ".annotated")

@@ -22,7 +22,8 @@ TiffPlotData(
   img_info = data.frame(),
   unit_per_pixel = NA_real_,
   unit_name = NA_character_,
-  channels = NULL
+  channels = NULL,
+  plot_parameters = list()
 )
 }
 \arguments{
@@ -56,6 +57,9 @@ zero-sized rectangle)}
 \code{channels} slot. If NULL (the default), it is built from the channel
 numbers in \code{data$channel}, each named by its number (empty if
 \code{data} has no numeric \code{channel} column).}
+
+\item{plot_parameters}{Named list of plotting parameters; see the
+\code{plot_parameters} slot.}
 }
 \value{
 A \linkS4class{TiffPlotData} object

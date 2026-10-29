@@ -16,6 +16,7 @@ TiffPlotDataMasked(
   unit_per_pixel = NA_real_,
   unit_name = NA_character_,
   channels = NULL,
+  plot_parameters = list(),
   mask_points = data.frame(),
   mask_color_mappings = data.frame()
 )
@@ -43,6 +44,8 @@ TiffPlotDataMasked(
 
 \item{channels}{Data frame describing the channels (see \linkS4class{TiffPlotData}).
 If NULL (the default), built from the channel numbers in \code{data$channel}.}
+
+\item{plot_parameters}{Named list of plotting parameters (see \linkS4class{TiffPlotData}).}
 
 \item{mask_points}{Decoded mask points and metadata.}
 

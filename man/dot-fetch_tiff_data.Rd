@@ -13,7 +13,8 @@
   show_raw = FALSE,
   quantile_norm = 0.999,
   channel_names = NULL,
-  selected_channels = NULL
+  selected_channels = NULL,
+  scale_colors = .default_scale_colors()
 )
 }
 \arguments{
@@ -30,6 +31,8 @@
 \item{show_raw}{If TRUE, displays raw pixel values; if FALSE (default), displays normalized values}
 
 \item{quantile_norm}{Quantile for normalization (default 0.999). Values are divided by this quantile}
+
+\item{scale_colors}{Colours of the fill gradient, low to high (see \code{fetchTiffData()}).}
 }
 \value{
 A TiffPlotData object containing the sparse image data and a named list of ggplot objects. It also records `tiff_path`, `resolution`, `precalc_max` and `rect` slots.
