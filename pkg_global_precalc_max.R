@@ -9,24 +9,30 @@ if(!dir.exists(align_dir)){
     align_dir = r"(C:\project_data\UVMMIC-RA-13113\alignment)"
 }
 if(!dir.exists(align_dir)){
+    align_dir = r"(C:\project_data\UVMMIC-RA-13113\alignment)"
+}
+
+if(!dir.exists(align_dir)){
     stop()
 }
 
 #### reem geomx ####
-
+#
 all_tiff = dir(align_dir, pattern = "tiff$", full.names = TRUE)
 tiff_meta.l = lapply(all_tiff, read_tiff_meta_data)
 lapply(tiff_meta.l, function(x){
     as.numeric(x$sizeX)*as.numeric(x$sizeY)/1e6
 })
 
-if(FALSE){
+if(TRUE){
     names(all_tiff) = basename(all_tiff)
     all_gquant = lapply(all_tiff, gather_channel_quantiles, workers = 1)
     # saveRDS(all_gquant, "all_gquant.reem_geomx.Rds")
 }
 
 #### ashley ebv ####
+ebv_dir = "D:\project_data\EBV_image_files"
+
 
 ebv_tiffs = dir("C:/Users/boydj/project_data/EBV_image_files", full.names = TRUE) %>% dir(full.names = TRUE)
 ebv_cache_dir = "~/../OneDrive - UVM Larner College of Medicine/projects_ashley/EBV_DLBCL/P1_phenocycler_and_rnascope/cached_global_precalc_max"
