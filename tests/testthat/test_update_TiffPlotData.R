@@ -13,6 +13,7 @@ library(ggplot2)
              rect = TiffRect(1, 2, 1, 2), img_info = data.frame())
   attr(obj, "channels") <- NULL
   attr(obj, "package_version") <- NULL
+  attr(obj, "plot_parameters") <- NULL
   obj
 }
 
@@ -26,6 +27,7 @@ test_that("update_TiffPlotData converts numeric channels and stamps the version"
   expect_equal(new_obj@data$channel, rep(c(3L, 1L), each = 2))
   expect_equal(levels(new_obj@data$channel_name), c("1", "3"))
   expect_equal(new_obj@precalc_max, old@precalc_max)
+  expect_equal(new_obj@plot_parameters, list(scale_colors = TiffPlotR:::.default_scale_colors()))
 
   p <- new_obj@plots$raw
   expect_true("channel_name" %in% colnames(p$data))
@@ -78,4 +80,18 @@ test_that("functions taking TiffPlotData update old objects with a warning", {
   expect_warning(expect_equal(old$channel_name, factor(c("1", "1", "2", "2"))), "0.1.19")
   expect_warning(out <- renormalize(old, channels = 2, max_value = 20), "0.1.19")
   expect_equal(out@data$norm_value, c(0.25, 0.5, 1, 1))
+})
+
+test_that("0.1.20 objects get plot_parameters and keep their version", {
+  df <- data.frame(i = 1:2, j = 1, channel = 1L, value = 1, norm_value = 1)
+  obj <- TiffPlotData(df, plots = list(raw = ggplot(df, aes(i, j)) + geom_point()))
+  obj@package_version <- "0.1.20"
+  attr(obj, "plot_parameters") <- NULL
+  expect_false(methods::.hasSlot(obj, "plot_parameters"))
+
+  expect_warning(out <- TiffPlotR:::.check_TiffPlotData_version(obj), "made by TiffPlotR 0.1.20")
+  expect_equal(out@plot_parameters, list(scale_colors = TiffPlotR:::.default_scale_colors()))
+  expect_equal(out@package_version, "0.1.20")
+  expect_equal(out@data, obj@data)
+  expect_equal(out@channels, obj@channels)
 })

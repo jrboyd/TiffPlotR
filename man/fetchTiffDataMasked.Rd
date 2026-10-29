@@ -17,7 +17,8 @@ fetchTiffDataMasked(
   mask_points = NULL,
   retain_unmasked = FALSE,
   segment_var = "Text",
-  bit_order = c("msb", "lsb")
+  bit_order = c("msb", "lsb"),
+  scale_colors = .default_scale_colors()
 )
 }
 \arguments{
@@ -46,6 +47,10 @@ and \code{max_value} for normalization.}
 or names.}
 
 \item{bit_order}{Bit order to use when decoding OME mask payloads.}
+
+\item{scale_colors}{Colours of the fill gradient, low to high, passed to
+\code{scale_fill_gradientn()}. Defaults to the magma palette used by
+earlier versions. Stored in \code{@plot_parameters$scale_colors}.}
 }
 \value{
 A \linkS4class{TiffPlotDataMasked} object with:

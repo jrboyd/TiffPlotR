@@ -26,6 +26,10 @@
 #' rgb and colorized plots from these versions don't record how they were
 #' built, so \code{renormalize()} leaves them unchanged.
 #'
+#' Objects from 0.1.20 and earlier have no \code{@plot_parameters}. It is
+#' filled with \code{scale_colors} set to the magma palette, which is what
+#' their plots used. Their plots are not changed.
+#'
 #' @param img_data A \linkS4class{TiffPlotData} object (or subclass, such as
 #'   \linkS4class{TiffPlotDataMasked}).
 #' @param channel_names The \code{channel_names} given to the fetch that made
@@ -45,39 +49,50 @@
 update_TiffPlotData = function(img_data, channel_names = NULL){
   if(!is(img_data, "TiffPlotData")) stop("img_data must be a TiffPlotData object.")
   if(!.needs_update(img_data)) return(img_data)
-  .update_from_unversioned(img_data, channel_names)
+  unversioned = !methods::.hasSlot(img_data, "package_version")
+  had_plot_parameters = methods::.hasSlot(img_data, "plot_parameters")
+  obj = .copy_into_current_class(img_data)
+  if(unversioned){
+    obj = .update_from_unversioned(obj, channel_names)
+  }
+  if(!had_plot_parameters){
+    obj@plot_parameters = list(scale_colors = .default_scale_colors())
+  }
+  validObject(obj)
+  obj
 }
 
 # Called at the top of every function that takes a TiffPlotData: returns the
 # object in the current format, warning when it had to be updated.
 .check_TiffPlotData_version = function(img_data){
   if(!.needs_update(img_data)) return(img_data)
-  warning("This TiffPlotData object was made by TiffPlotR 0.1.19 or earlier. ",
+  made_by = if(methods::.hasSlot(img_data, "package_version")) img_data@package_version else "0.1.19 or earlier"
+  warning("This TiffPlotData object was made by TiffPlotR ", made_by, ". ",
           "It has been updated for this call; run update_TiffPlotData() and save the result ",
           "to avoid updating it every time.", call. = FALSE)
   update_TiffPlotData(img_data)
 }
 
-# Only unversioned objects (0.1.19 and earlier) need changes so far. When the
-# format changes again, compare @package_version against the version that
-# introduced the change.
+# So far every format change added a slot: @channels and @package_version
+# (0.1.20), @plot_parameters (after 0.1.20). A change that keeps the slots should
+# compare @package_version against the version that introduced it.
 .needs_update = function(img_data){
-  !methods::.hasSlot(img_data, "package_version")
+  !all(vapply(methods::slotNames("TiffPlotData"), methods::.hasSlot, logical(1), object = img_data))
 }
 
-.update_from_unversioned = function(img_data, channel_names){
-  # copy the slots the old object has; new() fills the rest from the prototype
-  # and stamps the current version
+# Copy the slots the old object has into a new one; new() fills the rest from
+# the prototype, and stamps the current version if there was none.
+.copy_into_current_class = function(img_data){
   cls = class(img_data)
   old_slots = attributes(img_data)
   old_slots = old_slots[intersect(names(old_slots), methods::slotNames(cls))]
-  obj = do.call(methods::new, c(list(Class = cls), old_slots))
+  do.call(methods::new, c(list(Class = cls), old_slots))
+}
 
+# 0.1.19 and earlier: no channel table, and data$channel may hold names.
+.update_from_unversioned = function(obj, channel_names){
   df = obj@data
-  if(!"channel" %in% colnames(df)){
-    validObject(obj)
-    return(obj)
-  }
+  if(!"channel" %in% colnames(df)) return(obj)
   obj@channels = .unversioned_channel_table(df$channel, obj@tiff_path, channel_names)
   obj@data = .unversioned_channel_columns(df, obj@channels)
   obj@plots = lapply(obj@plots, function(p){
@@ -86,7 +101,6 @@ update_TiffPlotData = function(img_data, channel_names = NULL){
     }
     .facet_channel_to_channel_name(p)
   })
-  validObject(obj)
   obj
 }
 

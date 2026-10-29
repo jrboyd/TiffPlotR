@@ -95,17 +95,32 @@ Use `devtools::test()` for the whole suite. Shape-class tests are small and fine
   so a saved object keeps the version it was made with.
   - Objects from 0.1.19 and earlier have neither `@package_version` nor `@channels`.
     `update_TiffPlotData()` (`R/update_TiffPlotData.R`) converts them and restamps the version.
+  - Objects from 0.1.20 have no `@plot_parameters`. The update fills it with the default
+    `scale_colors` and keeps their `@package_version`. `.needs_update()` is true whenever any
+    class slot is missing, so adding a slot only needs a fill-in step in `update_TiffPlotData()`.
   - **Every function that takes a TiffPlotData must start with
     `.check_TiffPlotData_version()`**, which updates old objects with a warning. Accessing a slot
     the old object lacks errors, and `validObject()` fails, so the check has to come first.
   - 0.1.19 discarded channel numbers once `channel_names` was applied. The update maps names back
     through the TIFF's OME names; otherwise the caller must pass the fetch-time `channel_names`.
     Number-like labels (`"5"`, `"1"`) are treated as channel numbers.
-  - When the object format changes again, add a step in `.needs_update()` /
+  - A format change that keeps the same slots needs a step in `.needs_update()` /
     `update_TiffPlotData()` gated on `@package_version`, rather than guessing from the data's shape.
+    That means bumping the version in the same change.
   - Real 0.1.19 objects can be made for testing with `git worktree add <scratch> bb5b802` and
     `devtools::load_all(<scratch>)`. The example TIFF is untracked, so pass its `inst/extdata` path.
     The 0.1.19 rgb fetch errors on an all-zero channel (channels 2–4 in the test region).
+- **Image fills come from two helpers in `R/fill_scales.R`.**
+  - Single-channel plots use `.fill_gradient_layers(scale_colors)`: `geom_raster()` plus
+    `scale_fill_gradientn()`.
+  - rgb/colorized composites use `.fill_identity_layers(rgb_df)`: a `chex` raster plus
+    `scale_fill_identity()`. `renormalize()` swaps in `.identity_raster()`.
+  - The default `scale_colors` is a hardcoded `viridisLite::magma(6)`, which is exactly what
+    `scale_fill_viridis_c(option = "magma")` interpolated, so old figures are unchanged. A test
+    checks this. viridisLite isn't a declared dependency, which is why the colours are hardcoded.
+  - `scale_colors` is recorded in `@plot_parameters`, a named list meant for any plotting
+    option that later rebuilds need to recall. rgb/colorized objects also carry it, from the
+    underlying `.fetch_tiff_data()` call.
 - **OME `Color` is RGBA (red in the high byte), but `to_rgba_hex()` decodes it as ARGB.**
   - `read_tiff_channels()` uses its own correct decoder, `.ome_color_to_hex()`.
   - The mask `FillColor` path still uses `to_rgba_hex()` via `.ome_fill_color_to_hex()`, so mask

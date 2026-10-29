@@ -50,5 +50,6 @@ Collate:
   'channels.R'
   'renormalize.R'
   'update_TiffPlotData.R'
+  'fill_scales.R'
 Config/roxygen2/version: 8.0.0
 RoxygenNote: 7.3.3

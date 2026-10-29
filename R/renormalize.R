@@ -147,7 +147,7 @@ renormalize = function(img_data,
     }
     # a fresh layer, since layers are environments shared with the original plot
     k = which(vapply(p$layers, function(l) is.data.frame(l$data) && "chex" %in% colnames(l$data), logical(1)))
-    p$layers[[k[1]]] = geom_raster(data = rgb_df, aes(x = i, y = j, fill = chex))
+    p$layers[[k[1]]] = .identity_raster(rgb_df)
     return(p)
   }
   if(is.data.frame(p$data) && all(c("channel", "value", "norm_value") %in% colnames(p$data))){

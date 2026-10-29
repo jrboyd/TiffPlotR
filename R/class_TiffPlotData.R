@@ -21,6 +21,9 @@
 #' @slot package_version Character scalar: the version of TiffPlotR that
 #'   created the object, set automatically. Objects saved before 0.1.20 do not
 #'   have this slot (check with \code{methods::.hasSlot()}).
+#' @slot plot_parameters A named list of optional plotting parameters, kept so
+#'   plots can be rebuilt the same way later. \code{scale_colors} holds the
+#'   fill gradient colours of single-channel plots.
 #'
 #' @importFrom methods setClass setMethod
 #' @import ggplot2
@@ -53,13 +56,15 @@ setClass("TiffPlotData",
            unit_per_pixel = "numeric",
            unit_name = "character",
            channels = "data.frame",
-           package_version = "character"
+           package_version = "character",
+           plot_parameters = "list"
          ),
          prototype = list(
            unit_per_pixel = NA_real_,
            unit_name = NA_character_,
            channels = data.frame(),
-           package_version = NA_character_
+           package_version = NA_character_,
+           plot_parameters = list()
          ),
          validity = function(object) {
            if (length(object@activePlot) != 1) {
@@ -82,6 +87,10 @@ setClass("TiffPlotData",
            }
            if (length(object@package_version) != 1) {
              return("Slot 'package_version' must be a single character string")
+           }
+           if (length(object@plot_parameters) > 0 &&
+               (is.null(names(object@plot_parameters)) || any(!nzchar(names(object@plot_parameters))))) {
+             return("Slot 'plot_parameters' must be a named list")
            }
            if (nrow(object@channels) > 0) {
              if (!all(c("channel", "channel_name") %in% colnames(object@channels))) {
@@ -185,6 +194,8 @@ setMethod("plot", "TiffPlotData",
 #'   \code{channels} slot. If NULL (the default), it is built from the channel
 #'   numbers in \code{data$channel}, each named by its number (empty if
 #'   \code{data} has no numeric \code{channel} column).
+#' @param plot_parameters Named list of plotting parameters; see the
+#'   \code{plot_parameters} slot.
 #' @return A \linkS4class{TiffPlotData} object
 #' @export
 TiffPlotData <- function(data,
@@ -197,7 +208,8 @@ TiffPlotData <- function(data,
                          img_info = data.frame(),
                          unit_per_pixel = NA_real_,
                          unit_name = NA_character_,
-                         channels = NULL) {
+                         channels = NULL,
+                         plot_parameters = list()) {
   if (is.null(activePlot)) {
     activePlot <- names(plots)[1]
   }
@@ -215,13 +227,14 @@ TiffPlotData <- function(data,
       img_info = img_info,
       unit_per_pixel = unit_per_pixel,
       unit_name = unit_name,
-      channels = channels)
+      channels = channels,
+      plot_parameters = plot_parameters)
 }
 
 #' @export
 setMethod("names", "TiffPlotData",
           function(x) {
-            name_vals = c("data", "plots", "activePlot", "tiff_path", "resolution", "precalc_max", "rect", "img_info", "unit_per_pixel", "unit_name", "channels", "package_version")
+            name_vals = c("data", "plots", "activePlot", "tiff_path", "resolution", "precalc_max", "rect", "img_info", "unit_per_pixel", "unit_name", "channels", "package_version", "plot_parameters")
             return(name_vals)
           }
 )
@@ -258,6 +271,8 @@ setMethod("$", "TiffPlotData",
               return(x@channels)
             } else if (name == "package_version") {
               return(x@package_version)
+            } else if (name == "plot_parameters") {
+              return(x@plot_parameters)
             } else if (name %in% names(x@data)) {
               # Allow direct access to data.frame columns
               return(x@data[[name]])
@@ -300,6 +315,8 @@ setMethod("$<-", "TiffPlotData",
               x@channels <- value
             } else if (name == "package_version") {
               x@package_version <- value
+            } else if (name == "plot_parameters") {
+              x@plot_parameters <- value
             } else {
               # Set as a column in the data.frame
               x@data[[name]] <- value

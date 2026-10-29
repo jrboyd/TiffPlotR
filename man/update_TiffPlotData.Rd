@@ -45,6 +45,10 @@ the object was fetched. Otherwise the update stops with an error.
 
 rgb and colorized plots from these versions don't record how they were
 built, so \code{renormalize()} leaves them unchanged.
+
+Objects from 0.1.20 and earlier have no \code{@plot_parameters}. It is
+filled with \code{scale_colors} set to the magma palette, which is what
+their plots used. Their plots are not changed.
 }
 \examples{
 \dontrun{
