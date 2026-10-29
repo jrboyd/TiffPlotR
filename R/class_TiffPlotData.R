@@ -18,6 +18,9 @@
 #'   per channel: \code{channel} (number), \code{channel_name} (the label used
 #'   in \code{@data} and plots), \code{ome_name} and \code{color} (from the
 #'   OME-XML, may be NA). Empty for objects not made from a TIFF.
+#' @slot package_version Character scalar: the version of TiffPlotR that
+#'   created the object, set automatically. Objects saved before 0.1.20 do not
+#'   have this slot (check with \code{methods::.hasSlot()}).
 #'
 #' @importFrom methods setClass setMethod
 #' @import ggplot2
@@ -49,12 +52,14 @@ setClass("TiffPlotData",
            img_info = "data.frame",
            unit_per_pixel = "numeric",
            unit_name = "character",
-           channels = "data.frame"
+           channels = "data.frame",
+           package_version = "character"
          ),
          prototype = list(
            unit_per_pixel = NA_real_,
            unit_name = NA_character_,
-           channels = data.frame()
+           channels = data.frame(),
+           package_version = NA_character_
          ),
          validity = function(object) {
            if (length(object@activePlot) != 1) {
@@ -75,6 +80,9 @@ setClass("TiffPlotData",
            if (length(object@unit_name) != 1) {
              return("Slot 'unit_name' must be a single character string")
            }
+           if (length(object@package_version) != 1) {
+             return("Slot 'package_version' must be a single character string")
+           }
            if (nrow(object@channels) > 0) {
              if (!all(c("channel", "channel_name") %in% colnames(object@channels))) {
                return("Slot 'channels' must have columns 'channel' and 'channel_name'")
@@ -85,6 +93,22 @@ setClass("TiffPlotData",
            }
            TRUE
          }
+)
+
+.tiffplotr_version <- function() {
+  as.character(utils::packageVersion("TiffPlotR"))
+}
+
+# Stamp every new object with the TiffPlotR version that made it. readRDS()
+# does not call initialize, so saved objects keep the version they were made with.
+setMethod("initialize", "TiffPlotData",
+          function(.Object, ...) {
+            .Object <- callNextMethod(.Object, ...)
+            if (is.na(.Object@package_version)) {
+              .Object@package_version <- .tiffplotr_version()
+            }
+            .Object
+          }
 )
 
 #' Show method for TiffPlotData
@@ -102,6 +126,7 @@ setMethod("show", "TiffPlotData",
             cat("Resolution:", object@resolution, "\n")
             cat("Pixels per unit:", object@unit_per_pixel, "\n")
             cat("Unit name:", object@unit_name, "\n")
+            cat("TiffPlotR version:", if (methods::.hasSlot(object, "package_version")) object@package_version else "before 0.1.20", "\n")
             cat("Precalc max rows:", nrow(object@precalc_max), "\n")
             if (nrow(object@channels) > 0) {
               cat("Channels:", paste0(object@channels$channel, "=", object@channels$channel_name, collapse = ", "), "\n")
@@ -194,7 +219,7 @@ TiffPlotData <- function(data,
 #' @export
 setMethod("names", "TiffPlotData",
           function(x) {
-            name_vals = c("data", "plots", "activePlot", "tiff_path", "resolution", "precalc_max", "rect", "img_info", "unit_per_pixel", "unit_name", "channels")
+            name_vals = c("data", "plots", "activePlot", "tiff_path", "resolution", "precalc_max", "rect", "img_info", "unit_per_pixel", "unit_name", "channels", "package_version")
             return(name_vals)
           }
 )
@@ -228,6 +253,8 @@ setMethod("$", "TiffPlotData",
               return(x@unit_name)
             } else if (name == "channels") {
               return(x@channels)
+            } else if (name == "package_version") {
+              return(x@package_version)
             } else if (name %in% names(x@data)) {
               # Allow direct access to data.frame columns
               return(x@data[[name]])
@@ -267,6 +294,8 @@ setMethod("$<-", "TiffPlotData",
               x@unit_name <- value
             } else if (name == "channels") {
               x@channels <- value
+            } else if (name == "package_version") {
+              x@package_version <- value
             } else {
               # Set as a column in the data.frame
               x@data[[name]] <- value

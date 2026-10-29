@@ -88,6 +88,13 @@ Use `devtools::test()` for the whole suite. Shape-class tests are small and fine
     `channel_names = "ome"`. That was a deliberate choice, so existing figures keep their labels.
   - Objects saved before `@channels` existed have no such slot. `renormalize()` refuses them and
     asks for a re-fetch.
+- **`@package_version` records the TiffPlotR version that created an object.** It is set by the
+  `initialize` method, so every creation path stamps it. `readRDS()` doesn't call `initialize`,
+  so a saved object keeps the version it was made with.
+  - Objects from 0.1.19 and earlier have no such slot, so test with `.hasSlot()` before reading
+    it.
+  - When the object format changes again, gate on this version rather than guessing from the
+    data's shape.
 - **OME `Color` is RGBA (red in the high byte), but `to_rgba_hex()` decodes it as ARGB.**
   - `read_tiff_channels()` uses its own correct decoder, `.ome_color_to_hex()`.
   - The mask `FillColor` path still uses `to_rgba_hex()` via `.ome_fill_color_to_hex()`, so mask

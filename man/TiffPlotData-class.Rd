@@ -36,6 +36,10 @@ or NA when unavailable.}
 per channel: \code{channel} (number), \code{channel_name} (the label used
 in \code{@data} and plots), \code{ome_name} and \code{color} (from the
 OME-XML, may be NA). Empty for objects not made from a TIFF.}
+
+\item{\code{package_version}}{Character scalar: the version of TiffPlotR that
+created the object, set automatically. Objects saved before 0.1.20 do not
+have this slot (check with \code{methods::.hasSlot()}).}
 }}
 
 \examples{
