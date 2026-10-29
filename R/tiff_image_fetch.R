@@ -135,7 +135,7 @@
 #'
 #' @examples
 #' tiff_path <- exampleTiff()
-#' view_rect <- TiffRect(900, 2300, 1400, 2800)
+#' view_rect <- TiffRect(1, 1024, 1, 1024)
 #' img <- fetchTiffData(tiff_path, view_rect)
 #'
 #' fetchTiffData(
@@ -393,7 +393,7 @@ fetchTiffDataMasked <- function(tiff_path,
     dplyr::select(Text, ROI_ID, i_bin, j_bin)
 
   # Join on the integer bins, not on i/j rebuilt from them: below full
-  # resolution the pixel spacing isn't an integer (e.g. 8651/1082 px), and the
+  # resolution the pixel spacing needn't be an integer (e.g. 8651/1082 px), and the
   # rebuilt coordinates miss the signal's by a few ulps, so nothing matched.
   masked_df = merge(signal_df, mask_merge, by = c("i_bin", "j_bin"), all.x = retain_unmasked)
   masked_df = masked_df[, c("i", "j", setdiff(colnames(signal_df), c("i", "j")), "Text", "ROI_ID")]
@@ -480,7 +480,7 @@ makeImageTidy = function(img_mat){
 #' @examples
 #' \dontrun{
 #'   tiff_path <- exampleTiff()
-#'   img_obj <- fetchTiffData(tiff_path, TiffRect(900, 2300, 1400, 2800))
+#'   img_obj <- fetchTiffData(tiff_path, TiffRect(1, 1024, 1, 1024))
 #'   rgb_df <- convertTidyToRGB(img_obj@data, red_channel = 6, green_channel = 1, blue_channel = 5)
 #' }
 convertTidyToRGB = function(img_df, red_channel = 1, green_channel = 2, blue_channel = 3, value_var = "norm_value"){
@@ -644,7 +644,7 @@ convertTidyToRGB = function(img_df, red_channel = 1, green_channel = 2, blue_cha
 #'
 #' @examples
 #' \dontrun{
-#' arr <- fetchTiffArray(exampleTiff(), rect = TiffRect(900, 2300, 1400, 2800))
+#' arr <- fetchTiffArray(exampleTiff(), rect = TiffRect(1, 1024, 1, 1024))
 #' dim(arr)
 #' }
 fetchTiffArray = function(tiff_path, rect = NULL,
@@ -822,12 +822,12 @@ fetchTiffArray = function(tiff_path, rect = NULL,
 #'
 #' @examples
 #' tiff_path = exampleTiff()
-#' fetchTiffData.rgb(tiff_path, rect = TiffRect(900,2300,1400,2800), red_channel=2, green_channel=3, blue_channel=1)
+#' fetchTiffData.rgb(tiff_path, rect = TiffRect(1, 1024, 1, 1024), red_channel=2, green_channel=3, blue_channel=1)
 #'
 #' channel_names = c("DAPI", "probe1", "probe2", "probe3", "probe4", "autofluor")
-#' fetchTiffData.rgb(tiff_path, rect = TiffRect(900,2300,1400,2800), red_channel=2, green_channel=3, blue_channel=1, channel_names = channel_names)
+#' fetchTiffData.rgb(tiff_path, rect = TiffRect(1, 1024, 1, 1024), red_channel=2, green_channel=3, blue_channel=1, channel_names = channel_names)
 #'
-#' fetchTiffData.rgb(tiff_path, rect = TiffRect(900,2300,1400,2800),
+#' fetchTiffData.rgb(tiff_path, rect = TiffRect(1, 1024, 1, 1024),
 #'   red_channel = "Opal 690", green_channel = "Opal 520", blue_channel = "DAPI", channel_names = "ome")
 fetchTiffData.rgb = function(tiff_path,
                              rect = NULL,
@@ -887,19 +887,19 @@ fetchTiffData.rgb = function(tiff_path,
 #' @examples
 #' library(TiffPlotR)
 #' tf = exampleTiff()
-#' fetchTiffData(tf, rect = TiffRect(2500, 3000, 2500, 3000))
+#' fetchTiffData(tf, rect = TiffRect(300, 800, 300, 800))
 #' fetchTiffData.colorized(tf,
 #'   channel_colors = list("blue", NULL, NULL, NULL, "purple", "cyan"),
-#'   rect = TiffRect(2500, 3000, 2500, 3000)
+#'   rect = TiffRect(300, 800, 300, 800)
 #' )
 #' fetchTiffData.colorized(tf,
 #'   channel_colors = list("A" = "blue", E = "purple", F = "cyan"),
-#'   rect = TiffRect(2500, 3000, 2500, 3000),
+#'   rect = TiffRect(300, 800, 300, 800),
 #'   channel_names = LETTERS[1:6]
 #' )
 #' fetchTiffData.colorized(tf,
 #'   channel_colors = list(DAPI = "blue", "Opal 570" = "yellow"),
-#'   rect = TiffRect(2500, 3000, 2500, 3000)
+#'   rect = TiffRect(300, 800, 300, 800)
 #' )
 fetchTiffData.colorized = function(tiff_path,
                                    rect = NULL,
@@ -962,7 +962,7 @@ fetchTiffData.colorized = function(tiff_path,
 #'
 #' @examples
 #' \dontrun{
-#' obj <- fetchTiffData(exampleTiff(), TiffRect(900, 2300, 1400, 2800))
+#' obj <- fetchTiffData(exampleTiff(), TiffRect(1, 1024, 1, 1024))
 #' obj <- apply_coord_fixed(obj)
 #' }
 apply_coord_fixed = function(img_data){
@@ -981,7 +981,7 @@ apply_coord_fixed = function(img_data){
 #'
 #' @examples
 #' \dontrun{
-#' obj <- fetchTiffData(exampleTiff(), TiffRect(900, 2300, 1400, 2800))
+#' obj <- fetchTiffData(exampleTiff(), TiffRect(1, 1024, 1, 1024))
 #' obj <- apply_coord_cartesian(obj)
 #' }
 apply_coord_cartesian = function(img_data){
@@ -1011,12 +1011,12 @@ apply_coord_cartesian = function(img_data){
 #' @examples
 #' tiff_path = exampleTiff()
 #' .fetch_tiff_data(tiff_path,
-#'   rect = TiffRect(900, 2300, 1400, 2800))
+#'   rect = TiffRect(1, 1024, 1, 1024))
 #' fetchTiffData(tiff_path,
-#'   rect = TiffRect(900,2300,1400,2800))
+#'   rect = TiffRect(1, 1024, 1, 1024))
 #'
-#' .fetch_tiff_data.rgb(tiff_path, rect = TiffRect(900, 2300, 1400, 2800), red_channel=6, green_channel=1, blue_channel=5)
-#' fetchTiffData.rgb(tiff_path, rect = TiffRect(900,2300,1400,2800), red_channel=6, green_channel=1, blue_channel=5)
+#' .fetch_tiff_data.rgb(tiff_path, rect = TiffRect(1, 1024, 1, 1024), red_channel=6, green_channel=1, blue_channel=5)
+#' fetchTiffData.rgb(tiff_path, rect = TiffRect(1, 1024, 1, 1024), red_channel=6, green_channel=1, blue_channel=5)
 .fetch_tiff_data.rgb = function(
     tiff_path,
     rect = NULL,
@@ -1207,11 +1207,19 @@ find_qmax_regions = function(tiff_path, resolution = 5){
 
 #' Path to the example tiff file for testing and examples.
 #'
+#' The example is a 1024 x 1024 pixel crop of a multiplex immunofluorescence
+#' scan of a cell pellet (6 channels: DAPI, Opal 520, 570, 620 and 690, and
+#' autofluorescence; 32-bit float; 0.25 um per pixel). It has 4 resolution
+#' levels (1024, 512, 256 and 128 pixels) and keeps the original OME channel
+#' names and colours. The crop includes the pellet's edge, so part of it has no
+#' signal. Opal 520 is close to empty throughout. It was made with
+#' \code{scripts/make_example_tiff/} in the package source.
+#'
 #' @returns Path to the example tiff file
 #' @export
 #'
 #' @examples
 #' exampleTiff()
 exampleTiff = function(){
-  system.file("extdata/301_CellPellet_NegCTL_Scan1_PC3Guise.ome.tiff", package = "TiffPlotR", mustWork = TRUE)
+  system.file("extdata/example_crop.ome.tiff", package = "TiffPlotR", mustWork = TRUE)
 }

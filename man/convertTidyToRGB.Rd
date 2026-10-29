@@ -35,7 +35,7 @@ frame with a hex color column, suitable for display with ggplot2.
 \examples{
 \dontrun{
   tiff_path <- exampleTiff()
-  img_obj <- fetchTiffData(tiff_path, TiffRect(900, 2300, 1400, 2800))
+  img_obj <- fetchTiffData(tiff_path, TiffRect(1, 1024, 1, 1024))
   rgb_df <- convertTidyToRGB(img_obj@data, red_channel = 6, green_channel = 1, blue_channel = 5)
 }
 }

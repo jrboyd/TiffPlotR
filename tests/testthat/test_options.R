@@ -1,7 +1,7 @@
 library(testthat)
 library(ggplot2)
 
-rect <- TiffRect(900, 2300, 1400, 2800)
+rect <- TiffRect(1, 1024, 1, 1024)
 fetch1 <- function(...) suppressMessages(fetchTiffData(exampleTiff(), rect, selected_channels = 1, ...))
 no_options <- list(TPR_MAX_PIXELS = NULL, TPR_CHANNEL_NAMES = NULL, TPR_THEME = NULL,
                    TPR_SCALE_BAR_STYLE = NULL, TPR_VERBOSE = NULL, TPR_UM_AXES = NULL,
@@ -21,7 +21,7 @@ test_that("fetches record the settings they used", {
 
 test_that("TPR_MAX_PIXELS sets the automatic resolution", {
   withr::local_options(no_options)
-  expect_equal(fetch1()@resolution, 2)       # 1400 px wide at full resolution, 700 at level 2
+  expect_equal(fetch1()@resolution, 2)       # 1024 px wide at full resolution, 512 at level 2
   withr::local_options(TPR_MAX_PIXELS = 200)
   img <- fetch1()
   expect_equal(img@resolution, 4)

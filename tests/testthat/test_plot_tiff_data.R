@@ -1,7 +1,7 @@
 library(testthat)
 library(ggplot2)
 
-rect <- TiffRect(900, 2300, 1400, 2800)
+rect <- TiffRect(1, 1024, 1, 1024)
 img <- suppressMessages(fetchTiffData(exampleTiff(), rect, resolution = 4, channel_names = "ome",
                                       scale_colors = c("black", "white")))
 
@@ -32,8 +32,8 @@ test_that("plotTiffData colours, value_var and rect", {
   expect_equal(rlang::as_label(plotTiffData(img, value_var = "value")$mapping$fill), "value")
   expect_error(plotTiffData(img, value_var = "nope"))
 
-  zoom <- TiffRect(1000, 1200, 1500, 1700)
-  expect_equal(plotTiffData(img, rect = zoom)$coordinates$limits$x, c(1000, 1200))
+  zoom <- TiffRect(100, 300, 100, 300)
+  expect_equal(plotTiffData(img, rect = zoom)$coordinates$limits$x, c(100, 300))
 })
 
 test_that("return_object stores the plot and makes it active", {
@@ -72,8 +72,8 @@ test_that("plotTiffData.rgb and .colorized rebuild composites from the data", {
 test_that("plotTiffDataMasked needs masked data", {
   expect_error(plotTiffDataMasked(img), "fetchTiffDataMasked")
 
-  mp <- expand.grid(i = 1000:1200, j = 1500:1700)
-  mp$Text <- ifelse(mp$i < 1100, "A", "B")
+  mp <- expand.grid(i = 100:300, j = 100:300)
+  mp$Text <- ifelse(mp$i < 200, "A", "B")
   mp$ROI_ID <- mp$Text
   m <- suppressMessages(fetchTiffDataMasked(exampleTiff(), rect, resolution = 4, mask_points = mp,
                                             selected_channels = 1:2))

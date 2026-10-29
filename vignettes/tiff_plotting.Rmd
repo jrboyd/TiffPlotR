@@ -13,8 +13,9 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 8, fig.height
 
 TiffPlotR reads rectangular regions of large, multi-resolution (OME-)TIFF
 images at a resolution suited to plotting, and returns them as tidy data plus
-ggplot2 plots. This vignette uses the multiplex immunofluorescence image that
-ships with the package.
+ggplot2 plots. This vignette uses the example image that ships with the
+package: a 1024 x 1024 pixel crop of a multiplex immunofluorescence scan of a
+cell pellet, taken at the pellet's edge.
 
 ```{r libraries}
 library(TiffPlotR)
@@ -30,9 +31,10 @@ tiff_path <- exampleTiff()
 read_tiff_meta_data(tiff_path)
 ```
 
-The image is 8651 x 5998 pixels at full resolution, with 6 channels and 5
-resolution levels, each half the size of the one before. The OME-XML names and
-colours each channel:
+The image has 6 channels and 4 resolution levels, each half the size of the
+one before. Real scans are far larger, often tens of thousands of pixels
+across, but they are handled the same way. The OME-XML names and colours each
+channel:
 
 ```{r channels}
 read_tiff_channels(tiff_path)[, c("channel", "name", "color")]
@@ -41,12 +43,13 @@ read_tiff_channels(tiff_path)[, c("channel", "name", "color")]
 ## Fetching a region
 
 `fetchTiffData()` reads a region, given as a `TiffRect` in full-resolution
-pixel coordinates. It picks the coarsest resolution that keeps the plot at
-least `max_pixels` (default 800) wide, so a large region is never read at full
-resolution by accident.
+pixel coordinates. Unless `resolution` is given, it reads the most detailed
+level that keeps the plot within `max_pixels` (default 800) in each
+direction, so a large region is never read at full resolution by accident.
+Here the whole 1024 pixel image is read at level 2, 512 pixels across.
 
 ```{r fetch}
-rect <- TiffRect(xmin = 900, xmax = 2300, ymin = 1400, ymax = 2800)
+rect <- TiffRect(xmin = 1, xmax = 1024, ymin = 1, ymax = 1024)
 img <- fetchTiffData(tiff_path, rect)
 img
 ```
@@ -54,8 +57,9 @@ img
 The result is a `TiffPlotData` object. `@data` holds one row per pixel and
 channel, with raw `value`s and `norm_value`s scaled to 0-1 by each channel's
 limits in `@precalc_max`. `@plots` holds the plots, and printing the object
-draws the active plot. Opal 520 has no signal in this region, so its
-normalized values are missing and its panel is grey.
+draws the active plot. Opal 520 has almost no signal in this image, so its
+normalization limit is 0, its normalized values are missing and its panel is
+grey.
 
 ```{r data}
 head(img@data)
@@ -149,7 +153,7 @@ then fetched in more detail. Passing the overview's `precalc_max` keeps the
 contrast the same in both.
 
 ```{r zoom-overview}
-zoom <- TiffRect(xmin = 1500, xmax = 1800, ymin = 2100, ymax = 2400)
+zoom <- TiffRect(xmin = 500, xmax = 800, ymin = 600, ymax = 900)
 overview <- fetchTiffData.colorized(tiff_path, rect,
                                     channel_colors = list(DAPI = "blue", "Opal 690" = "yellow"))
 shape_annotate(overview, zoom, color = "white", fill = NA)

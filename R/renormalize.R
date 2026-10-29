@@ -39,7 +39,7 @@
 #'
 #' @examples
 #' \dontrun{
-#' img <- fetchTiffData(exampleTiff(), TiffRect(900, 2300, 1400, 2800),
+#' img <- fetchTiffData(exampleTiff(), TiffRect(1, 1024, 1, 1024),
 #'                      channel_names = c("DAPI", paste("channel", LETTERS[1:5])))
 #' # small: raise the ceiling on two channels
 #' img2 <- renormalize(img, channels = c("DAPI", "channel B"), max_value = 2000)

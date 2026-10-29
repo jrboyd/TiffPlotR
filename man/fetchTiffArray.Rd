@@ -34,7 +34,7 @@ Convenience wrapper around \code{RBioFormats::read.image()} that applies
 }
 \examples{
 \dontrun{
-arr <- fetchTiffArray(exampleTiff(), rect = TiffRect(900, 2300, 1400, 2800))
+arr <- fetchTiffArray(exampleTiff(), rect = TiffRect(1, 1024, 1, 1024))
 dim(arr)
 }
 }

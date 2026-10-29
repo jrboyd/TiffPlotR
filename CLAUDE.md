@@ -73,7 +73,7 @@ Use `devtools::test()` for the whole suite. Shape-class tests are small and fine
     contrast of existing figures. On CosMx, the old 0.90 / 0.998 clipped nuclear signal to
     black.
   - A full `gather_channel_quantiles(exampleTiff(), max_full_fetch = 1e6, workers = 1)`
-    takes about 35 s, so the tests use synthetic quantile matrices instead.
+    takes about 15 s, so the tests use synthetic quantile matrices instead.
 - **Channels: one dictionary, one resolver** (`R/channels.R`).
   - `@channels` lists *every* channel in the image, not only the selected ones. Its columns are
     `channel`, `channel_name` (the display label), `ome_name` and `color`. It is built by
@@ -115,8 +115,11 @@ Use `devtools::test()` for the whole suite. Shape-class tests are small and fine
     `update_TiffPlotData()` gated on `@package_version`, rather than guessing from the data's shape.
     That means bumping the version in the same change.
   - Real 0.1.19 objects can be made for testing with `git worktree add <scratch> bb5b802` and
-    `devtools::load_all(<scratch>)`. The example TIFF is untracked, so pass its `inst/extdata` path.
-    The 0.1.19 rgb fetch errors on an all-zero channel (channels 2–4 in the test region).
+    `devtools::load_all(<scratch>)`.
+    - That commit's `exampleTiff()` points at the original 400 MB scan, which isn't in git. Pass
+      a path explicitly.
+    - The 0.1.19 rgb fetch errors on an all-zero channel, so choose channels with signal
+      (1, 5 and 6).
 - **All image plots are built in `R/plot_tiff_data.R`.**
   - The builders are `.plot_channels()`, `.plot_masked()`, `.plot_rgb()` and `.plot_colorized()`.
     The last two share `.plot_composite()`, which sets `p$meta$tiffplotr_composite` for
@@ -151,17 +154,34 @@ Use `devtools::test()` for the whole suite. Shape-class tests are small and fine
     `um_axes`, `scale_bar`, `scale_bar_style` and `plot_theme`.
 - **Vignettes use only package data** (`exampleTiff()`). Keep it that way: no paths into
   `/netfiles` or home directories.
-  - The example TIFF (400 MB) is **gitignored** (`inst/extdata/*tiff`). A fresh clone has no
-    `exampleTiff()`, so vignettes, examples and most tests fail there.
-  - The bundled ImageJ ROIs (`inst/extdata/*.roi`, `*_rects.zip`) belong to a different, larger
-    image (y ~ 19,400), so they can't be drawn on the example TIFF.
   - Render both vignettes against the dev code with:
     `devtools::load_all(); rmarkdown::render("vignettes/tiff_plotting.Rmd", output_dir = <scratch>, envir = new.env())`.
-    `tiff_plotting` takes about 2 min and peaks around 2.3 GB, so it is fine inline but near the
-    4 GB limit.
-  - In the test region, Opal 520 is all zero. Its `norm_value` is NA, so it draws as a grey panel.
-  - Full-resolution row j = 1452 is all zeros in the TIFF itself (a scanner tile seam). It shows
-    as a thin dark line in plots, and isn't a TiffPlotR bug.
+    `tiff_plotting` takes about 75 s and peaks around 1.7 GB.
+  - The bundled ImageJ ROIs (`inst/extdata/*.roi`, `*_rects.zip`) belong to a different, larger
+    image (y ~ 19,400), so they can't be drawn on the example TIFF.
+- **The example image is `inst/extdata/example_crop.ome.tiff`** (11 MB, committed through a
+  `!` exception in `.gitignore`).
+  - It is a 1024 x 1024 crop of `301_CellPellet_NegCTL_Scan1_PC3Guise.ome.tiff`: 0-based x 1000,
+    y 1500 in the original, which is TiffPlotR's x 1001, y 1501. It has 6 float32 channels, 4
+    levels (1024 down to 128) and 0.2499 um/px.
+  - The crop's full-resolution pixels are identical to the original. Each lower level is an exact
+    2x2 mean.
+  - The original 400 MB scan may still sit in `inst/extdata/`. It is gitignored and
+    `.Rbuildignore`d, and nothing uses it.
+  - Regenerate the crop with `scripts/make_example_tiff/make_example_tiff.sh <original>`. That
+    script runs `CropOmeTiff.java` through Fiji's Java and Bio-Formats jars; Fiji is at
+    `/gpfs1/home/j/r/jrboyd/tools/Fiji`. It takes about 11 s, one thread and 0.6 GB.
+  - Fiji doesn't ship `bfconvert` (`loci.formats.tools`), which is why the Java cropper exists.
+  - Pyramids need `PyramidOMETiffWriter`, writing every full-resolution plane before each lower
+    level. Plain `OMETiffWriter` stores the lower levels as extra top-level IFDs, which readers
+    ignore. Plane-by-plane order makes `close()` fail with "Tag not found (SUB_IFD)".
+  - Its levels are exact halves (1024 / 512 / ...), unlike real scans (8651 / 4326 / 2163 /
+    1082 ...). Code that only breaks on non-integer pixel spacing therefore needs a synthetic
+    grid to test; see the last test in `test_fetch_masked.R`.
+  - Opal 520 is essentially empty everywhere: its maximum is 2.5 and almost no pixel is nonzero.
+    Its 0.999 quantile is 0, so `norm_value` is NA and it draws as a grey panel. Opal 570 is
+    sparse puncta.
+  - The top-left of the crop is empty background beyond the pellet's edge.
 - **`man/hello.Rd` is stale.** It documents a `hello()` that no longer exists. The examples on
   the internal topics (`man/dot-*.Rd`) call private functions. Both make
   `devtools::run_examples()` stop early, so run the exported topics' examples individually.
@@ -186,8 +206,8 @@ Use `devtools::test()` for the whole suite. Shape-class tests are small and fine
     `retain_unmasked = TRUE`, no points in `rect` is only a warning.
   - The example TIFF has no mask annotations. `test_fetch_masked.R` passes synthetic
     `mask_points` and mocks `.fetch_tiff_data()`.
-  - **Below full resolution, pixel coordinates aren't integers.** The example TIFF is 8651 px wide,
-    but 1082 at level 4, so the spacing is 7.9953789… Never join or compare `i`/`j` across
+  - **Below full resolution, pixel coordinates aren't integers** in real scans. The original
+    scan is 8651 px wide, but 1082 at level 4, so the spacing is 7.9953789… Never join or compare `i`/`j` across
     sources with `==`/`merge()`. `fetchTiffDataMasked()` joins masks to the signal on the integer
     `i_bin`/`j_bin` instead. Before that fix, rebuilding `i`/`j` from the bins missed by a few ulps.
     Levels 3 and 4 then matched nothing, and level 2 silently lost about 30% of masked pixels.
@@ -206,9 +226,10 @@ Use `devtools::test()` for the whole suite. Shape-class tests are small and fine
     the original plot, so assigning to `p$layers[[k]]$data` changes the original object too.
     `ggproto(NULL, layer)` overflows the S7 stack at build time, just as it does for guides.
 - **The example TIFF holds small floats.** DAPI (channel 1) reaches about 115, and the other
-  channels are below about 20. Several channels are entirely zero in small regions, so
-  `TiffRect(900, 1000, 1400, 1500)` is a poor test region. Tests use
-  `TiffRect(900, 2300, 1400, 2800)` at resolution 4.
+  channels are below about 20. Tests use the whole image, `TiffRect(1, 1024, 1, 1024)`, mostly at
+  resolution 4 (128 px).
+  - `TiffRect` coordinates are 1-based and inclusive in `fetchTiffArray()`. A rect starting at 0
+    loses a pixel.
 
 ## Tooling
 

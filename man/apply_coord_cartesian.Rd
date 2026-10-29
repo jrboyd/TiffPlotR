@@ -18,7 +18,7 @@ Applies \code{ggplot2::coord_cartesian()} to each plot stored in a
 }
 \examples{
 \dontrun{
-obj <- fetchTiffData(exampleTiff(), TiffRect(900, 2300, 1400, 2800))
+obj <- fetchTiffData(exampleTiff(), TiffRect(1, 1024, 1, 1024))
 obj <- apply_coord_cartesian(obj)
 }
 }

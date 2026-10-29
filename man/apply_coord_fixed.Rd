@@ -18,7 +18,7 @@ Applies \code{ggplot2::coord_fixed()} to each plot stored in a
 }
 \examples{
 \dontrun{
-obj <- fetchTiffData(exampleTiff(), TiffRect(900, 2300, 1400, 2800))
+obj <- fetchTiffData(exampleTiff(), TiffRect(1, 1024, 1, 1024))
 obj <- apply_coord_fixed(obj)
 }
 }

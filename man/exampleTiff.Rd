@@ -10,7 +10,13 @@ exampleTiff()
 Path to the example tiff file
 }
 \description{
-Path to the example tiff file for testing and examples.
+The example is a 1024 x 1024 pixel crop of a multiplex immunofluorescence
+scan of a cell pellet (6 channels: DAPI, Opal 520, 570, 620 and 690, and
+autofluorescence; 32-bit float; 0.25 um per pixel). It has 4 resolution
+levels (1024, 512, 256 and 128 pixels) and keeps the original OME channel
+names and colours. The crop includes the pellet's edge, so part of it has no
+signal. Opal 520 is close to empty throughout. It was made with
+\code{scripts/make_example_tiff/} in the package source.
 }
 \examples{
 exampleTiff()

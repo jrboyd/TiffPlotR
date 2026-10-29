@@ -1,6 +1,6 @@
 library(testthat)
 
-rect <- TiffRect(900, 2300, 1400, 2800)
+rect <- TiffRect(1, 1024, 1, 1024)
 ome_names <- c("DAPI", "Opal 520", "Opal 570", "Opal 620", "Opal 690", "Autofluorescence")
 cn <- c("DAPI", paste("channel", LETTERS[1:5]))
 

@@ -112,7 +112,7 @@ in \code{@plot_parameters}, along with \code{channel_names} and
 }
 \examples{
 tiff_path <- exampleTiff()
-view_rect <- TiffRect(900, 2300, 1400, 2800)
+view_rect <- TiffRect(1, 1024, 1, 1024)
 img <- fetchTiffData(tiff_path, view_rect)
 
 fetchTiffData(

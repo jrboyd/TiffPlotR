@@ -1,7 +1,7 @@
 library(testthat)
 library(ggplot2)
 
-rect <- TiffRect(900, 2300, 1400, 2800)
+rect <- TiffRect(1, 1024, 1, 1024)
 fetch <- function(...) suppressMessages(fetchTiffData(exampleTiff(), rect, resolution = 4, selected_channels = 1, ...))
 has_um_axes <- function(p) identical(p$scales$get_scales("x")$name, "µm")
 n_layers <- function(p) length(p$layers)

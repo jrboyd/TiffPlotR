@@ -149,14 +149,14 @@ Only channels present in \code{@data} can be plotted, that is those kept by
 the fetch's \code{selected_channels}.
 }
 \examples{
-img <- fetchTiffData(exampleTiff(), TiffRect(900, 2300, 1400, 2800),
+img <- fetchTiffData(exampleTiff(), TiffRect(1, 1024, 1, 1024),
                      channel_names = "ome")
 plotTiffData(img, selected_channels = c("Opal 690", "DAPI"), ncol = 1,
              scale_colors = c("black", "white"))
 plotTiffData.rgb(img, red_channel = "Opal 690", green_channel = "Autofluorescence",
                  blue_channel = "DAPI")
 plotTiffData.colorized(img, channel_colors = list(DAPI = "blue", "Opal 690" = "yellow"),
-                       rect = TiffRect(900, 1600, 1400, 2100))
+                       rect = TiffRect(1, 600, 1, 600))
 img <- plotTiffData(img, value_var = "value", return_object = TRUE)
 names(img@plots)
 }

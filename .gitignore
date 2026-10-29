@@ -3,6 +3,7 @@
 tests/testthat/Rplots.pdf
 *.Rproj
 inst/extdata/*tiff
+!inst/extdata/example_crop.ome.tiff
 .positai
 tmp*
 *Rds

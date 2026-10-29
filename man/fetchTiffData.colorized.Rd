@@ -90,18 +90,18 @@ contributions with additive clamping to RGB.
 \examples{
 library(TiffPlotR)
 tf = exampleTiff()
-fetchTiffData(tf, rect = TiffRect(2500, 3000, 2500, 3000))
+fetchTiffData(tf, rect = TiffRect(300, 800, 300, 800))
 fetchTiffData.colorized(tf,
   channel_colors = list("blue", NULL, NULL, NULL, "purple", "cyan"),
-  rect = TiffRect(2500, 3000, 2500, 3000)
+  rect = TiffRect(300, 800, 300, 800)
 )
 fetchTiffData.colorized(tf,
   channel_colors = list("A" = "blue", E = "purple", F = "cyan"),
-  rect = TiffRect(2500, 3000, 2500, 3000),
+  rect = TiffRect(300, 800, 300, 800),
   channel_names = LETTERS[1:6]
 )
 fetchTiffData.colorized(tf,
   channel_colors = list(DAPI = "blue", "Opal 570" = "yellow"),
-  rect = TiffRect(2500, 3000, 2500, 3000)
+  rect = TiffRect(300, 800, 300, 800)
 )
 }

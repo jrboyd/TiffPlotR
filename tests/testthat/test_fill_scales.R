@@ -24,7 +24,7 @@ test_that("plot_parameters must be a named list", {
 })
 
 test_that("fetched plots use scale_colors and record it", {
-  rect <- TiffRect(900, 2300, 1400, 2800)
+  rect <- TiffRect(1, 1024, 1, 1024)
   img <- fetchTiffData(exampleTiff(), rect, resolution = 4, selected_channels = 1,
                        scale_colors = c("black", "green"))
   expect_equal(img@plot_parameters$scale_colors, c("black", "green"))
@@ -46,7 +46,7 @@ test_that("TPR_SCALE_COLORS sets the default scale_colors", {
 
   withr::local_options(TPR_SCALE_COLORS = c("black", "green"))
   expect_equal(TiffPlotR:::.default_scale_colors(), c("black", "green"))
-  rect <- TiffRect(900, 2300, 1400, 2800)
+  rect <- TiffRect(1, 1024, 1, 1024)
   img <- fetchTiffData(exampleTiff(), rect, resolution = 4, selected_channels = 1)
   expect_equal(img@plot_parameters$scale_colors, c("black", "green"))
   expect_equal(img@plots[[1]]$scales$get_scales("fill")$palette(c(0, 1)), c("#000000", "#00FF00"))

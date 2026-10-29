@@ -37,7 +37,7 @@
 #' options(TPR_THEME = theme(panel.background = element_blank(), panel.grid = element_blank()))
 #' tiff_path = exampleTiff()
 #' imgd = fetchTiffData(tiff_path, selected_channels = c(1, 5))
-#' zoom_rect = TiffRect(2500, 3000, 4000, 4500)
+#' zoom_rect = TiffRect(400, 700, 400, 700)
 #' imgd = add_um_scale_bar(imgd)
 #' imgd = shape_annotate(imgd, zoom_rect)
 #' imgd

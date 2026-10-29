@@ -92,11 +92,11 @@ Combines three specified channels into red, green, and blue components.
 }
 \examples{
 tiff_path = exampleTiff()
-fetchTiffData.rgb(tiff_path, rect = TiffRect(900,2300,1400,2800), red_channel=2, green_channel=3, blue_channel=1)
+fetchTiffData.rgb(tiff_path, rect = TiffRect(1, 1024, 1, 1024), red_channel=2, green_channel=3, blue_channel=1)
 
 channel_names = c("DAPI", "probe1", "probe2", "probe3", "probe4", "autofluor")
-fetchTiffData.rgb(tiff_path, rect = TiffRect(900,2300,1400,2800), red_channel=2, green_channel=3, blue_channel=1, channel_names = channel_names)
+fetchTiffData.rgb(tiff_path, rect = TiffRect(1, 1024, 1, 1024), red_channel=2, green_channel=3, blue_channel=1, channel_names = channel_names)
 
-fetchTiffData.rgb(tiff_path, rect = TiffRect(900,2300,1400,2800),
+fetchTiffData.rgb(tiff_path, rect = TiffRect(1, 1024, 1, 1024),
   red_channel = "Opal 690", green_channel = "Opal 520", blue_channel = "DAPI", channel_names = "ome")
 }

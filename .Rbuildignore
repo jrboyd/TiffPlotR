@@ -2,3 +2,5 @@
 ^\.Rproj\.user$
 ^\.positai$
 ^\.claude$
+^scripts$
+^inst/extdata/301_CellPellet_NegCTL_Scan1_PC3Guise\.ome\.tiff$

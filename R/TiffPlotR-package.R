@@ -51,7 +51,7 @@
 #'         TPR_SCALE_BAR_STYLE = list(line_color = "black", position = "bottomright"),
 #'         TPR_THEME = ggplot2::theme_minimal(),
 #'         TPR_VERBOSE = FALSE)
-#' img <- fetchTiffData(exampleTiff(), TiffRect(900, 2300, 1400, 2800))
+#' img <- fetchTiffData(exampleTiff(), TiffRect(1, 1024, 1, 1024))
 #' str(img@plot_parameters)
 #' }
 #'

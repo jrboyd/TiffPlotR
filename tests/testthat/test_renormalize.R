@@ -1,6 +1,6 @@
 library(testthat)
 
-rect <- TiffRect(900, 2300, 1400, 2800)
+rect <- TiffRect(1, 1024, 1, 1024)
 cn <- c("DAPI", paste("channel", LETTERS[1:5]))
 pm0 <- data.frame(channel = 1:6, min_value = 0, max_value = 10)
 
