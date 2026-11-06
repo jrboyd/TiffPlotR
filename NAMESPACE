@@ -85,18 +85,26 @@ exportMethods(shape_resize_mult)
 exportMethods(shape_shift)
 exportMethods(show)
 import(ggplot2)
-importFrom(RBioFormats,read.image)
-importFrom(RBioFormats,read.metadata)
+importFrom(RBioFormats,
+  read.image,
+  read.metadata
+)
 importFrom(data.table,as.data.table)
-importFrom(dplyr,group_by)
-importFrom(dplyr,mutate)
-importFrom(dplyr,select)
-importFrom(dplyr,summarise)
-importFrom(ggplot2,aes)
-importFrom(ggplot2,geom_rect)
-importFrom(ggplot2,ggplot)
+importFrom(dplyr,
+  group_by,
+  mutate,
+  select,
+  summarise
+)
+importFrom(ggplot2,
+  aes,
+  geom_rect,
+  ggplot
+)
 importFrom(magrittr,"%>%")
-importFrom(methods,setClass)
-importFrom(methods,setMethod)
+importFrom(methods,
+  setClass,
+  setMethod
+)
 importFrom(parallel,detectCores)
 importFrom(tidyr,pivot_wider)

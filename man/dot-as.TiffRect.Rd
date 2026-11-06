@@ -6,9 +6,6 @@
 \usage{
 .as.TiffRect(df)
 }
-\arguments{
-\item{df}{}
-}
 \description{
 as.TiffRect
 }
