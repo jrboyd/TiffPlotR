@@ -5,14 +5,15 @@ rect <- TiffRect(1, 1024, 1, 1024)
 fetch1 <- function(...) suppressMessages(fetchTiffData(exampleTiff(), rect, selected_channels = 1, ...))
 no_options <- list(TPR_MAX_PIXELS = NULL, TPR_CHANNEL_NAMES = NULL, TPR_THEME = NULL,
                    TPR_SCALE_BAR_STYLE = NULL, TPR_VERBOSE = NULL, TPR_UM_AXES = NULL,
-                   TPR_UM_SCALE_BAR = NULL, TPR_SCALE_COLORS = NULL)
+                   TPR_UM_SCALE_BAR = NULL, TPR_SCALE_COLORS = NULL, TPR_MIN_Q = NULL,
+                   TPR_MAX_Q = NULL)
 
 test_that("fetches record the settings they used", {
   withr::local_options(no_options)
   img <- fetch1(resolution = 4)
   pp <- img@plot_parameters
   expect_setequal(names(pp), c("scale_colors", "channel_names", "max_pixels", "um_axes", "scale_bar",
-                               "scale_bar_style", "plot_theme"))
+                               "scale_bar_style", "plot_theme", "min_q", "max_q"))
   expect_equal(pp$channel_names, "auto")
   expect_equal(pp$max_pixels, 800)
   expect_equal(pp$scale_bar_style, list())

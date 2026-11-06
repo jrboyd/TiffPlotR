@@ -69,6 +69,13 @@ Use `devtools::test()` for the whole suite. Shape-class tests are small and fine
   - `scale_channels_set_thresholds()` drops zero quantiles *before* picking limits.
     - `max_value` is the non-zero quantile nearest `max_q`.
     - `min_value` is `min_q` if that quantile is non-zero, else the smallest non-zero one.
+      `min_q = 0` always gives 0.
+  - Fetches without `precalc_max` use the same rule (`.limits_from_quantiles()` /
+    `.limits_table()` in `R/global_precalc.R`) over `.scale_probs()`: the `.query_probs()`
+    grid plus `min_q`/`max_q`. Their `min_q`/`max_q` default to the `TPR_MIN_Q` / `TPR_MAX_Q`
+    options, else 0 / 0.999, which reproduces the old `quantile_norm = 0.999` exactly for
+    channels whose 0.999 quantile is non-zero. `quantile_norm` is a deprecated alias for
+    `max_q`.
   - This matches the AVITI and CosMx reductions. Their defaults (0.30 / 0.99) set the
     contrast of existing figures. On CosMx, the old 0.90 / 0.998 clipped nuclear signal to
     black.
@@ -151,7 +158,7 @@ Use `devtools::test()` for the whole suite. Shape-class tests are small and fine
     fetch in `.quiet_unless()`, which is `suppressMessages()`, so it silences every message from
     the fetch, not only TiffPlotR's.
   - `@plot_parameters` from a fetch holds `scale_colors`, `channel_names`, `max_pixels`,
-    `um_axes`, `scale_bar`, `scale_bar_style` and `plot_theme`.
+    `min_q`, `max_q`, `um_axes`, `scale_bar`, `scale_bar_style` and `plot_theme`.
 - **Vignettes use only package data** (`exampleTiff()`). Keep it that way: no paths into
   `/netfiles` or home directories.
   - Render both vignettes against the dev code with:
@@ -179,7 +186,8 @@ Use `devtools::test()` for the whole suite. Shape-class tests are small and fine
     1082 ...). Code that only breaks on non-integer pixel spacing therefore needs a synthetic
     grid to test; see the last test in `test_fetch_masked.R`.
   - Opal 520 is essentially empty everywhere: its maximum is 2.5 and almost no pixel is nonzero.
-    Its 0.999 quantile is 0, so `norm_value` is NA and it draws as a grey panel. Opal 570 is
+    Its 0.999 quantile is 0. Before 0.1.22 that made `norm_value` NA, so it drew as a grey
+    panel; now its max is the nearest non-zero quantile, so its noise is stretched. Opal 570 is
     sparse puncta.
   - The top-left of the crop is empty background beyond the pellet's edge.
 - **`man/hello.Rd` is stale.** It documents a `hello()` that no longer exists. The examples on

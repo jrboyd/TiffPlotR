@@ -112,16 +112,12 @@ scale_channels_gather_quantiles = function(tf, max_full_fetch = "auto", query_pr
     message("using fetch mode ", fetch_mode, " @resolution ", res_i)
     #### step 1 gather quantiles ####
     
-    .gather_quantiles_full_res = function(mat, probs){
-      quantile(mat, probs = probs)
-    }
-    
-    switch (
+        switch (
       fetch_mode,
       FULL = {
         arr = fetchTiffArray(tf, resolution = res_i, max_pixels = Inf)
         arr = arr@.Data
-        quant_res = apply(arr, 3, .gather_quantiles_full_res, probs = query_probs)
+        quant_res = apply(arr, 3, .channel_quantiles, probs = query_probs)
         colnames(quant_res) = seq(ncol(quant_res))
         if(preserve_rects){
           message("locating representative areas")
@@ -131,7 +127,7 @@ scale_channels_gather_quantiles = function(tf, max_full_fetch = "auto", query_pr
           q99_per_range = lapply(seq(nrow(sample_ranges)), function(i){
             xs = seq(sample_ranges[i, "xmin"], sample_ranges[i, "xmax"])
             ys = seq(sample_ranges[i, "ymin"], sample_ranges[i, "ymax"])
-            apply(arr[xs, ys,], 3, .gather_quantiles_full_res, probs = .99)
+            apply(arr[xs, ys,], 3, .channel_quantiles, probs = .99)
           })
           q99_per_range.mat = matrix(unlist(q99_per_range), ncol = dim(arr)[3], byrow = TRUE)
           #select representive rectangles spaced at .25 quantiles apart
@@ -191,10 +187,10 @@ scale_channels_gather_quantiles = function(tf, max_full_fetch = "auto", query_pr
             ys = seq(sample_ranges[i, "ymin"], sample_ranges[i, "ymax"])
             # run 3d (channel stack) or 2d mode
             if(length(dim(arr)) == 3){
-              apply(arr[xs, ys,,drop = FALSE], 3, .gather_quantiles_full_res, probs = .99)
+              apply(arr[xs, ys,,drop = FALSE], 3, .channel_quantiles, probs = .99)
             }else{
               stop()
-              .gather_quantiles_full_res(arr[xs, ys], probs = .99)
+              .channel_quantiles(arr[xs, ys], probs = .99)
             }
           })
           
@@ -218,7 +214,7 @@ scale_channels_gather_quantiles = function(tf, max_full_fetch = "auto", query_pr
         }else{
           future_globals = c("to_fetch", ".as.TiffRect", ".mult_TiffRect",
                              "res_ratio", "tf", "res_i", "chan_i",
-                             ".gather_quantiles_full_res", "prev_ranges")
+                             ".channel_quantiles", "prev_ranges")
           future::plan(future::sequential)
           future::plan(future::multisession, workers = workers)
           todo_result = future.apply::future_lapply(seq(n_todo), .run_todo_i, future.globals = future_globals)
@@ -268,7 +264,7 @@ scale_channels_gather_quantiles = function(tf, max_full_fetch = "auto", query_pr
         representative_ranges.i = lapply(processed_channel, function(x)x$representative_ranges)
         
         quant_res = lapply(fetch_contents.by_channel, function(fc){
-          .gather_quantiles_full_res(
+          .channel_quantiles(
             unlist(fc),
             probs = query_probs
           )
@@ -380,10 +376,11 @@ scale_channels_gather_quantiles = function(tf, max_full_fetch = "auto", query_pr
 #' }
 #' If that leaves \code{max_value <= min_value}, \code{min_value} becomes 0. A
 #' channel with no non-zero quantile at a resolution gets \code{min_value = 0}
-#' and \code{max_value = 1}.
+#' and \code{max_value = 1}. \code{min_q = 0} always gives \code{min_value = 0}.
+#' Fetches without \code{precalc_max} pick their limits by the same rule.
 #'
 #' @param gq Output of \code{scale_channels_gather_quantiles()}.
-#' @param min_q Quantile probability for \code{min_value}.
+#' @param min_q Quantile probability for \code{min_value}. 0 means a floor of 0.
 #' @param max_q Quantile probability for \code{max_value}.
 #'
 #' @returns A data.frame with columns \code{resolution}, \code{channel},
@@ -401,31 +398,71 @@ scale_channels_set_thresholds = function(gq, min_q = 0.30, max_q = 0.99){
   if(!is.list(sig_q) || !length(sig_q)){
     stop("gq must be the output of scale_channels_gather_quantiles()")
   }
-  if(!(min_q >= 0 && max_q <= 1 && min_q < max_q)){
-    stop("need 0 <= min_q < max_q <= 1")
-  }
+  .check_quantile_pair(min_q, max_q)
   rows = lapply(seq_along(sig_q), function(res_i){
     x = sig_q[[res_i]]
-    q = as.numeric(sub("%", "", rownames(x))) / 100
-    chans = suppressWarnings(as.integer(colnames(x)))
-    if(is.null(chans) || anyNA(chans)) chans = seq_len(ncol(x))
-    do.call(rbind, lapply(seq_len(ncol(x)), function(ch_i){
-      v = x[, ch_i]
-      nz = v > 0
-      if(!any(nz)){
-        return(data.frame(resolution = res_i, channel = chans[ch_i], min_value = 0, max_value = 1))
-      }
-      qn = q[nz]
-      vn = v[nz]
-      at_min = abs(qn - min_q) < 1e-9
-      min_value = if(any(at_min)) vn[at_min][1] else min(vn)
-      max_value = vn[which.min(abs(qn - max_q))]
-      # fetches normalize by (max_value - min_value); never let that be <= 0
-      if(max_value <= min_value) min_value = 0
-      data.frame(resolution = res_i, channel = chans[ch_i], min_value = min_value, max_value = max_value)
-    }))
+    if(is.null(x)) return(NULL)
+    .limits_table(x, resolution = res_i, min_q = min_q, max_q = max_q)
   })
   out = do.call(rbind, rows)
   rownames(out) = NULL
   out
+}
+
+#### shared by scale_channels_*(), precalcTiffDataScales() and fetches ####
+
+# Quantiles of one channel's values, named like quantile() ("99.9%").
+.channel_quantiles = function(values, probs){
+  quantile(values, probs = probs)
+}
+
+# Probabilities for picking limits: the standard grid plus min_q and max_q, so
+# both are matched exactly.
+.scale_probs = function(min_q, max_q){
+  sort(unique(c(.query_probs(), min_q, max_q)))
+}
+
+# Quantile matrix (probs x channels, columns named by channel number) of a
+# tidy image's value column.
+.tidy_channel_quantiles = function(tidy_img, probs){
+  vals = split(tidy_img$value, tidy_img$channel)
+  vapply(vals, .channel_quantiles, numeric(length(probs)), probs = probs)
+}
+
+.check_quantile_pair = function(min_q, max_q){
+  ok = is.numeric(min_q) && is.numeric(max_q) && length(min_q) == 1 && length(max_q) == 1 &&
+    !is.na(min_q) && !is.na(max_q) && min_q >= 0 && max_q <= 1 && min_q < max_q
+  if(!ok) stop("need 0 <= min_q < max_q <= 1", call. = FALSE)
+  invisible(TRUE)
+}
+
+# c(min_value, max_value) for one channel from its quantiles v at
+# probabilities q. Zero quantiles are dropped first, so sparse channels aren't
+# clipped to black; see ?scale_channels_set_thresholds.
+.limits_from_quantiles = function(q, v, min_q, max_q){
+  nz = !is.na(v) & v > 0
+  if(!any(nz)) return(c(0, 1))
+  qn = q[nz]
+  vn = v[nz]
+  max_value = vn[which.min(abs(qn - max_q))]
+  if(min_q == 0){
+    min_value = 0
+  }else{
+    at_min = abs(qn - min_q) < 1e-9
+    min_value = if(any(at_min)) vn[at_min][1] else min(vn)
+  }
+  # fetches normalize by (max_value - min_value); never let that be <= 0
+  if(max_value <= min_value) min_value = 0
+  c(min_value, max_value)
+}
+
+# precalc_max rows for one resolution from a quantile matrix x (probs x
+# channels). q defaults to the probabilities in x's rownames ("99.9%").
+.limits_table = function(x, resolution, min_q, max_q, q = NULL){
+  if(is.null(q)) q = as.numeric(sub("%", "", rownames(x))) / 100
+  chans = suppressWarnings(as.integer(colnames(x)))
+  if(length(chans) != ncol(x) || anyNA(chans)) chans = seq_len(ncol(x))
+  lim = vapply(seq_len(ncol(x)), function(i) .limits_from_quantiles(q, x[, i], min_q, max_q), numeric(2))
+  data.frame(resolution = rep(resolution, ncol(x)), channel = chans,
+             min_value = lim[1, ], max_value = lim[2, ])
 }

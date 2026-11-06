@@ -32,6 +32,14 @@
   .check_option(getOption("TPR_VERBOSE", TRUE), "TPR_VERBOSE", .check_flag)
 }
 
+.default_min_q = function(){
+  .check_option(getOption("TPR_MIN_Q", 0), "TPR_MIN_Q", .check_prob)
+}
+
+.default_max_q = function(){
+  .check_option(getOption("TPR_MAX_Q", 0.999), "TPR_MAX_Q", .check_prob)
+}
+
 # Validate an option's value, naming the option in any error.
 .check_option = function(val, name, check_FUN){
   tryCatch(check_FUN(val, name), error = function(e){
@@ -42,6 +50,18 @@
 .check_flag = function(x, arg){
   if(!is.logical(x) || length(x) != 1 || is.na(x)) stop(arg, " must be TRUE or FALSE.", call. = FALSE)
   x
+}
+
+.check_prob = function(x, arg){
+  if(!is.numeric(x) || length(x) != 1 || is.na(x) || x < 0 || x > 1) stop(arg, " must be a single number from 0 to 1.", call. = FALSE)
+  x
+}
+
+# quantile_norm (deprecated) was the max quantile; it overrides max_q when given
+.deprecated_quantile_norm = function(quantile_norm, max_q){
+  if(is.null(quantile_norm)) return(max_q)
+  warning("quantile_norm is deprecated; use max_q (and min_q) instead.", call. = FALSE)
+  quantile_norm
 }
 
 .check_max_pixels = function(x, arg){

@@ -15,7 +15,8 @@
   channel_names = .default_channel_names(),
   value_var = "norm_value",
   precalc_max = NULL,
-  quantile_norm = 0.999
+  min_q = .default_min_q(),
+  max_q = .default_max_q()
 )
 }
 \arguments{

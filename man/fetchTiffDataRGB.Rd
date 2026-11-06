@@ -15,12 +15,14 @@ fetchTiffDataRGB(
   channel_names = .default_channel_names(),
   value_var = "norm_value",
   precalc_max = NULL,
-  quantile_norm = 0.999,
+  min_q = .default_min_q(),
+  max_q = .default_max_q(),
   um_axes = .default_um_axes(),
   scale_bar = .default_scale_bar(),
   scale_bar_style = .default_scale_bar_style(),
   plot_theme = .default_plot_theme(),
-  verbose = .default_verbose()
+  verbose = .default_verbose(),
+  quantile_norm = NULL
 )
 }
 \arguments{
@@ -59,7 +61,12 @@ NULL means \code{"auto"}. Recorded in
 
 \item{precalc_max}{Optional data frame with precalculated min/max values per channel for normalization}
 
-\item{quantile_norm}{Quantile for normalization (default 0.999)}
+\item{min_q, max_q}{Quantiles of each channel's fetched pixels used as its
+\code{min_value} and \code{max_value} when \code{precalc_max} is NULL.
+Zero quantiles are skipped, as in \code{scale_channels_set_thresholds()};
+\code{min_q = 0} is a floor of 0. Default to the \code{TPR_MIN_Q} and
+\code{TPR_MAX_Q} options, else 0 and 0.999. Recorded in
+\code{@plot_parameters}.}
 
 \item{um_axes}{If TRUE, label the axes in microns (see \code{set_axes_um()}).
 Defaults to the \code{TPR_UM_AXES} option (see \link{TiffPlotR-package}),
@@ -82,6 +89,9 @@ element_blank())}. Defaults to the \code{TPR_THEME} option, else none.}
 \item{verbose}{If FALSE, suppress progress messages (such as the selected
 resolution and image size). Defaults to the \code{TPR_VERBOSE} option,
 else TRUE.}
+
+\item{quantile_norm}{Deprecated: use \code{max_q}. If given, it sets
+\code{max_q}, with a warning.}
 }
 \value{
 A TiffPlotData object containing the RGB data and a named ggplot object. The object includes metadata slots `tiff_path`, `resolution`, `precalc_max`, `rect`, `img_info` and `channels`.

@@ -66,7 +66,7 @@ renormalize = function(img_data,
       stop("Supply either precalc_max, or channels with min_value/max_value, not both.")
     }
     upd = .handle_precalc_max(precalc_max, tidy_img = NULL, resolution = img_data@resolution,
-                              channel_table = channel_table, quantile_norm = NULL)
+                              channel_table = channel_table, min_q = NULL, max_q = NULL)
     missing = setdiff(upd$channel, old_pm$channel)
     if(length(missing) > 0){
       stop("precalc_max has channels not present in img_data: ", paste(missing, collapse = ", "))

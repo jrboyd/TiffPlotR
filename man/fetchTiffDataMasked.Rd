@@ -11,7 +11,8 @@ fetchTiffDataMasked(
   max_pixels = .default_max_pixels(),
   precalc_max = NULL,
   show_raw = FALSE,
-  quantile_norm = 0.999,
+  min_q = .default_min_q(),
+  max_q = .default_max_q(),
   channel_names = .default_channel_names(),
   selected_channels = NULL,
   mask_points = NULL,
@@ -23,7 +24,8 @@ fetchTiffDataMasked(
   scale_bar = .default_scale_bar(),
   scale_bar_style = .default_scale_bar_style(),
   plot_theme = .default_plot_theme(),
-  verbose = .default_verbose()
+  verbose = .default_verbose(),
+  quantile_norm = NULL
 )
 }
 \arguments{
@@ -44,8 +46,12 @@ and \code{max_value} for normalization.}
 
 \item{show_raw}{If TRUE, plot raw values. If FALSE (default), plot normalized values.}
 
-\item{quantile_norm}{Quantile used to estimate per-channel max values when
-\code{precalc_max} is NULL.}
+\item{min_q, max_q}{Quantiles of each channel's fetched pixels used as its
+\code{min_value} and \code{max_value} when \code{precalc_max} is NULL.
+Zero quantiles are skipped, as in \code{scale_channels_set_thresholds()};
+\code{min_q = 0} is a floor of 0. Default to the \code{TPR_MIN_Q} and
+\code{TPR_MAX_Q} options, else 0 and 0.999. Recorded in
+\code{@plot_parameters}.}
 
 \item{channel_names}{How to name the channels:
 \itemize{
@@ -94,6 +100,9 @@ element_blank())}. Defaults to the \code{TPR_THEME} option, else none.}
 \item{verbose}{If FALSE, suppress progress messages (such as the selected
 resolution and image size). Defaults to the \code{TPR_VERBOSE} option,
 else TRUE.}
+
+\item{quantile_norm}{Deprecated: use \code{max_q}. If given, it sets
+\code{max_q}, with a warning.}
 }
 \value{
 A \linkS4class{TiffPlotDataMasked} object with:

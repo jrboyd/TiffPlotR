@@ -1,0 +1,61 @@
+library(testthat)
+
+# limits picked by fetches without precalc_max (min_q / max_q)
+rect <- TiffRect(1, 1024, 1, 1024)
+fetch4 <- function(...) suppressMessages(fetchTiffData(exampleTiff(), rect, resolution = 4, ...))
+no_q_options <- list(TPR_MIN_Q = NULL, TPR_MAX_Q = NULL)
+
+test_that(".limits_from_quantiles follows the zero-dropping rule", {
+  q <- c(0, 0.3, 0.5, 0.99, 0.999, 1)
+  dense <- c(0, 10, 20, 90, 99, 100)
+  expect_equal(.limits_from_quantiles(q, dense, 0.3, 0.99), c(10, 90))
+  expect_equal(.limits_from_quantiles(q, dense, 0, 0.999), c(0, 99))     # min_q = 0: floor of 0
+  expect_equal(.limits_from_quantiles(q, c(5, dense[-1]), 0, 0.999), c(0, 99))
+  sparse <- c(0, 0, 0, 0, 5, 8)
+  expect_equal(.limits_from_quantiles(q, sparse, 0.3, 0.99), c(0, 5))   # nearest non-zero to 0.99
+  expect_equal(.limits_from_quantiles(q, rep(0, 6), 0.3, 0.99), c(0, 1))
+})
+
+test_that("default fetch limits match the old quantile_norm = 0.999 for channels with signal", {
+  withr::local_options(no_q_options)
+  img <- fetch4()
+  pm <- img@precalc_max
+  arr <- fetchTiffArray(exampleTiff(), rect, resolution = 4)@.Data
+  for(ch in c(1, 3, 4, 5, 6)){
+    expect_equal(pm$min_value[pm$channel == ch], 0)
+    expect_equal(pm$max_value[pm$channel == ch], unname(quantile(arr[, , ch], 0.999)))
+  }
+  # Opal 520's 0.999 quantile is 0; it used to give NA norm_value (a grey panel)
+  expect_true(all(is.finite(pm$max_value)))
+  expect_false(anyNA(img@data$norm_value))
+  expect_equal(img@plot_parameters[c("min_q", "max_q")], list(min_q = 0, max_q = 0.999))
+})
+
+test_that("min_q and max_q set the fetch limits", {
+  withr::local_options(no_q_options)
+  img <- fetch4(min_q = 0.5, max_q = 0.99, selected_channels = "DAPI")
+  arr <- fetchTiffArray(exampleTiff(), rect, resolution = 4)@.Data
+  pm <- img@precalc_max
+  expect_equal(pm$min_value[pm$channel == 1], unname(quantile(arr[, , 1], 0.5)))
+  expect_equal(pm$max_value[pm$channel == 1], unname(quantile(arr[, , 1], 0.99)))
+  expect_error(fetch4(min_q = 0.9, max_q = 0.5), "min_q < max_q")
+})
+
+test_that("TPR_MIN_Q / TPR_MAX_Q set the defaults; explicit arguments win", {
+  withr::local_options(TPR_MIN_Q = 0.5, TPR_MAX_Q = 0.99)
+  img <- fetch4(selected_channels = 1)
+  expect_equal(img@plot_parameters[c("min_q", "max_q")], list(min_q = 0.5, max_q = 0.99))
+  expect_equal(fetch4(selected_channels = 1, max_q = 0.999)@plot_parameters$max_q, 0.999)
+  withr::local_options(TPR_MAX_Q = 2)
+  expect_error(fetch4(), "Invalid TPR_MAX_Q option")
+})
+
+test_that("quantile_norm still works, with a deprecation warning", {
+  withr::local_options(no_q_options)
+  expect_warning(old <- fetch4(quantile_norm = 0.99, selected_channels = 1), "quantile_norm is deprecated")
+  expect_equal(old@precalc_max, fetch4(max_q = 0.99, selected_channels = 1)@precalc_max)
+  expect_equal(old@plot_parameters$max_q, 0.99)
+  expect_warning(suppressMessages(fetchTiffDataRGB(exampleTiff(), rect, resolution = 4, quantile_norm = 0.99,
+                                                   red_channel = 5, green_channel = 6, blue_channel = 1)),
+                 "quantile_norm is deprecated")
+})

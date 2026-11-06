@@ -11,7 +11,8 @@
   max_pixels = .default_max_pixels(),
   precalc_max = NULL,
   show_raw = FALSE,
-  quantile_norm = 0.999,
+  min_q = .default_min_q(),
+  max_q = .default_max_q(),
   channel_names = .default_channel_names(),
   selected_channels = NULL,
   scale_colors = .default_scale_colors()
@@ -30,7 +31,8 @@
 
 \item{show_raw}{If TRUE, displays raw pixel values; if FALSE (default), displays normalized values}
 
-\item{quantile_norm}{Quantile for normalization (default 0.999). Values are divided by this quantile}
+\item{min_q, max_q}{Quantiles for the per-channel limits when
+\code{precalc_max} is NULL (see \code{fetchTiffData()}).}
 
 \item{scale_colors}{Colours of the fill gradient, low to high (see \code{fetchTiffData()}).}
 }
