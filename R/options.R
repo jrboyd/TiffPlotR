@@ -33,7 +33,10 @@
 }
 
 .default_min_q = function(){
-  .check_option(getOption("TPR_MIN_Q", 0), "TPR_MIN_Q", .check_prob)
+  # NULL (unset) means a floor of 0
+  val = getOption("TPR_MIN_Q")
+  if(is.null(val)) return(NULL)
+  .check_option(val, "TPR_MIN_Q", .check_prob)
 }
 
 .default_max_q = function(){

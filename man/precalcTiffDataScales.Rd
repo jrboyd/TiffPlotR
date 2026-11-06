@@ -31,10 +31,11 @@ else 800. Recorded in \code{@plot_parameters$max_pixels}.}
 
 \item{min_q, max_q}{Quantiles of each channel's fetched pixels used as its
 \code{min_value} and \code{max_value} when \code{precalc_max} is NULL.
-Zero quantiles are skipped, as in \code{scale_channels_set_thresholds()};
-\code{min_q = 0} is a floor of 0. Default to the \code{TPR_MIN_Q} and
-\code{TPR_MAX_Q} options, else 0 and 0.999. Recorded in
-\code{@plot_parameters}.}
+Zero quantiles are skipped, as in \code{scale_channels_set_thresholds()}.
+\code{min_q = NULL} is a floor of 0. \code{min_q = 0} is treated like any
+other quantile, so a channel whose minimum is 0 gets its smallest non-zero
+quantile. Default to the \code{TPR_MIN_Q} and \code{TPR_MAX_Q} options,
+else NULL and 0.999. Recorded in \code{@plot_parameters}.}
 
 \item{channel_names}{How to name the channels:
 \itemize{

@@ -9,7 +9,8 @@ scale_channels_set_thresholds(gq, min_q = 0.3, max_q = 0.99)
 \arguments{
 \item{gq}{Output of \code{scale_channels_gather_quantiles()}.}
 
-\item{min_q}{Quantile probability for \code{min_value}. 0 means a floor of 0.}
+\item{min_q}{Quantile probability for \code{min_value}, or NULL for a floor
+of 0.}
 
 \item{max_q}{Quantile probability for \code{max_value}.}
 }
@@ -32,7 +33,9 @@ to black:
 }
 If that leaves \code{max_value <= min_value}, \code{min_value} becomes 0. A
 channel with no non-zero quantile at a resolution gets \code{min_value = 0}
-and \code{max_value = 1}. \code{min_q = 0} always gives \code{min_value = 0}.
+and \code{max_value = 1}. \code{min_q = NULL} gives \code{min_value = 0}
+for every channel; \code{min_q = 0} follows the rule above like any other
+value, so it gives the smallest non-zero quantile when the minimum is 0.
 Fetches without \code{precalc_max} pick their limits by the same rule.
 }
 \examples{

@@ -69,11 +69,12 @@ Use `devtools::test()` for the whole suite. Shape-class tests are small and fine
   - `scale_channels_set_thresholds()` drops zero quantiles *before* picking limits.
     - `max_value` is the non-zero quantile nearest `max_q`.
     - `min_value` is `min_q` if that quantile is non-zero, else the smallest non-zero one.
-      `min_q = 0` always gives 0.
+      `min_q = NULL` gives a floor of 0. `min_q = 0` is an ordinary quantile (so a zero
+      minimum falls back to the smallest non-zero quantile); don't special-case it.
   - Fetches without `precalc_max` use the same rule (`.limits_from_quantiles()` /
     `.limits_table()` in `R/global_precalc.R`) over `.scale_probs()`: the `.query_probs()`
     grid plus `min_q`/`max_q`. Their `min_q`/`max_q` default to the `TPR_MIN_Q` / `TPR_MAX_Q`
-    options, else 0 / 0.999, which reproduces the old `quantile_norm = 0.999` exactly for
+    options, else NULL / 0.999, which reproduces the old `quantile_norm = 0.999` exactly for
     channels whose 0.999 quantile is non-zero. `quantile_norm` is a deprecated alias for
     `max_q`.
   - This matches the AVITI and CosMx reductions. Their defaults (0.30 / 0.99) set the

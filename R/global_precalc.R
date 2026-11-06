@@ -417,11 +417,14 @@ scale_channels_gather_quantiles = function(tf, max_full_fetch = "auto", query_pr
 #' }
 #' If that leaves \code{max_value <= min_value}, \code{min_value} becomes 0. A
 #' channel with no non-zero quantile at a resolution gets \code{min_value = 0}
-#' and \code{max_value = 1}. \code{min_q = 0} always gives \code{min_value = 0}.
+#' and \code{max_value = 1}. \code{min_q = NULL} gives \code{min_value = 0}
+#' for every channel; \code{min_q = 0} follows the rule above like any other
+#' value, so it gives the smallest non-zero quantile when the minimum is 0.
 #' Fetches without \code{precalc_max} pick their limits by the same rule.
 #'
 #' @param gq Output of \code{scale_channels_gather_quantiles()}.
-#' @param min_q Quantile probability for \code{min_value}. 0 means a floor of 0.
+#' @param min_q Quantile probability for \code{min_value}, or NULL for a floor
+#'   of 0.
 #' @param max_q Quantile probability for \code{max_value}.
 #'
 #' @returns A data.frame with columns \code{resolution}, \code{channel},
@@ -521,10 +524,13 @@ precalcTiffDataScales = function(tiff_path, rect = NULL, resolution = NULL, max_
   vapply(vals, .channel_quantiles, numeric(length(probs)), probs = probs)
 }
 
+# min_q may be NULL (a floor of 0); max_q may not.
 .check_quantile_pair = function(min_q, max_q){
-  ok = is.numeric(min_q) && is.numeric(max_q) && length(min_q) == 1 && length(max_q) == 1 &&
-    !is.na(min_q) && !is.na(max_q) && min_q >= 0 && max_q <= 1 && min_q < max_q
-  if(!ok) stop("need 0 <= min_q < max_q <= 1", call. = FALSE)
+  ok_max = is.numeric(max_q) && length(max_q) == 1 && !is.na(max_q) && max_q > 0 && max_q <= 1
+  if(!ok_max) stop("need 0 <= min_q < max_q <= 1", call. = FALSE)
+  if(is.null(min_q)) return(invisible(TRUE))
+  ok = is.numeric(min_q) && length(min_q) == 1 && !is.na(min_q) && min_q >= 0 && min_q < max_q
+  if(!ok) stop("need 0 <= min_q < max_q <= 1 (or min_q = NULL for a floor of 0)", call. = FALSE)
   invisible(TRUE)
 }
 
@@ -537,7 +543,7 @@ precalcTiffDataScales = function(tiff_path, rect = NULL, resolution = NULL, max_
   qn = q[nz]
   vn = v[nz]
   max_value = vn[which.min(abs(qn - max_q))]
-  if(min_q == 0){
+  if(is.null(min_q)){
     min_value = 0
   }else{
     at_min = abs(qn - min_q) < 1e-9

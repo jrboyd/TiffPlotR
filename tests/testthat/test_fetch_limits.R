@@ -9,8 +9,11 @@ test_that(".limits_from_quantiles follows the zero-dropping rule", {
   q <- c(0, 0.3, 0.5, 0.99, 0.999, 1)
   dense <- c(0, 10, 20, 90, 99, 100)
   expect_equal(.limits_from_quantiles(q, dense, 0.3, 0.99), c(10, 90))
-  expect_equal(.limits_from_quantiles(q, dense, 0, 0.999), c(0, 99))     # min_q = 0: floor of 0
-  expect_equal(.limits_from_quantiles(q, c(5, dense[-1]), 0, 0.999), c(0, 99))
+  expect_equal(.limits_from_quantiles(q, dense, NULL, 0.999), c(0, 99))  # min_q = NULL: floor of 0
+  expect_equal(.limits_from_quantiles(q, c(5, dense[-1]), NULL, 0.999), c(0, 99))
+  # min_q = 0 is an ordinary quantile: a zero minimum falls back to the smallest non-zero one
+  expect_equal(.limits_from_quantiles(q, dense, 0, 0.999), c(10, 99))
+  expect_equal(.limits_from_quantiles(q, c(5, dense[-1]), 0, 0.999), c(5, 99))
   sparse <- c(0, 0, 0, 0, 5, 8)
   expect_equal(.limits_from_quantiles(q, sparse, 0.3, 0.99), c(0, 5))   # nearest non-zero to 0.99
   expect_equal(.limits_from_quantiles(q, rep(0, 6), 0.3, 0.99), c(0, 1))
@@ -28,7 +31,19 @@ test_that("default fetch limits match the old quantile_norm = 0.999 for channels
   # Opal 520's 0.999 quantile is 0; it used to give NA norm_value (a grey panel)
   expect_true(all(is.finite(pm$max_value)))
   expect_false(anyNA(img@data$norm_value))
-  expect_equal(img@plot_parameters[c("min_q", "max_q")], list(min_q = 0, max_q = 0.999))
+  expect_equal(img@plot_parameters[c("min_q", "max_q")], list(min_q = NULL, max_q = 0.999))
+  expect_true("min_q" %in% names(img@plot_parameters))
+})
+
+test_that("min_q = 0 is an ordinary quantile, unlike the default NULL", {
+  withr::local_options(no_q_options)
+  arr <- fetchTiffArray(exampleTiff(), rect, resolution = 4)@.Data
+  dapi <- arr[, , 1]
+  pm <- fetch4(min_q = 0, selected_channels = 1)@precalc_max
+  dq <- quantile(dapi, .scale_probs(0, 0.999))
+  expect_equal(pm$min_value[pm$channel == 1], unname(min(dq[dq > 0])))   # smallest non-zero quantile
+  expect_gt(pm$min_value[pm$channel == 1], 0)
+  expect_error(fetch4(min_q = NA), "min_q")
 })
 
 test_that("min_q and max_q set the fetch limits", {

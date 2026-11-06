@@ -30,8 +30,9 @@
 #'     image plot. Unlike \code{theme_set()}, it affects only TiffPlotR plots.
 #'     Default: none.}
 #'   \item{\code{TPR_MIN_Q} (\code{min_q})}{Quantile used for each channel's
-#'     \code{min_value} when a fetch has no \code{precalc_max}. Default 0, a
-#'     floor of 0.}
+#'     \code{min_value} when a fetch has no \code{precalc_max}. Default NULL, a
+#'     floor of 0. Setting it to 0 is not the same: 0 picks the smallest
+#'     non-zero quantile when a channel's minimum is 0.}
 #'   \item{\code{TPR_MAX_Q} (\code{max_q})}{Quantile used for each channel's
 #'     \code{max_value} when a fetch has no \code{precalc_max}. Default 0.999.}
 #'   \item{\code{TPR_VERBOSE} (\code{verbose})}{FALSE to silence progress
