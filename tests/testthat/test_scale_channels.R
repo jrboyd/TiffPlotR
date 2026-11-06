@@ -95,4 +95,10 @@ test_that("old rgb/colorized fetch names still work, with a deprecation warning"
                                           channel_colors = list(DAPI = "blue"))),
                  "fetchTiffDataColorized")
   expect_s4_class(old, "TiffPlotData")
+  expect_warning(p <- plotTiffData.rgb(new, red_channel = 5, green_channel = 6, blue_channel = 1),
+                 "plotTiffDataRGB")
+  expect_s3_class(p, "ggplot")
+  expect_warning(p <- plotTiffData.colorized(new, channel_colors = list(DAPI = "blue")),
+                 "plotTiffDataColorized")
+  expect_s3_class(p, "ggplot")
 })

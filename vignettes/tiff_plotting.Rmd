@@ -56,10 +56,12 @@ img
 
 The result is a `TiffPlotData` object. `@data` holds one row per pixel and
 channel, with raw `value`s and `norm_value`s scaled to 0-1 by each channel's
-limits in `@precalc_max`. `@plots` holds the plots, and printing the object
-draws the active plot. Opal 520 has almost no signal in this image, so its
-normalization limit is 0, its normalized values are missing and its panel is
-grey.
+limits in `@precalc_max`. By default those limits are 0 and the 0.999
+quantile of the channel's fetched pixels; `min_q` and `max_q` (or the
+`TPR_MIN_Q` and `TPR_MAX_Q` options) choose other quantiles. Zero quantiles
+are skipped, so Opal 520, which has almost no signal in this image, is scaled
+to its nearest non-zero quantile and shows stretched background noise.
+`@plots` holds the plots, and printing the object draws the active plot.
 
 ```{r data}
 head(img@data)
@@ -108,7 +110,7 @@ plotTiffData(img, selected_channels = c("Opal 690", "DAPI"), ncol = 1,
 ```
 
 ```{r replot-composite}
-plotTiffData.colorized(img, channel_colors = list(DAPI = "cyan", "Opal 690" = "magenta"))
+plotTiffDataColorized(img, channel_colors = list(DAPI = "cyan", "Opal 690" = "magenta"))
 ```
 
 With `return_object = TRUE`, the new plot is stored in the object instead and
@@ -149,22 +151,54 @@ an existing plot or object.
 ## Zooming in
 
 Shapes such as `TiffRect` can be drawn on a plot with `shape_annotate()`, and
-then fetched in more detail. Passing the overview's `precalc_max` keeps the
-contrast the same in both.
+then fetched in more detail.
 
 ```{r zoom-overview}
 zoom <- TiffRect(xmin = 500, xmax = 800, ymin = 600, ymax = 900)
-overview <- fetchTiffDataColorized(tiff_path, rect,
-                                   channel_colors = list(DAPI = "blue", "Opal 690" = "yellow"))
+colors <- list(DAPI = "blue", "Opal 690" = "yellow")
+overview <- fetchTiffDataColorized(tiff_path, rect, channel_colors = colors)
 shape_annotate(overview, zoom, color = "white", fill = NA)
 ```
 
-```{r zoom-detail}
-fetchTiffDataColorized(tiff_path, zoom, precalc_max = overview@precalc_max,
-                       channel_colors = list(DAPI = "blue", "Opal 690" = "yellow"))
+The zoomed region is small enough to be read at full resolution. Fetched on
+its own, it is scaled to its own pixels, so its contrast doesn't match the
+overview's:
+
+```{r zoom-own}
+fetchTiffDataColorized(tiff_path, zoom, channel_colors = colors)
 ```
 
-The zoomed region is small enough to be read at full resolution.
+### Sharing contrast between views
+
+To keep the contrast the same, give the zoom the overview's limits as
+`precalc_max`. `precalcTiffDataScales()` computes the limits a fetch of a
+view would use. It takes the same arguments as `fetchTiffData()` and reads
+the same resolution, but builds no data or plot. Its result matches the
+overview's `@precalc_max`:
+
+```{r scales}
+overview_scales <- precalcTiffDataScales(tiff_path, rect)
+overview_scales
+all.equal(overview_scales[, -1], overview@precalc_max, check.attributes = FALSE)
+```
+
+The table has one row per channel, so it applies at any resolution. Here
+limits taken at level 2 normalize a level 1 read:
+
+```{r zoom-detail}
+fetchTiffDataColorized(tiff_path, zoom, precalc_max = overview_scales, channel_colors = colors)
+```
+
+`min_q` and `max_q` choose other quantiles of the view. A lower `max_q`
+brightens dim signal, and a higher `min_q` darkens the background:
+
+```{r zoom-brighter}
+brighter <- precalcTiffDataScales(tiff_path, rect, min_q = 0.3, max_q = 0.99)
+fetchTiffDataColorized(tiff_path, zoom, precalc_max = brighter, channel_colors = colors)
+```
+
+For limits taken from a whole image at every resolution, use
+`scale_channels_gather_quantiles()` and `scale_channels_set_thresholds()`.
 
 ## Adding points
 

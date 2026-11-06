@@ -9,6 +9,9 @@
 #'   \item \code{fetchTiffData.rgb()}: use \code{fetchTiffDataRGB()}.
 #'   \item \code{fetchTiffData.colorized()}: use
 #'     \code{fetchTiffDataColorized()}.
+#'   \item \code{plotTiffData.rgb()}: use \code{plotTiffDataRGB()}.
+#'   \item \code{plotTiffData.colorized()}: use
+#'     \code{plotTiffDataColorized()}.
 #' }
 #'
 #' @param ... Passed to the replacement function.
@@ -44,4 +47,18 @@ fetchTiffData.rgb = function(...){
 fetchTiffData.colorized = function(...){
   .Deprecated("fetchTiffDataColorized", package = "TiffPlotR")
   fetchTiffDataColorized(...)
+}
+
+#' @rdname TiffPlotR-deprecated
+#' @export
+plotTiffData.rgb = function(...){
+  .Deprecated("plotTiffDataRGB", package = "TiffPlotR")
+  plotTiffDataRGB(...)
+}
+
+#' @rdname TiffPlotR-deprecated
+#' @export
+plotTiffData.colorized = function(...){
+  .Deprecated("plotTiffDataColorized", package = "TiffPlotR")
+  plotTiffDataColorized(...)
 }

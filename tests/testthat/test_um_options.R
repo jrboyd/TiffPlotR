@@ -57,7 +57,7 @@ test_that("plotTiffData*: argument, then the object's choice, then the option", 
   expect_false(has_um_axes(plotTiffData(img)))
   withr::local_options(TPR_UM_AXES = TRUE)
   expect_true(has_um_axes(plotTiffData(img)))
-  expect_true(has_um_axes(plotTiffData.colorized(img, channel_colors = list(DAPI = "blue"))))
+  expect_true(has_um_axes(plotTiffDataColorized(img, channel_colors = list(DAPI = "blue"))))
 
   out <- plotTiffData(img, scale_bar = TRUE, return_object = TRUE)
   expect_true(out@plot_parameters$um_axes)

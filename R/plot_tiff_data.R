@@ -73,9 +73,9 @@
 #'   \item \code{plotTiffDataMasked()}: a channel by segment grid, as
 #'     \code{fetchTiffDataMasked()} draws. Needs the \code{Text} column of
 #'     masked data.
-#'   \item \code{plotTiffData.rgb()}: three channels as red, green and blue, as
+#'   \item \code{plotTiffDataRGB()}: three channels as red, green and blue, as
 #'     \code{fetchTiffDataRGB()} draws.
-#'   \item \code{plotTiffData.colorized()}: channels tinted by colour and
+#'   \item \code{plotTiffDataColorized()}: channels tinted by colour and
 #'     blended, as \code{fetchTiffDataColorized()} draws.
 #' }
 #'
@@ -130,10 +130,10 @@
 #'                      channel_names = "ome")
 #' plotTiffData(img, selected_channels = c("Opal 690", "DAPI"), ncol = 1,
 #'              scale_colors = c("black", "white"))
-#' plotTiffData.rgb(img, red_channel = "Opal 690", green_channel = "Autofluorescence",
-#'                  blue_channel = "DAPI")
-#' plotTiffData.colorized(img, channel_colors = list(DAPI = "blue", "Opal 690" = "yellow"),
-#'                        rect = TiffRect(1, 600, 1, 600))
+#' plotTiffDataRGB(img, red_channel = "Opal 690", green_channel = "Autofluorescence",
+#'                 blue_channel = "DAPI")
+#' plotTiffDataColorized(img, channel_colors = list(DAPI = "blue", "Opal 690" = "yellow"),
+#'                       rect = TiffRect(1, 600, 1, 600))
 #' img <- plotTiffData(img, value_var = "value", return_object = TRUE)
 #' names(img@plots)
 plotTiffData = function(img_data,
@@ -191,18 +191,18 @@ plotTiffDataMasked = function(img_data,
 #' @param red_channel,green_channel,blue_channel Channels (number or name) for
 #'   the red, green and blue components.
 #' @export
-plotTiffData.rgb = function(img_data,
-                            red_channel = 2,
-                            green_channel = 3,
-                            blue_channel = 1,
-                            value_var = c("norm_value", "value"),
-                            rect = NULL,
-                            um_axes = NULL,
-                            scale_bar = NULL,
-                            scale_bar_style = NULL,
-                            plot_theme = NULL,
-                            return_object = FALSE,
-                            plot_name = "rgb"){
+plotTiffDataRGB = function(img_data,
+                           red_channel = 2,
+                           green_channel = 3,
+                           blue_channel = 1,
+                           value_var = c("norm_value", "value"),
+                           rect = NULL,
+                           um_axes = NULL,
+                           scale_bar = NULL,
+                           scale_bar_style = NULL,
+                           plot_theme = NULL,
+                           return_object = FALSE,
+                           plot_name = "rgb"){
   img_data = .check_plot_input(img_data)
   value_var = match.arg(value_var)
   rgb_channels = vapply(list(red_channel, green_channel, blue_channel), .resolve_channels, numeric(1),
@@ -219,16 +219,16 @@ plotTiffData.rgb = function(img_data,
 #'   \code{fetchTiffDataColorized()}: an unnamed list by channel number (NULL
 #'   or NA entries are skipped), or a list named by channel name.
 #' @export
-plotTiffData.colorized = function(img_data,
-                                  channel_colors,
-                                  value_var = c("norm_value", "value"),
-                                  rect = NULL,
-                                  um_axes = NULL,
-                                  scale_bar = NULL,
-                                  scale_bar_style = NULL,
-                                  plot_theme = NULL,
-                                  return_object = FALSE,
-                                  plot_name = "colorized"){
+plotTiffDataColorized = function(img_data,
+                                 channel_colors,
+                                 value_var = c("norm_value", "value"),
+                                 rect = NULL,
+                                 um_axes = NULL,
+                                 scale_bar = NULL,
+                                 scale_bar_style = NULL,
+                                 plot_theme = NULL,
+                                 return_object = FALSE,
+                                 plot_name = "colorized"){
   img_data = .check_plot_input(img_data)
   value_var = match.arg(value_var)
   if(!is.list(channel_colors)) stop("channel_colors must be a list.")

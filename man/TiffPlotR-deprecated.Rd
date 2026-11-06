@@ -6,6 +6,8 @@
 \alias{precalc_from_quantiles}
 \alias{fetchTiffData.rgb}
 \alias{fetchTiffData.colorized}
+\alias{plotTiffData.rgb}
+\alias{plotTiffData.colorized}
 \title{Deprecated functions in TiffPlotR}
 \usage{
 gather_channel_quantiles(...)
@@ -15,6 +17,10 @@ precalc_from_quantiles(...)
 fetchTiffData.rgb(...)
 
 fetchTiffData.colorized(...)
+
+plotTiffData.rgb(...)
+
+plotTiffData.colorized(...)
 }
 \arguments{
 \item{...}{Passed to the replacement function.}
@@ -32,6 +38,9 @@ These still work, with a warning, and will be removed in a later version.
   \item \code{fetchTiffData.rgb()}: use \code{fetchTiffDataRGB()}.
   \item \code{fetchTiffData.colorized()}: use
     \code{fetchTiffDataColorized()}.
+  \item \code{plotTiffData.rgb()}: use \code{plotTiffDataRGB()}.
+  \item \code{plotTiffData.colorized()}: use
+    \code{plotTiffDataColorized()}.
 }
 }
 \keyword{internal}

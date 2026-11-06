@@ -3,8 +3,8 @@
 \name{plotTiffData}
 \alias{plotTiffData}
 \alias{plotTiffDataMasked}
-\alias{plotTiffData.rgb}
-\alias{plotTiffData.colorized}
+\alias{plotTiffDataRGB}
+\alias{plotTiffDataColorized}
 \title{Plot a TiffPlotData object}
 \usage{
 plotTiffData(
@@ -37,7 +37,7 @@ plotTiffDataMasked(
   plot_name = "masked"
 )
 
-plotTiffData.rgb(
+plotTiffDataRGB(
   img_data,
   red_channel = 2,
   green_channel = 3,
@@ -52,7 +52,7 @@ plotTiffData.rgb(
   plot_name = "rgb"
 )
 
-plotTiffData.colorized(
+plotTiffDataColorized(
   img_data,
   channel_colors,
   value_var = c("norm_value", "value"),
@@ -139,9 +139,9 @@ shown, their order, the colours or the region after a fetch.
   \item \code{plotTiffDataMasked()}: a channel by segment grid, as
     \code{fetchTiffDataMasked()} draws. Needs the \code{Text} column of
     masked data.
-  \item \code{plotTiffData.rgb()}: three channels as red, green and blue, as
+  \item \code{plotTiffDataRGB()}: three channels as red, green and blue, as
     \code{fetchTiffDataRGB()} draws.
-  \item \code{plotTiffData.colorized()}: channels tinted by colour and
+  \item \code{plotTiffDataColorized()}: channels tinted by colour and
     blended, as \code{fetchTiffDataColorized()} draws.
 }
 
@@ -153,10 +153,10 @@ img <- fetchTiffData(exampleTiff(), TiffRect(1, 1024, 1, 1024),
                      channel_names = "ome")
 plotTiffData(img, selected_channels = c("Opal 690", "DAPI"), ncol = 1,
              scale_colors = c("black", "white"))
-plotTiffData.rgb(img, red_channel = "Opal 690", green_channel = "Autofluorescence",
-                 blue_channel = "DAPI")
-plotTiffData.colorized(img, channel_colors = list(DAPI = "blue", "Opal 690" = "yellow"),
-                       rect = TiffRect(1, 600, 1, 600))
+plotTiffDataRGB(img, red_channel = "Opal 690", green_channel = "Autofluorescence",
+                blue_channel = "DAPI")
+plotTiffDataColorized(img, channel_colors = list(DAPI = "blue", "Opal 690" = "yellow"),
+                      rect = TiffRect(1, 600, 1, 600))
 img <- plotTiffData(img, value_var = "value", return_object = TRUE)
 names(img@plots)
 }

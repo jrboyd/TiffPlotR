@@ -48,21 +48,21 @@ test_that("return_object stores the plot and makes it active", {
   expect_error(plotTiffData(img, return_object = TRUE, plot_name = ""), "plot_name")
 })
 
-test_that("plotTiffData.rgb and .colorized rebuild composites from the data", {
+test_that("plotTiffDataRGB and plotTiffDataColorized rebuild composites from the data", {
   fetched <- suppressMessages(fetchTiffDataRGB(exampleTiff(), rect, resolution = 4,
                                                 red_channel = 5, green_channel = 6, blue_channel = 1))
-  p <- plotTiffData.rgb(fetched, red_channel = 5, green_channel = 6, blue_channel = 1)
+  p <- plotTiffDataRGB(fetched, red_channel = 5, green_channel = 6, blue_channel = 1)
   expect_equal(ggplot_build(p)$data, ggplot_build(fetched@plots$rgb)$data)
   expect_equal(p$meta$tiffplotr_composite$channels, c(5, 6, 1))
 
-  p <- plotTiffData.rgb(img, red_channel = "Opal 690", green_channel = "Autofluorescence", blue_channel = "DAPI")
+  p <- plotTiffDataRGB(img, red_channel = "Opal 690", green_channel = "Autofluorescence", blue_channel = "DAPI")
   expect_equal(p$meta$tiffplotr_composite$channels, c(5, 6, 1))
 
-  p <- plotTiffData.colorized(img, channel_colors = list(DAPI = "blue", "Opal 690" = "yellow"))
+  p <- plotTiffDataColorized(img, channel_colors = list(DAPI = "blue", "Opal 690" = "yellow"))
   expect_equal(p$meta$tiffplotr_composite$channel_map$channel, c(1, 5))
-  expect_error(plotTiffData.colorized(img, channel_colors = c(DAPI = "blue")), "must be a list")
+  expect_error(plotTiffDataColorized(img, channel_colors = c(DAPI = "blue")), "must be a list")
 
-  out <- plotTiffData.colorized(img, channel_colors = list(DAPI = "blue"), return_object = TRUE)
+  out <- plotTiffDataColorized(img, channel_colors = list(DAPI = "blue"), return_object = TRUE)
   expect_equal(out@activePlot, "colorized")
   # composites made here can still be renormalized
   out <- renormalize(out, channels = "DAPI", max_value = 30)
