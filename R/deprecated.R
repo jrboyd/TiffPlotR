@@ -6,6 +6,9 @@
 #'     \code{scale_channels_gather_quantiles()}.
 #'   \item \code{precalc_from_quantiles()}: use
 #'     \code{scale_channels_set_thresholds()}.
+#'   \item \code{fetchTiffData.rgb()}: use \code{fetchTiffDataRGB()}.
+#'   \item \code{fetchTiffData.colorized()}: use
+#'     \code{fetchTiffDataColorized()}.
 #' }
 #'
 #' @param ... Passed to the replacement function.
@@ -27,4 +30,18 @@ gather_channel_quantiles = function(...){
 precalc_from_quantiles = function(...){
   .Deprecated("scale_channels_set_thresholds", package = "TiffPlotR")
   scale_channels_set_thresholds(...)
+}
+
+#' @rdname TiffPlotR-deprecated
+#' @export
+fetchTiffData.rgb = function(...){
+  .Deprecated("fetchTiffDataRGB", package = "TiffPlotR")
+  fetchTiffDataRGB(...)
+}
+
+#' @rdname TiffPlotR-deprecated
+#' @export
+fetchTiffData.colorized = function(...){
+  .Deprecated("fetchTiffDataColorized", package = "TiffPlotR")
+  fetchTiffDataColorized(...)
 }

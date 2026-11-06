@@ -55,7 +55,7 @@ test_that("large form applies a subset precalc_max, by name and per resolution",
 })
 
 test_that("rgb and colorized plots are rebuilt, extra layers kept", {
-  img <- fetchTiffData.rgb(exampleTiff(), rect = rect, precalc_max = pm0, resolution = 4,
+  img <- fetchTiffDataRGB(exampleTiff(), rect = rect, precalc_max = pm0, resolution = 4,
                            red_channel = 1, green_channel = 6, blue_channel = 5)
   img@plots$rgb <- img@plots$rgb + geom_point(data = data.frame(i = 950, j = 1450), aes(i, j))
   n_layers <- length(img@plots$rgb$layers)
@@ -70,7 +70,7 @@ test_that("rgb and colorized plots are rebuilt, extra layers kept", {
   expect_identical(img@plots$rgb$layers[[1]]$data, old_raster)
   expect_silent(ggplot_build(img2@plots$rgb))
 
-  imgc <- fetchTiffData.colorized(exampleTiff(), rect = rect, precalc_max = pm0, resolution = 4,
+  imgc <- fetchTiffDataColorized(exampleTiff(), rect = rect, precalc_max = pm0, resolution = 4,
                                   channel_colors = list(DAPI = "blue", "channel E" = "red"),
                                   channel_names = cn)
   imgc2 <- renormalize(imgc, channels = "channel E", max_value = 0.1)
@@ -80,7 +80,7 @@ test_that("rgb and colorized plots are rebuilt, extra layers kept", {
 })
 
 test_that("plots without a rebuild recipe are left with a warning", {
-  img <- fetchTiffData.rgb(exampleTiff(), rect = rect, precalc_max = pm0, resolution = 4)
+  img <- fetchTiffDataRGB(exampleTiff(), rect = rect, precalc_max = pm0, resolution = 4)
   img@plots$rgb$meta$tiffplotr_composite <- NULL
   expect_warning(img2 <- renormalize(img, channels = 1, max_value = 10), "rgb")
   expect_equal(img2@precalc_max$max_value[1], 10)

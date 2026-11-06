@@ -23,7 +23,7 @@ test_that("add_points leaves sibling copies' colour guide untouched", {
 test_that("add_points on a colorized image keeps a buildable plot", {
   skip_if_not_installed("ggnewscale")
   rect <- TiffRect(0, 100, 0, 100)
-  img <- fetchTiffData.colorized(exampleTiff(), rect = rect,
+  img <- fetchTiffDataColorized(exampleTiff(), rect = rect,
                                  channel_colors = list("red", "green", "blue"))
   p <- img@plots[[1]]
   q <- add_points(p, data.frame(x = c(10, 20), y = c(10, 20), gene = c("A", "B")), colour_by = "gene")

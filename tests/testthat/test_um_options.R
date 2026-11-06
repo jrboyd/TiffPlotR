@@ -30,7 +30,7 @@ test_that("TPR_UM_AXES and TPR_UM_SCALE_BAR set the fetch defaults", {
   expect_false(has_um_axes(img@plots[[1]]))
   expect_equal(n_layers(img@plots[[1]]), 3)
 
-  rgb <- suppressMessages(fetchTiffData.rgb(exampleTiff(), rect, resolution = 4,
+  rgb <- suppressMessages(fetchTiffDataRGB(exampleTiff(), rect, resolution = 4,
                                             red_channel = 5, green_channel = 6, blue_channel = 1))
   expect_true(has_um_axes(rgb@plots$rgb))
   # renormalize() swaps the raster but keeps the bar

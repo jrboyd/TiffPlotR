@@ -36,7 +36,7 @@ test_that("fetched plots use scale_colors and record it", {
 
   expect_error(fetchTiffData(exampleTiff(), rect, resolution = 4, scale_colors = "red"), "at least 2")
 
-  rgb <- fetchTiffData.rgb(exampleTiff(), rect, resolution = 4, red_channel = 5, green_channel = 6, blue_channel = 1)
+  rgb <- fetchTiffDataRGB(exampleTiff(), rect, resolution = 4, red_channel = 5, green_channel = 6, blue_channel = 1)
   expect_s3_class(rgb@plots$rgb$scales$get_scales("fill"), "ScaleDiscreteIdentity")
 })
 

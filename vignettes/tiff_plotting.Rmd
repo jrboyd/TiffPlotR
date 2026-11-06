@@ -81,19 +81,19 @@ fetchTiffData(tiff_path, rect,
 
 ## Composite images
 
-`fetchTiffData.rgb()` shows three channels as red, green and blue.
-`fetchTiffData.colorized()` blends any number of channels, each with its own
+`fetchTiffDataRGB()` shows three channels as red, green and blue.
+`fetchTiffDataColorized()` blends any number of channels, each with its own
 colour.
 
 ```{r rgb}
-fetchTiffData.rgb(tiff_path, rect,
-                  red_channel = "Opal 690", green_channel = "Autofluorescence",
-                  blue_channel = "DAPI")
+fetchTiffDataRGB(tiff_path, rect,
+                 red_channel = "Opal 690", green_channel = "Autofluorescence",
+                 blue_channel = "DAPI")
 ```
 
 ```{r colorized}
-colorized <- fetchTiffData.colorized(tiff_path, rect,
-                                     channel_colors = list(DAPI = "blue", "Opal 690" = "yellow"))
+colorized <- fetchTiffDataColorized(tiff_path, rect,
+                                    channel_colors = list(DAPI = "blue", "Opal 690" = "yellow"))
 colorized
 ```
 
@@ -154,14 +154,14 @@ contrast the same in both.
 
 ```{r zoom-overview}
 zoom <- TiffRect(xmin = 500, xmax = 800, ymin = 600, ymax = 900)
-overview <- fetchTiffData.colorized(tiff_path, rect,
-                                    channel_colors = list(DAPI = "blue", "Opal 690" = "yellow"))
+overview <- fetchTiffDataColorized(tiff_path, rect,
+                                   channel_colors = list(DAPI = "blue", "Opal 690" = "yellow"))
 shape_annotate(overview, zoom, color = "white", fill = NA)
 ```
 
 ```{r zoom-detail}
-fetchTiffData.colorized(tiff_path, zoom, precalc_max = overview@precalc_max,
-                        channel_colors = list(DAPI = "blue", "Opal 690" = "yellow"))
+fetchTiffDataColorized(tiff_path, zoom, precalc_max = overview@precalc_max,
+                       channel_colors = list(DAPI = "blue", "Opal 690" = "yellow"))
 ```
 
 The zoomed region is small enough to be read at full resolution.

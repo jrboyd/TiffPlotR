@@ -85,7 +85,7 @@ test_that("bad channel names fail before the image is read", {
 })
 
 test_that("rgb channels can be given by name", {
-  img <- fetchTiffData.rgb(exampleTiff(), rect = rect, resolution = 4, channel_names = cn,
+  img <- fetchTiffDataRGB(exampleTiff(), rect = rect, resolution = 4, channel_names = cn,
                            red_channel = "channel E", green_channel = "Opal 570", blue_channel = "DAPI")
   expect_equal(img@plots$rgb$meta$tiffplotr_composite$channels, c(6, 3, 1))
   leg <- img@plots$rgb$layers[[2]]$data
@@ -95,13 +95,13 @@ test_that("rgb channels can be given by name", {
 })
 
 test_that("colorized channel_colors resolve OME names without channel_names", {
-  img <- fetchTiffData.colorized(exampleTiff(), rect = rect, resolution = 4,
+  img <- fetchTiffDataColorized(exampleTiff(), rect = rect, resolution = 4,
                                  channel_colors = list(DAPI = "blue", "Opal 570" = "yellow"))
   cmap <- img@plots$colorized$meta$tiffplotr_composite$channel_map
   expect_equal(cmap$channel, c(1L, 3L))
   # labels are the display names: the OME names under the default "auto"
   expect_equal(cmap$channel_name, c("DAPI", "Opal 570"))
-  expect_error(fetchTiffData.colorized(exampleTiff(), rect = rect, resolution = 4,
+  expect_error(fetchTiffDataColorized(exampleTiff(), rect = rect, resolution = 4,
                                        channel_colors = list(nope = "blue")),
                "Unknown channel_colors names")
 })

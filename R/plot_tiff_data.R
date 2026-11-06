@@ -74,9 +74,9 @@
 #'     \code{fetchTiffDataMasked()} draws. Needs the \code{Text} column of
 #'     masked data.
 #'   \item \code{plotTiffData.rgb()}: three channels as red, green and blue, as
-#'     \code{fetchTiffData.rgb()} draws.
+#'     \code{fetchTiffDataRGB()} draws.
 #'   \item \code{plotTiffData.colorized()}: channels tinted by colour and
-#'     blended, as \code{fetchTiffData.colorized()} draws.
+#'     blended, as \code{fetchTiffDataColorized()} draws.
 #' }
 #'
 #' Only channels present in \code{@data} can be plotted, that is those kept by
@@ -216,7 +216,7 @@ plotTiffData.rgb = function(img_data,
 
 #' @rdname plotTiffData
 #' @param channel_colors Channel-to-colour mapping, as in
-#'   \code{fetchTiffData.colorized()}: an unnamed list by channel number (NULL
+#'   \code{fetchTiffDataColorized()}: an unnamed list by channel number (NULL
 #'   or NA entries are skipped), or a list named by channel name.
 #' @export
 plotTiffData.colorized = function(img_data,

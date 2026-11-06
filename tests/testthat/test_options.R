@@ -86,6 +86,6 @@ test_that("TPR_VERBOSE silences fetch messages", {
   expect_silent(fetchTiffData(exampleTiff(), rect, resolution = 4, selected_channels = 1, verbose = FALSE))
   withr::local_options(TPR_VERBOSE = FALSE)
   expect_silent(fetchTiffData(exampleTiff(), rect, selected_channels = 1))
-  expect_silent(fetchTiffData.rgb(exampleTiff(), rect, resolution = 4, red_channel = 5, green_channel = 6,
+  expect_silent(fetchTiffDataRGB(exampleTiff(), rect, resolution = 4, red_channel = 5, green_channel = 6,
                                   blue_channel = 1))
 })

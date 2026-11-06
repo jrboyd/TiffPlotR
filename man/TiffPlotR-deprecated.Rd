@@ -4,11 +4,17 @@
 \alias{TiffPlotR-deprecated}
 \alias{gather_channel_quantiles}
 \alias{precalc_from_quantiles}
+\alias{fetchTiffData.rgb}
+\alias{fetchTiffData.colorized}
 \title{Deprecated functions in TiffPlotR}
 \usage{
 gather_channel_quantiles(...)
 
 precalc_from_quantiles(...)
+
+fetchTiffData.rgb(...)
+
+fetchTiffData.colorized(...)
 }
 \arguments{
 \item{...}{Passed to the replacement function.}
@@ -23,6 +29,9 @@ These still work, with a warning, and will be removed in a later version.
     \code{scale_channels_gather_quantiles()}.
   \item \code{precalc_from_quantiles()}: use
     \code{scale_channels_set_thresholds()}.
+  \item \code{fetchTiffData.rgb()}: use \code{fetchTiffDataRGB()}.
+  \item \code{fetchTiffData.colorized()}: use
+    \code{fetchTiffDataColorized()}.
 }
 }
 \keyword{internal}

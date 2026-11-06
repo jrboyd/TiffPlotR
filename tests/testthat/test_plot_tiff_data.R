@@ -49,7 +49,7 @@ test_that("return_object stores the plot and makes it active", {
 })
 
 test_that("plotTiffData.rgb and .colorized rebuild composites from the data", {
-  fetched <- suppressMessages(fetchTiffData.rgb(exampleTiff(), rect, resolution = 4,
+  fetched <- suppressMessages(fetchTiffDataRGB(exampleTiff(), rect, resolution = 4,
                                                 red_channel = 5, green_channel = 6, blue_channel = 1))
   p <- plotTiffData.rgb(fetched, red_channel = 5, green_channel = 6, blue_channel = 1)
   expect_equal(ggplot_build(p)$data, ggplot_build(fetched@plots$rgb)$data)

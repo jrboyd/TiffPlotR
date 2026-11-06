@@ -54,3 +54,17 @@ test_that("old quantile function names still work, with a deprecation warning", 
   expect_warning(expect_error(gather_channel_quantiles("no_such_file.tiff")),
                  "scale_channels_gather_quantiles")
 })
+
+test_that("old rgb/colorized fetch names still work, with a deprecation warning", {
+  rect <- TiffRect(1, 1024, 1, 1024)
+  expect_warning(old <- suppressMessages(fetchTiffData.rgb(exampleTiff(), rect, resolution = 4,
+                                          red_channel = 5, green_channel = 6, blue_channel = 1)),
+                 "fetchTiffDataRGB")
+  new <- suppressMessages(fetchTiffDataRGB(exampleTiff(), rect, resolution = 4,
+                                           red_channel = 5, green_channel = 6, blue_channel = 1))
+  expect_equal(old@data, new@data)
+  expect_warning(old <- suppressMessages(fetchTiffData.colorized(exampleTiff(), rect = rect, resolution = 4,
+                                          channel_colors = list(DAPI = "blue"))),
+                 "fetchTiffDataColorized")
+  expect_s4_class(old, "TiffPlotData")
+})

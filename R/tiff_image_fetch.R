@@ -822,32 +822,32 @@ fetchTiffArray = function(tiff_path, rect = NULL,
 #'
 #' @examples
 #' tiff_path = exampleTiff()
-#' fetchTiffData.rgb(tiff_path, rect = TiffRect(1, 1024, 1, 1024), red_channel=2, green_channel=3, blue_channel=1)
+#' fetchTiffDataRGB(tiff_path, rect = TiffRect(1, 1024, 1, 1024), red_channel=2, green_channel=3, blue_channel=1)
 #'
 #' channel_names = c("DAPI", "probe1", "probe2", "probe3", "probe4", "autofluor")
-#' fetchTiffData.rgb(tiff_path, rect = TiffRect(1, 1024, 1, 1024), red_channel=2, green_channel=3, blue_channel=1, channel_names = channel_names)
+#' fetchTiffDataRGB(tiff_path, rect = TiffRect(1, 1024, 1, 1024), red_channel=2, green_channel=3, blue_channel=1, channel_names = channel_names)
 #'
-#' fetchTiffData.rgb(tiff_path, rect = TiffRect(1, 1024, 1, 1024),
+#' fetchTiffDataRGB(tiff_path, rect = TiffRect(1, 1024, 1, 1024),
 #'   red_channel = "Opal 690", green_channel = "Opal 520", blue_channel = "DAPI", channel_names = "ome")
-fetchTiffData.rgb = function(tiff_path,
-                             rect = NULL,
-                             resolution = NULL,
-                             max_pixels = .default_max_pixels(),
-                             red_channel = 2,
-                             green_channel = 3,
-                             blue_channel = 1,
-                             channel_names = .default_channel_names(),
-                             value_var = "norm_value",
-                             precalc_max = NULL,
-                             quantile_norm = .999,
-                             um_axes = .default_um_axes(),
-                             scale_bar = .default_scale_bar(),
-                             scale_bar_style = .default_scale_bar_style(),
-                             plot_theme = .default_plot_theme(),
-                             verbose = .default_verbose()
+fetchTiffDataRGB = function(tiff_path,
+                            rect = NULL,
+                            resolution = NULL,
+                            max_pixels = .default_max_pixels(),
+                            red_channel = 2,
+                            green_channel = 3,
+                            blue_channel = 1,
+                            channel_names = .default_channel_names(),
+                            value_var = "norm_value",
+                            precalc_max = NULL,
+                            quantile_norm = .999,
+                            um_axes = .default_um_axes(),
+                            scale_bar = .default_scale_bar(),
+                            scale_bar_style = .default_scale_bar_style(),
+                            plot_theme = .default_plot_theme(),
+                            verbose = .default_verbose()
 ){
   rect = .rect_null_check(rect, tiff_path)
-  if(nrow(rect@coords) != 1) stop("fetchTiffData.rgb requires a TiffRect with exactly one row")
+  if(nrow(rect@coords) != 1) stop("fetchTiffDataRGB requires a TiffRect with exactly one row")
   obj = .quiet_unless(verbose, .fetch_tiff_data.rgb(tiff_path,
                        rect = rect,
                        resolution = resolution,
@@ -888,35 +888,35 @@ fetchTiffData.rgb = function(tiff_path,
 #' library(TiffPlotR)
 #' tf = exampleTiff()
 #' fetchTiffData(tf, rect = TiffRect(300, 800, 300, 800))
-#' fetchTiffData.colorized(tf,
+#' fetchTiffDataColorized(tf,
 #'   channel_colors = list("blue", NULL, NULL, NULL, "purple", "cyan"),
 #'   rect = TiffRect(300, 800, 300, 800)
 #' )
-#' fetchTiffData.colorized(tf,
+#' fetchTiffDataColorized(tf,
 #'   channel_colors = list("A" = "blue", E = "purple", F = "cyan"),
 #'   rect = TiffRect(300, 800, 300, 800),
 #'   channel_names = LETTERS[1:6]
 #' )
-#' fetchTiffData.colorized(tf,
+#' fetchTiffDataColorized(tf,
 #'   channel_colors = list(DAPI = "blue", "Opal 570" = "yellow"),
 #'   rect = TiffRect(300, 800, 300, 800)
 #' )
-fetchTiffData.colorized = function(tiff_path,
-                                   rect = NULL,
-                                   resolution = NULL,
-                                   max_pixels = .default_max_pixels(),
-                                   channel_colors,
-                                   channel_names = .default_channel_names(),
-                                   value_var = "norm_value",
-                                   precalc_max = NULL,
-                                   quantile_norm = .999,
-                                   um_axes = .default_um_axes(),
-                                   scale_bar = .default_scale_bar(),
-                                   scale_bar_style = .default_scale_bar_style(),
-                                   plot_theme = .default_plot_theme(),
-                                   verbose = .default_verbose()){
+fetchTiffDataColorized = function(tiff_path,
+                                  rect = NULL,
+                                  resolution = NULL,
+                                  max_pixels = .default_max_pixels(),
+                                  channel_colors,
+                                  channel_names = .default_channel_names(),
+                                  value_var = "norm_value",
+                                  precalc_max = NULL,
+                                  quantile_norm = .999,
+                                  um_axes = .default_um_axes(),
+                                  scale_bar = .default_scale_bar(),
+                                  scale_bar_style = .default_scale_bar_style(),
+                                  plot_theme = .default_plot_theme(),
+                                  verbose = .default_verbose()){
   rect = .rect_null_check(rect, tiff_path)
-  if(nrow(rect@coords) != 1) stop("fetchTiffData.colorized requires a TiffRect with exactly one row")
+  if(nrow(rect@coords) != 1) stop("fetchTiffDataColorized requires a TiffRect with exactly one row")
   if(!is.list(channel_colors)) stop("channel_colors must be a list.")
   obj = .quiet_unless(verbose, .fetch_tiff_data.colorized(
     tiff_path = tiff_path,
@@ -1016,7 +1016,7 @@ apply_coord_cartesian = function(img_data){
 #'   rect = TiffRect(1, 1024, 1, 1024))
 #'
 #' .fetch_tiff_data.rgb(tiff_path, rect = TiffRect(1, 1024, 1, 1024), red_channel=6, green_channel=1, blue_channel=5)
-#' fetchTiffData.rgb(tiff_path, rect = TiffRect(1, 1024, 1, 1024), red_channel=6, green_channel=1, blue_channel=5)
+#' fetchTiffDataRGB(tiff_path, rect = TiffRect(1, 1024, 1, 1024), red_channel=6, green_channel=1, blue_channel=5)
 .fetch_tiff_data.rgb = function(
     tiff_path,
     rect = NULL,

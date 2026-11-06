@@ -53,7 +53,7 @@
 # 
 # 
 # 
-# img5 = fetchTiffData.rgb(tf, resolution = 5)
+# img5 = fetchTiffDataRGB(tf, resolution = 5)
 # 
 # 
 # 

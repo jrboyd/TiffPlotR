@@ -51,5 +51,5 @@ fetchTiffData(tiff_path,
   rect = TiffRect(1, 1024, 1, 1024))
 
 .fetch_tiff_data.rgb(tiff_path, rect = TiffRect(1, 1024, 1, 1024), red_channel=6, green_channel=1, blue_channel=5)
-fetchTiffData.rgb(tiff_path, rect = TiffRect(1, 1024, 1, 1024), red_channel=6, green_channel=1, blue_channel=5)
+fetchTiffDataRGB(tiff_path, rect = TiffRect(1, 1024, 1, 1024), red_channel=6, green_channel=1, blue_channel=5)
 }

@@ -120,7 +120,7 @@ recorded in \code{@plot_parameters}, and for gradient plots
 the red, green and blue components.}
 
 \item{channel_colors}{Channel-to-colour mapping, as in
-\code{fetchTiffData.colorized()}: an unnamed list by channel number (NULL
+\code{fetchTiffDataColorized()}: an unnamed list by channel number (NULL
 or NA entries are skipped), or a list named by channel name.}
 }
 \value{
@@ -140,9 +140,9 @@ shown, their order, the colours or the region after a fetch.
     \code{fetchTiffDataMasked()} draws. Needs the \code{Text} column of
     masked data.
   \item \code{plotTiffData.rgb()}: three channels as red, green and blue, as
-    \code{fetchTiffData.rgb()} draws.
+    \code{fetchTiffDataRGB()} draws.
   \item \code{plotTiffData.colorized()}: channels tinted by colour and
-    blended, as \code{fetchTiffData.colorized()} draws.
+    blended, as \code{fetchTiffDataColorized()} draws.
 }
 
 Only channels present in \code{@data} can be plotted, that is those kept by
