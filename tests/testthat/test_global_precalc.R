@@ -2,10 +2,10 @@
 # library(tidyverse)
 # tf = exampleTiff()
 # 
-# g_quants = TiffPlotR::gather_channel_quantiles(tf)
+# g_quants = TiffPlotR::scale_channels_gather_quantiles(tf)
 # 
 # 
-# g_quants.approx = TiffPlotR::gather_channel_quantiles(tf, max_full_fetch = 5e5)
+# g_quants.approx = TiffPlotR::scale_channels_gather_quantiles(tf, max_full_fetch = 5e5)
 # 
 # g_quants$signal_quantiles
 # g_quants.approx$signal_quantiles

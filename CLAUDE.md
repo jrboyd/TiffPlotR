@@ -43,7 +43,7 @@ Use `devtools::test()` for the whole suite. Shape-class tests are small and fine
     (ids can be about 1e8).
   - `as.character(1e8)` is `"1e+08"`, so names use `format(scientific = FALSE)`.
   - A 1-2 px label gives fewer than 3 vertices and is dropped.
-- **`gather_channel_quantiles(max_full_fetch = "auto")`** resolves to
+- **`scale_channels_gather_quantiles(max_full_fetch = "auto")`** resolves to
   `min(100e6, mem / (n_channels * 8 B * 10))`.
   - mem is the SLURM allocation (`SLURM_MEM_PER_NODE` / `SLURM_MEM_PER_CPU`) when set,
     otherwise MemAvailable. `.detect_cores()` caps workers by the same memory.
@@ -61,18 +61,18 @@ Use `devtools::test()` for the whole suite. Shape-class tests are small and fine
     function".
   - That check misses bare symbols in a pipe (`x %>% ungroup %>% ...`), so also grep for those.
   - `sym`, `.data` and `expr` resolve through `import(ggplot2)`, which re-exports them from rlang.
-- **The precalc pipeline is `gather_channel_quantiles()` → `precalc_from_quantiles()`.**
+- **The precalc pipeline is `scale_channels_gather_quantiles()` → `scale_channels_set_thresholds()`.** The old names `gather_channel_quantiles()` / `precalc_from_quantiles()` are deprecated wrappers in `R/deprecated.R`.
   - The older `collect_channel_quantiles_all_resolutions` / `quantiles_to_precalc_max` /
     `precalc_max_all_resolutions` pipeline was removed after 0.1.18. Its sampled path called a
     function that had already been deleted. `dev_global_precalc_max_claude.R` still
     references it.
-  - `precalc_from_quantiles()` drops zero quantiles *before* picking limits.
+  - `scale_channels_set_thresholds()` drops zero quantiles *before* picking limits.
     - `max_value` is the non-zero quantile nearest `max_q`.
     - `min_value` is `min_q` if that quantile is non-zero, else the smallest non-zero one.
   - This matches the AVITI and CosMx reductions. Their defaults (0.30 / 0.99) set the
     contrast of existing figures. On CosMx, the old 0.90 / 0.998 clipped nuclear signal to
     black.
-  - A full `gather_channel_quantiles(exampleTiff(), max_full_fetch = 1e6, workers = 1)`
+  - A full `scale_channels_gather_quantiles(exampleTiff(), max_full_fetch = 1e6, workers = 1)`
     takes about 15 s, so the tests use synthetic quantile matrices instead.
 - **Channels: one dictionary, one resolver** (`R/channels.R`).
   - `@channels` lists *every* channel in the image, not only the selected ones. Its columns are

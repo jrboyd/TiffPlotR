@@ -57,4 +57,5 @@ Collate:
   'TiffPlotR-package.R'
   'plot_tiff_data.R'
   'options.R'
+  'deprecated.R'
 Config/roxygen2/version: 8.1.0

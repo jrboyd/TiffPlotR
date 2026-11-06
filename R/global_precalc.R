@@ -60,8 +60,9 @@
 #' @returns A list with \code{signal_quantiles} (per resolution, a matrix of
 #'   quantiles x channels with rows named like \code{"99.8\%"}) and
 #'   \code{assessed_ranges} (per resolution, the representative regions).
+#'   Pass it to \code{scale_channels_set_thresholds()}.
 #' @export
-gather_channel_quantiles = function(tf, max_full_fetch = "auto", query_probs = .query_probs(), workers = "auto"){
+scale_channels_gather_quantiles = function(tf, max_full_fetch = "auto", query_probs = .query_probs(), workers = "auto"){
   
   #### step 0 prep ####
   if(identical(workers, "auto")){
@@ -351,7 +352,7 @@ gather_channel_quantiles = function(tf, max_full_fetch = "auto", query_probs = .
   unique(sort(c(seq(0, 100, by = .1), seq(99,100, by = .01), seq(99.9,100, by = .001))))/100
 }
 
-#' Pixel budget for a whole-resolution read in gather_channel_quantiles
+#' Pixel budget for a whole-resolution read in scale_channels_gather_quantiles
 #'
 #' A FULL fetch holds n_channels doubles per pixel, plus copies made while
 #' computing quantiles; 10x is a conservative overhead allowance.
@@ -364,10 +365,10 @@ gather_channel_quantiles = function(tf, max_full_fetch = "auto", query_probs = .
   min(cap, floor(mem_mb * 1024^2 / (n_channels * 8 * 10)))
 }
 
-#' Reduce gather_channel_quantiles() output to a precalc_max table
+#' Reduce scale_channels_gather_quantiles() output to a precalc_max table
 #'
 #' Picks per-resolution, per-channel normalization limits from the quantiles
-#' collected by \code{gather_channel_quantiles()}, giving the table that
+#' collected by \code{scale_channels_gather_quantiles()}, giving the table that
 #' \code{fetchTiffData()} and friends accept as \code{precalc_max}.
 #'
 #' Zero-valued quantiles are dropped first, so sparse channels are not clipped
@@ -381,7 +382,7 @@ gather_channel_quantiles = function(tf, max_full_fetch = "auto", query_probs = .
 #' channel with no non-zero quantile at a resolution gets \code{min_value = 0}
 #' and \code{max_value = 1}.
 #'
-#' @param gq Output of \code{gather_channel_quantiles()}.
+#' @param gq Output of \code{scale_channels_gather_quantiles()}.
 #' @param min_q Quantile probability for \code{min_value}.
 #' @param max_q Quantile probability for \code{max_value}.
 #'
@@ -391,14 +392,14 @@ gather_channel_quantiles = function(tf, max_full_fetch = "auto", query_probs = .
 #'
 #' @examples
 #' \dontrun{
-#'   gq <- gather_channel_quantiles(exampleTiff())
-#'   pm <- precalc_from_quantiles(gq)
+#'   gq <- scale_channels_gather_quantiles(exampleTiff())
+#'   pm <- scale_channels_set_thresholds(gq)
 #'   fetchTiffData(exampleTiff(), precalc_max = pm)
 #' }
-precalc_from_quantiles = function(gq, min_q = 0.30, max_q = 0.99){
+scale_channels_set_thresholds = function(gq, min_q = 0.30, max_q = 0.99){
   sig_q = gq$signal_quantiles
   if(!is.list(sig_q) || !length(sig_q)){
-    stop("gq must be the output of gather_channel_quantiles()")
+    stop("gq must be the output of scale_channels_gather_quantiles()")
   }
   if(!(min_q >= 0 && max_q <= 1 && min_q < max_q)){
     stop("need 0 <= min_q < max_q <= 1")

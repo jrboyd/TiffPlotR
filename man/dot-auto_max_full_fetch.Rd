@@ -2,7 +2,7 @@
 % Please edit documentation in R/global_precalc.R
 \name{.auto_max_full_fetch}
 \alias{.auto_max_full_fetch}
-\title{Pixel budget for a whole-resolution read in gather_channel_quantiles}
+\title{Pixel budget for a whole-resolution read in scale_channels_gather_quantiles}
 \usage{
 .auto_max_full_fetch(n_channels, mem_mb = .available_memory_mb(), cap = 1e+08)
 }
