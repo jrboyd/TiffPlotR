@@ -50,6 +50,32 @@ test_that("TPR_MIN_Q / TPR_MAX_Q set the defaults; explicit arguments win", {
   expect_error(fetch4(), "Invalid TPR_MAX_Q option")
 })
 
+test_that("precalcTiffDataScales gives the limits fetchTiffData computes for the same view", {
+  withr::local_options(no_q_options)
+  pm <- precalcTiffDataScales(exampleTiff(), rect, resolution = 4)
+  expect_equal(colnames(pm), c("resolution", "channel", "min_value", "max_value"))
+  expect_equal(pm$resolution, rep(4, 6))
+  expect_equal(pm[, -1], fetch4()@precalc_max, ignore_attr = TRUE)
+  # automatic resolution, as fetchTiffData chooses it
+  expect_message(pm2 <- precalcTiffDataScales(exampleTiff(), rect, max_pixels = 200), "selected resolution 4")
+  expect_equal(pm2, pm)
+  expect_silent(precalcTiffDataScales(exampleTiff(), rect, max_pixels = 200, verbose = FALSE))
+  pm3 <- precalcTiffDataScales(exampleTiff(), rect, resolution = 4, min_q = 0.5, max_q = 0.99,
+                               selected_channels = c("Opal 690", "DAPI"))
+  expect_equal(pm3$channel, c(5, 1))
+  full <- fetch4(min_q = 0.5, max_q = 0.99)@precalc_max
+  expect_equal(pm3$min_value, full$min_value[c(5, 1)])
+  expect_equal(pm3$max_value, full$max_value[c(5, 1)])
+})
+
+test_that("precalcTiffDataScales output carries a view's contrast to other fetches", {
+  withr::local_options(no_q_options)
+  pm <- precalcTiffDataScales(exampleTiff(), rect, resolution = 4)
+  zoom <- suppressMessages(fetchTiffData(exampleTiff(), TiffRect(500, 800, 600, 900), resolution = 2,
+                                         precalc_max = pm))
+  expect_equal(zoom@precalc_max, pm[, -1], ignore_attr = TRUE)
+})
+
 test_that("quantile_norm still works, with a deprecation warning", {
   withr::local_options(no_q_options)
   expect_warning(old <- fetch4(quantile_norm = 0.99, selected_channels = 1), "quantile_norm is deprecated")

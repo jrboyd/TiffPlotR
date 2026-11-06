@@ -450,6 +450,57 @@ scale_channels_set_thresholds = function(gq, min_q = 0.30, max_q = 0.99){
   out
 }
 
+#' Normalization limits for one view of a TIFF
+#'
+#' Computes the \code{precalc_max} table that \code{fetchTiffData()} would
+#' compute for the same view, without building the data or plot: per-channel
+#' limits from the \code{min_q} / \code{max_q} quantiles of the view's pixels,
+#' at the resolution the fetch would read. Pass it as \code{precalc_max} to
+#' fetches of other regions or resolutions so they share the view's contrast.
+#'
+#' The rule for picking limits is the one \code{scale_channels_set_thresholds()}
+#' uses. For limits over a whole image at every resolution, see
+#' \code{scale_channels_gather_quantiles()}.
+#'
+#' @inheritParams fetchTiffData
+#' @param selected_channels Optional subset of channels to return, as channel
+#'   numbers or names. All channels are read either way.
+#' @param verbose If FALSE, suppress the message naming the selected
+#'   resolution.
+#'
+#' @returns A data.frame with columns \code{resolution}, \code{channel} (the
+#'   channel number), \code{min_value} and \code{max_value}. With one row per
+#'   channel, a fetch at any resolution accepts it.
+#' @export
+#'
+#' @examples
+#' tiff_path <- exampleTiff()
+#' pm <- precalcTiffDataScales(tiff_path, TiffRect(1, 1024, 1, 1024))
+#' pm
+#' # a zoomed fetch with the overview's contrast
+#' fetchTiffData(tiff_path, TiffRect(500, 800, 600, 900), precalc_max = pm,
+#'               selected_channels = "DAPI")
+precalcTiffDataScales = function(tiff_path, rect = NULL, resolution = NULL, max_pixels = .default_max_pixels(),
+                                 min_q = .default_min_q(), max_q = .default_max_q(),
+                                 channel_names = .default_channel_names(), selected_channels = NULL,
+                                 verbose = .default_verbose()){
+  .check_quantile_pair(min_q, max_q)
+  rect = .rect_null_check(rect, tiff_path)
+  channel_table = .channel_table(tiff_path, channel_names)
+  selected_channels = .resolve_channels(selected_channels, channel_table, arg = "selected_channels")
+  resolution = .quiet_unless(verbose, .resolution_null_check(resolution = resolution, tiff_path = tiff_path,
+                                                             rect = rect, max_pixels = max_pixels))
+  arr = fetchTiffArray(tiff_path, rect = rect, resolution = resolution)@.Data
+  if(length(dim(arr)) == 2) dim(arr) = c(dim(arr), 1)
+  probs = .scale_probs(min_q, max_q)
+  qm = apply(arr, 3, .channel_quantiles, probs = probs)
+  colnames(qm) = seq_len(ncol(qm))
+  pm = .limits_table(qm, resolution, min_q, max_q, q = probs)
+  if(!is.null(selected_channels)) pm = pm[match(selected_channels, pm$channel), ]
+  rownames(pm) = NULL
+  pm
+}
+
 #### shared by scale_channels_*(), precalcTiffDataScales() and fetches ####
 
 # Quantiles of one channel's values, named like quantile() ("99.9%").
