@@ -48,6 +48,34 @@ test_that("scale_channels_set_thresholds validates input", {
   expect_error(scale_channels_set_thresholds(.fake_gq(), min_q = 0.9, max_q = 0.5), "min_q < max_q")
 })
 
+test_that(".gather_plan reads the levels a LOW-mode level depends on", {
+  # 4 levels: 1024^2, 512^2, 256^2, 128^2 px
+  meta <- data.frame(resolutionLevel = 1:4, sizeX = 1024 / 2^(0:3), sizeY = 1024 / 2^(0:3))
+  all_full <- .gather_plan(NULL, meta, max_full_fetch = Inf)
+  expect_equal(all_full$requested, 1:4)
+  expect_equal(all_full$needed, 4:1)
+  expect_equal(.gather_plan(3:4, meta, Inf)$needed, 4:3)
+  expect_equal(.gather_plan(1, meta, Inf)$needed, 1)
+  # levels 1 and 2 are LOW: level 1 needs 2 and 3 (the finest FULL level), not 4
+  plan <- .gather_plan(1, meta, max_full_fetch = 300^2)
+  expect_equal(plan$requested, 1)
+  expect_equal(plan$needed, 3:1)
+  expect_equal(.gather_plan(c(4, 2), meta, 300^2)$needed, 4:2)
+  expect_error(.gather_plan(5, meta, Inf), "resolution levels: 1, 2, 3, 4")
+  expect_error(.gather_plan(NULL, meta, 100), "raise max_full_fetch")
+})
+
+test_that("scale_channels_gather_quantiles reports only the requested resolutions", {
+  gq <- suppressMessages(scale_channels_gather_quantiles(exampleTiff(), max_full_fetch = 1e6, workers = 1,
+                                                         resolutions = 3:4))
+  expect_null(gq$signal_quantiles[[1]])
+  expect_null(gq$signal_quantiles[[2]])
+  expect_equal(dim(gq$signal_quantiles[[4]]), c(length(.query_probs()), 6))
+  pm <- scale_channels_set_thresholds(gq)
+  expect_equal(sort(unique(pm$resolution)), 3:4)
+  expect_equal(nrow(pm), 12)
+})
+
 test_that("old quantile function names still work, with a deprecation warning", {
   expect_warning(pm <- precalc_from_quantiles(.fake_gq(2)), "scale_channels_set_thresholds")
   expect_equal(pm, scale_channels_set_thresholds(.fake_gq(2)))

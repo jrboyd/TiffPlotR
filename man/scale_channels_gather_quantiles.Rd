@@ -8,7 +8,8 @@ scale_channels_gather_quantiles(
   tf,
   max_full_fetch = "auto",
   query_probs = .query_probs(),
-  workers = "auto"
+  workers = "auto",
+  resolutions = NULL
 )
 }
 \arguments{
@@ -23,15 +24,29 @@ SLURM allocation when set, else free system memory.}
 
 \item{workers}{Number of parallel workers for LOW mode, or \code{"auto"}
 (\code{.detect_cores()}, which honours the SLURM CPU and memory allocation).}
+
+\item{resolutions}{Resolution levels to report, or NULL (the default) for
+all of them. A LOW-mode level also needs the levels between it and the
+finest level read whole, because each one locates the regions the next
+reads, so those are read too but left out of the result. Coarser levels
+than that are skipped unless requested.}
 }
 \value{
 A list with \code{signal_quantiles} (per resolution, a matrix of
   quantiles x channels with rows named like \code{"99.8\%"}) and
-  \code{assessed_ranges} (per resolution, the representative regions).
+  \code{assessed_ranges} (per resolution, the representative regions). Both
+  are indexed by resolution level, with NULL for levels not requested.
   Pass it to \code{scale_channels_set_thresholds()}.
 }
 \description{
 Coarse resolutions are read whole ("FULL" mode). Once a resolution exceeds
 \code{max_full_fetch} pixels, only representative regions located at the
 previous resolution are read ("LOW" mode), in parallel across \code{workers}.
+}
+\examples{
+\dontrun{
+  # only the two coarsest levels of the example image
+  gq <- scale_channels_gather_quantiles(exampleTiff(), resolutions = 3:4, workers = 1)
+  scale_channels_set_thresholds(gq)
+}
 }

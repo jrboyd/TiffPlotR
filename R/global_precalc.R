@@ -56,14 +56,28 @@
 #' @param query_probs Quantile probabilities to record.
 #' @param workers Number of parallel workers for LOW mode, or \code{"auto"}
 #'   (\code{.detect_cores()}, which honours the SLURM CPU and memory allocation).
+#' @param resolutions Resolution levels to report, or NULL (the default) for
+#'   all of them. A LOW-mode level also needs the levels between it and the
+#'   finest level read whole, because each one locates the regions the next
+#'   reads, so those are read too but left out of the result. Coarser levels
+#'   than that are skipped unless requested.
 #'
 #' @returns A list with \code{signal_quantiles} (per resolution, a matrix of
 #'   quantiles x channels with rows named like \code{"99.8\%"}) and
-#'   \code{assessed_ranges} (per resolution, the representative regions).
+#'   \code{assessed_ranges} (per resolution, the representative regions). Both
+#'   are indexed by resolution level, with NULL for levels not requested.
 #'   Pass it to \code{scale_channels_set_thresholds()}.
 #' @export
-scale_channels_gather_quantiles = function(tf, max_full_fetch = "auto", query_probs = .query_probs(), workers = "auto"){
-  
+#'
+#' @examples
+#' \dontrun{
+#'   # only the two coarsest levels of the example image
+#'   gq <- scale_channels_gather_quantiles(exampleTiff(), resolutions = 3:4, workers = 1)
+#'   scale_channels_set_thresholds(gq)
+#' }
+scale_channels_gather_quantiles = function(tf, max_full_fetch = "auto", query_probs = .query_probs(), workers = "auto",
+                                           resolutions = NULL){
+
   #### step 0 prep ####
   if(identical(workers, "auto")){
     workers = .detect_cores()
@@ -73,14 +87,12 @@ scale_channels_gather_quantiles = function(tf, max_full_fetch = "auto", query_pr
     max_full_fetch = .auto_max_full_fetch(n_channels = max(img_meta_df$sizeC))
     message("max_full_fetch auto: ", format(max_full_fetch, big.mark = ",", scientific = FALSE), " px")
   }
-  meta_max = dplyr::filter(img_meta_df, sizeX == max(sizeX))
-  #select max (lowest pixel) res
-  max_res = max(img_meta_df$resolutionLevel)
-  
+  plan = .gather_plan(resolutions, img_meta_df, max_full_fetch)
+
   rep_ranges = list()
   all_quantiles = list()
-  
-  for(res_i in seq(max_res, 1)){
+
+  for(res_i in plan$needed){
     meta_i = dplyr::filter(img_meta_df, resolutionLevel == res_i)
     # res_ratio can be defined as 2^(res_i-1)
     # res_ratio = meta_max$sizeX / meta_i$sizeX
@@ -97,7 +109,8 @@ scale_channels_gather_quantiles = function(tf, max_full_fetch = "auto", query_pr
         next_pixels = as.numeric(meta_next$sizeX)*as.numeric(meta_next$sizeY)
       }
       
-      preserve_rects = next_pixels > max_full_fetch
+      # only worth locating regions if the next level is read too
+      preserve_rects = next_pixels > max_full_fetch && res_next %in% plan$needed
     }else{
       res_next = NULL
       meta_next = NULL
@@ -279,7 +292,35 @@ scale_channels_gather_quantiles = function(tf, max_full_fetch = "auto", query_pr
     rep_ranges[[res_i]] = representative_ranges.by_channel
     all_quantiles[[res_i]] = quant_res
   }
+  # levels read only to locate regions for finer ones aren't reported
+  all_quantiles[setdiff(seq_along(all_quantiles), plan$requested)] = list(NULL)
+  rep_ranges[setdiff(seq_along(rep_ranges), plan$requested)] = list(NULL)
   list(signal_quantiles = all_quantiles, assessed_ranges = rep_ranges)
+}
+
+# Levels scale_channels_gather_quantiles() reads to report `resolutions`
+# (coarsest first). A LOW-mode level reads regions located at the level above
+# it, so every level from the finest requested up to the finest one read whole
+# (FULL mode) is needed.
+.gather_plan = function(resolutions, img_meta_df, max_full_fetch){
+  img_meta_df = img_meta_df[order(img_meta_df$resolutionLevel), ]
+  all_res = img_meta_df$resolutionLevel
+  if(is.null(resolutions)) resolutions = all_res
+  if(!is.numeric(resolutions) || !length(resolutions) || anyNA(resolutions) || !all(resolutions %in% all_res)){
+    stop("resolutions must be among the image's resolution levels: ", paste(all_res, collapse = ", "), call. = FALSE)
+  }
+  requested = sort(unique(as.integer(resolutions)))
+  pixels = as.numeric(img_meta_df$sizeX) * as.numeric(img_meta_df$sizeY)
+  full_res = all_res[pixels <= max_full_fetch]
+  if(!length(full_res)){
+    stop("the coarsest resolution (", format(min(pixels), big.mark = ",", scientific = FALSE),
+         " px) exceeds max_full_fetch (", format(max_full_fetch, big.mark = ",", scientific = FALSE),
+         " px); raise max_full_fetch", call. = FALSE)
+  }
+  needed = requested
+  finest_full = min(full_res)
+  if(min(requested) < finest_full) needed = union(needed, seq(min(requested), finest_full))
+  list(requested = requested, needed = sort(needed, decreasing = TRUE))
 }
 .divide_space = function(xmax, ymax, target_pixels = 50e6, trim1 = TRUE){
   last_diff = Inf
